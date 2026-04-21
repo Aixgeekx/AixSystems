@@ -1,0 +1,46 @@
+// 设置 store - 从 db.settings 同步并缓存
+import { create } from 'zustand';
+import { db } from '@/db';
+
+interface SettingsState {
+  theme: string;                                          // 主题 key
+  brightness: number;
+  blur: number;
+  appLocked: boolean;
+  appLockPasswordHash?: string;
+  startPage: string;                                      // 启动页路由
+  setTheme: (k: string) => Promise<void>;
+  setBrightness: (n: number) => Promise<void>;
+  setBlur: (n: number) => Promise<void>;
+  load: () => Promise<void>;
+  setKV: (k: string, v: any) => Promise<void>;
+}
+
+async function save(key: string, value: any) {
+  await db.settings.put({ key, value });
+}
+
+export const useSettingsStore = create<SettingsState>((set, get) => ({
+  theme: 'bikong',
+  brightness: 100,
+  blur: 0,
+  appLocked: false,
+  startPage: '/home/today/myDay',
+  async load() {
+    const rows = await db.settings.toArray();
+    const kv: Record<string, any> = {};
+    rows.forEach(r => kv[r.key] = r.value);
+    set({
+      theme: kv.theme ?? 'bikong',
+      brightness: kv.brightness ?? 100,
+      blur: kv.blur ?? 0,
+      appLocked: !!kv.appLockPasswordHash,
+      appLockPasswordHash: kv.appLockPasswordHash,
+      startPage: kv.startPage ?? '/home/today/myDay'
+    });
+  },
+  async setTheme(k) { await save('theme', k); set({ theme: k }); },
+  async setBrightness(n) { await save('brightness', n); set({ brightness: n }); },
+  async setBlur(n) { await save('blur', n); set({ blur: n }); },
+  async setKV(k, v) { await save(k, v); set({ [k]: v } as any); }
+}));

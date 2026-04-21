@@ -1,0 +1,69 @@
+{
+  "name": "aixsystems-desktop",
+  "version": "0.1.0",
+  "description": "AixSystems 时间管理系统 - Electron 桌面壳",
+  "main": "main.cjs",
+  "author": {
+    "name": "AixSystems",
+    "email": "local@aixsystems.local"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env SGX_DEV=1 electron .",
+    "dist": "electron-builder --win --x64",
+    "dist:portable": "electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^25.1.8",
+    "cross-env": "^7.0.3"
+  },
+  "build": {
+    "appId": "com.aixsystems.app",
+    "productName": "AixSystems",
+    "copyright": "Copyright © 2026 AixSystems",
+    "directories": {
+      "output": "dist-installer",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "package.json",
+      "!node_modules/**/{README.md,README,readme.md,readme,test,tests,__tests__}",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!**/.*"
+    ],
+    "extraResources": [
+      {
+        "from": "../code/dist",
+        "to": "app-dist",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "artifactName": "AixSystems-${version}-Setup.${ext}",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "AixSystems",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
+    },
+    "portable": {
+      "artifactName": "AixSystems-${version}-portable.${ext}"
+    }
+  }
+}
