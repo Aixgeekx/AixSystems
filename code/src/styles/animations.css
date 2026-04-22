@@ -1,4 +1,16 @@
-/* 全局动画与过渡系统 - AixSystems UI Polish v0.20.0 */
+/* 全局动画与过渡系统 - AixSystems */
+
+/* === 全局字体 === */
+body {
+  font-family: 'Maple Mono NF CN', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 等宽场景回退 */
+code, pre, kbd, .mono {
+  font-family: 'Maple Mono NF CN', 'Cascadia Code', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
 
 /* === 基础淡入 === */
 @keyframes fadeIn {

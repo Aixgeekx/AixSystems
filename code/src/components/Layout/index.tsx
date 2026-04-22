@@ -109,22 +109,29 @@ export default function Layout() {
   return (
     <AntLayout className="workspace-shell" style={{ minHeight: '100vh', background: 'transparent' }}>
       <style>{`
+        .workspace-shell {
+          --menu-text: ${isDark ? themeMeta.accent + 'cc' : '#e2e8f0'};
+          --menu-text-dim: ${isDark ? themeMeta.accent + '99' : 'rgba(255,255,255,0.7)'};
+          --menu-text-group: ${isDark ? themeMeta.accent + '66' : 'rgba(255,255,255,0.45)'};
+          --menu-hover-bg: ${isDark ? themeMeta.accent + '15' : 'rgba(255,255,255,0.08)'};
+          --menu-selected-bg: ${isDark ? themeMeta.accent + '22' : 'rgba(255,255,255,0.15)'};
+        }
         .workspace-shell .workspace-sider .ant-layout-sider-trigger {
-          background: rgba(255,255,255,0.08);
-          color: #e2e8f0;
-          border-top: 1px solid rgba(255,255,255,0.08);
+          background: ${isDark ? themeMeta.accent + '11' : 'rgba(255,255,255,0.08)'};
+          color: var(--menu-text);
+          border-top: 1px solid ${isDark ? themeMeta.accent + '22' : 'rgba(255,255,255,0.08)'};
           transition: all 0.3s ease;
         }
         .workspace-shell .workspace-sider .ant-layout-sider-trigger:hover {
-          background: rgba(255,255,255,0.15);
+          background: ${isDark ? themeMeta.accent + '22' : 'rgba(255,255,255,0.15)'};
         }
         .workspace-shell .workspace-menu.ant-menu {
           background: transparent;
-          color: #e2e8f0;
+          color: var(--menu-text);
         }
         .workspace-shell .workspace-menu .ant-menu-item-group-title {
           padding: 18px 12px 8px;
-          color: rgba(255,255,255,0.45);
+          color: var(--menu-text-group);
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.22em;
@@ -137,7 +144,7 @@ export default function Layout() {
           margin: 6px 8px;
           padding: 10px 14px;
           border-radius: 12px;
-          color: rgba(255,255,255,0.7);
+          color: var(--menu-text-dim);
           transition: all 0.32s cubic-bezier(0.16, 1, 0.3, 1);
           position: relative;
           overflow: hidden;
@@ -146,7 +153,7 @@ export default function Layout() {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+          background: linear-gradient(90deg, transparent, ${isDark ? themeMeta.accent + '08' : 'rgba(255,255,255,0.04)'}, transparent);
           transform: translateX(-100%);
           transition: transform 0.5s ease;
         }
@@ -154,17 +161,17 @@ export default function Layout() {
           transform: translateX(100%);
         }
         .workspace-shell .workspace-menu .ant-menu-item:hover {
-          background: rgba(255,255,255,0.08);
-          color: #fff;
+          background: var(--menu-hover-bg);
+          color: ${isDark ? themeMeta.accent : '#fff'};
           transform: translateX(5px);
         }
         .workspace-shell .workspace-menu .ant-menu-item:active {
           transform: scale(0.97);
         }
         .workspace-shell .workspace-menu .ant-menu-item-selected {
-          background: rgba(255, 255, 255, 0.15) !important;
-          color: #fff !important;
-          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), 0 8px 20px rgba(0, 0, 0, 0.15);
+          background: var(--menu-selected-bg) !important;
+          color: ${isDark ? themeMeta.accent : '#fff'} !important;
+          box-shadow: inset 0 0 0 1px ${isDark ? themeMeta.accent + '33' : 'rgba(255,255,255,0.12)'}, 0 8px 20px rgba(0, 0, 0, 0.15);
         }
         .workspace-shell .workspace-menu .ant-menu-item-selected::after {
           content: '';
@@ -187,7 +194,7 @@ export default function Layout() {
         }
         .workspace-shell .workspace-content {
           scrollbar-width: thin;
-          scrollbar-color: rgba(59,130,246,0.35) rgba(148,163,184,0.1);
+          scrollbar-color: ${isDark ? themeMeta.accent + '55' : 'rgba(59,130,246,0.35)'} rgba(148,163,184,0.1);
         }
         .workspace-shell .workspace-content::-webkit-scrollbar {
           width: 8px;
@@ -196,13 +203,13 @@ export default function Layout() {
           background: transparent;
         }
         .workspace-shell .workspace-content::-webkit-scrollbar-thumb {
-          background: rgba(148,163,184,0.2);
+          background: ${isDark ? themeMeta.accent + '33' : 'rgba(148,163,184,0.2)'};
           border-radius: 999px;
           border: 2px solid transparent;
           background-clip: padding-box;
         }
         .workspace-shell .workspace-content::-webkit-scrollbar-thumb:hover {
-          background: rgba(148,163,184,0.4);
+          background: ${isDark ? themeMeta.accent + '55' : 'rgba(148,163,184,0.4)'};
         }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); filter: blur(4px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
