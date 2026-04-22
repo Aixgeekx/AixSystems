@@ -5,6 +5,11 @@ import { Timeline, Card, Typography, Tag } from 'antd';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.8.0', date: '2026-04-22', items: [
+    '日记与备忘录编辑器改为按需加载，打开列表页不再预先吞下富文本编辑器依赖',
+    '新增本地草稿恢复，误关窗口后仍可继续编辑未保存内容',
+    '继续优化离线便携环境中的稳定性、启动体验和使用简便性'
+  ]},
   { ver: '0.7.0', date: '2026-04-22', items: [
     '专注页图表改为按需懒加载，进入统计标签时再拉取图表依赖',
     '专注页默认先展示最近记录，降低首开页面时的资源压力',
