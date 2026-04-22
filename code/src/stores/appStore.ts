@@ -4,6 +4,10 @@ import { create } from 'zustand';
 interface AppState {
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
+  commandPaletteOpen: boolean;
+  openCommandPalette: () => void;
+  closeCommandPalette: () => void;
+  toggleCommandPalette: () => void;
   itemFormOpen: boolean;
   itemFormId?: string;                                    // 编辑时传 id
   itemFormType?: string;                                  // 新建时默认 type
@@ -14,6 +18,10 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   collapsed: false,
   setCollapsed: (v) => set({ collapsed: v }),
+  commandPaletteOpen: false,
+  openCommandPalette: () => set({ commandPaletteOpen: true }),
+  closeCommandPalette: () => set({ commandPaletteOpen: false }),
+  toggleCommandPalette: () => set(s => ({ commandPaletteOpen: !s.commandPaletteOpen })),
   itemFormOpen: false,
   itemFormId: undefined,
   itemFormType: undefined,

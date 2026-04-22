@@ -6,7 +6,7 @@ import { ROUTES } from '@/config/routes';
 
 export function useHotkeys() {
   const nav = useNavigate();
-  const { openItemForm, collapsed, setCollapsed } = useAppStore();
+  const { openItemForm, collapsed, setCollapsed, toggleCommandPalette } = useAppStore();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -16,12 +16,12 @@ export function useHotkeys() {
       if (['INPUT', 'TEXTAREA'].includes(tag)) return;       // 输入框内不触发
 
       if (e.key === 'n') { e.preventDefault(); openItemForm(); }
-      else if (e.key === 'k') { e.preventDefault(); nav(ROUTES.SEARCH); }
+      else if (e.key === 'k') { e.preventDefault(); toggleCommandPalette(); }
       else if (e.key === 'b') { e.preventDefault(); setCollapsed(!collapsed); }
       else if (e.key === ',') { e.preventDefault(); nav(ROUTES.SYSTEM); }
       else if (e.key === '/') { e.preventDefault(); nav(ROUTES.HELP); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [nav, openItemForm, collapsed, setCollapsed]);
+  }, [nav, openItemForm, collapsed, setCollapsed, toggleCommandPalette]);
 }

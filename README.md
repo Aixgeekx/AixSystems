@@ -30,7 +30,7 @@ git clone https://github.com/<YOUR>/AixSystems.git
 cd AixSystems
 ```
 
-**Windows**:双击根目录 `桌面版.bat`(Electron 独立窗口)或 `启动.bat`(浏览器)。首次自动安装依赖。
+**Windows**:双击 `results/桌面版.bat`(Electron 独立窗口)或 `results/启动.bat`(浏览器)。首次自动安装依赖。
 
 **命令行**:
 ```bash
@@ -76,13 +76,6 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 
 ```
 AixSystems/
-├─ 启动.bat                  双击 - 浏览器 + 生产模式
-├─ 开发.bat                  双击 - 浏览器 + 热更新
-├─ 桌面版.bat                双击 - Electron 独立窗口
-├─ 桌面版-开发.bat           双击 - Electron + 热更新
-├─ 打包.bat                  双击 - 生成 .exe 安装包
-├─ 创建桌面快捷方式.bat      一次性 - 在桌面放 3 个图标
-├─ 使用说明.md               完整使用文档
 ├─ code/                     应用源码 (Vite + React + TS)
 │  ├─ src/
 │  │  ├─ config/            统一配置
@@ -98,6 +91,16 @@ AixSystems/
 │  ├─ main.cjs              主进程 + IPC
 │  ├─ preload.cjs           渲染进程桥
 │  └─ build/icon.ico        应用图标
+├─ results/                  交付脚本与说明
+│  ├─ 桌面版.bat            Electron 独立窗口
+│  ├─ 启动.bat              浏览器生产模式
+│  ├─ 开发.bat              浏览器开发模式
+│  ├─ 桌面版-开发.bat       Electron 开发模式
+│  ├─ 打包.bat              Windows 安装包
+│  ├─ 打包-便携版.bat       Windows 便携压缩包
+│  ├─ 创建桌面快捷方式.bat  桌面快捷方式
+│  ├─ 创建桌面快捷方式.ps1  快捷方式实现
+│  └─ 使用说明.md           使用文档
 ├─ Aix_tools/                辅助脚本(含图标生成器)
 ├─ title/                    调研资料
 └─ data/                     JSON 备份目录
@@ -107,13 +110,13 @@ AixSystems/
 
 ```bash
 # 一键(推荐)
-双击 打包.bat
+双击 results/打包.bat
 
 # 命令行
 cd desktop && npm install && npm run dist
 ```
 
-产物:`desktop/dist-installer/AixSystems-0.1.0-Setup.exe`(约 80MB NSIS 向导包)
+产物:`desktop/dist-installer/AixSystems-0.2.0-Setup.exe`(约 80MB NSIS 向导包)
 
 ## License
 

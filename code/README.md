@@ -46,7 +46,7 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 目录
 
-见 `../Aix_tools/readme.md` 和根目录 `../使用说明.md`。
+见 `../Aix_tools/readme.md` 和 `../results/使用说明.md`。
 
 ## License
 

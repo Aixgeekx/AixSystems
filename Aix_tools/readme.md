@@ -5,7 +5,16 @@
 ## 工具脚本
 
 - `decode_bundle_cn.py` — webpack minified bundle 里 `\uXXXX` 转义的中文字符串批量解码(调研阶段使用)。
-- `gen_icon.cjs` — 纯 Node 生成 AixSystems 应用图标 (`desktop/build/icon.png` + `icon.ico`),不依赖任何第三方库。修改此脚本后重新运行即可刷新图标。
+- `gen_icon_v2.py` — 以 `image-cache/.../1.png` 手绘无穷符号为源图,生成**紫红渐变底 + 银白 logo + iOS 圆角**的应用图标,覆盖 `desktop/build/icon.{png,ico}` 和 `code/{public,dist}/icons/icon-{192,512}.png`。改颜色/版式调 `BG_TOP_LEFT`/`BG_BOT_RIGHT`/`LOGO_COLOR`/`CORNER` 常量。**依赖 Pillow** (`pip install pillow`)。
+- `rebuild_bats.py` — 批量生成 `results/` 下的 `.bat` 启动脚本,**强制 GBK 编码 + CRLF 换行 + 末尾 pause 兜底**。任何 bat 的修改都改本脚本再执行 `python Aix_tools/rebuild_bats.py`,严禁直接编辑 .bat(编辑器会把 GBK 另存为 UTF-8 导致 cmd 报 `'ho' 不是内部命令` 系列错)。
+
+## 脚本编码规则 (Windows 中文环境)
+
+| 文件类型 | 编码 | 原因 |
+|---|---|---|
+| `.bat` | **GBK (CP936)**,无 BOM | Windows cmd.exe 按系统 ANSI 代码页解析 bat,中文 Windows 默认 GBK。UTF-8 无 BOM 会把 `echo`/`call`/`errorlevel` 被中文字节拦腰切断。 |
+| `.ps1` | **UTF-8 with BOM** | PowerShell 5.1 默认按 ANSI 读,PS 7+ 默认 UTF-8。加 BOM 后两者都按 UTF-8 解析,兼容最广。 |
+| `.py` / `.ts` / `.md` | UTF-8 (无 BOM) | 符合跨平台通用默认。 |
 
 ## 项目概览
 
@@ -20,7 +29,7 @@ AixSystems 时间管理系统(离线本地版)。基于调研原版 [时光序](
 
 ## 启动方式
 
-- **双击** 根目录 `.bat` 脚本最方便(见 `../使用说明.md`)
+- **双击** `results/` 下的 `.bat` 脚本最方便(见 `../results/使用说明.md`)
 - 或命令行:
 
 ```bash
@@ -56,7 +65,7 @@ AixSystems/
 ├─ title/               # 调研资料
 ├─ data/                # 桌面版导出的 JSON 备份
 ├─ results/             # 最终交付物
-└─ *.bat / *.ps1 / *.md # 根目录启动脚本与文档
+└─ results/             # 启动脚本、快捷方式脚本与使用说明
 ```
 
 ## 技术栈
@@ -92,6 +101,6 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.1.0-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.2.0-Setup.exe` (NSIS 安装包,约 80MB)
 
-便携版: `npm run dist:portable` → `AixSystems-0.1.0-portable.exe`
+便携版: `npm run dist:portable` → `AixSystems-0.2.0-portable.exe`

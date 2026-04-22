@@ -1,10 +1,11 @@
-# 在桌面创建 AixSystems 快捷方式 - 右键此文件选"用 PowerShell 运行"
+# 在桌面创建 AixSystems 快捷方式
 # 生成 3 个快捷方式: 桌面版 / 浏览器版 / 开发模式
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
+$root = Split-Path -Parent $here
 $desktop = [Environment]::GetFolderPath('Desktop')
 $shell = New-Object -ComObject WScript.Shell
-$iconPath = Join-Path $here 'desktop\build\icon.ico'
+$iconPath = Join-Path $root 'desktop\build\icon.ico'
 
 function New-Shortcut($name, $target, $desc, $icon) {
   $path = Join-Path $desktop "$name.lnk"
@@ -12,7 +13,7 @@ function New-Shortcut($name, $target, $desc, $icon) {
   $sc.TargetPath = $target
   $sc.WorkingDirectory = Split-Path $target
   $sc.Description = $desc
-  $sc.WindowStyle = 7                                     # 最小化启动
+  $sc.WindowStyle = 7
   if ($icon) { $sc.IconLocation = $icon }
   $sc.Save()
   Write-Host "已创建: $path"

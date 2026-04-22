@@ -1,6 +1,6 @@
 {
   "name": "aixsystems-desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AixSystems 时间管理系统 - Electron 桌面壳",
   "main": "main.cjs",
   "author": {
