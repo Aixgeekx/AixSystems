@@ -1,6 +1,6 @@
 // 番茄专注 - 三模式 + 暂停恢复 + 白噪音 + 统计
-import React, { useEffect, useState } from 'react';
-import { Button, Card, Col, Input, InputNumber, List, Progress, Row, Slider, Space, Statistic, Switch, Tabs, Tag, Typography, Select } from 'antd';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { Button, Card, Col, Input, InputNumber, List, Progress, Row, Skeleton, Slider, Space, Statistic, Switch, Tabs, Tag, Typography, Select } from 'antd';
 import {
   PauseCircleOutlined,
   PlayCircleOutlined,
@@ -11,7 +11,6 @@ import {
 import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
 import { useLiveQuery } from 'dexie-react-hooks';
-import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { FOCUS_MODES, FOCUS_MODE_LABELS } from '@/config/constants';
 import { useFocusStore } from '@/stores/focusStore';
@@ -19,6 +18,7 @@ import { currentNoise, NOISE_LABELS, playNoise, setVolume, stopNoise } from '@/u
 import { fmtDateTime } from '@/utils/time';
 
 const PRESETS = [15, 25, 45, 90];
+const ReactECharts = lazy(() => import('echarts-for-react'));
 
 function formatClock(totalSeconds: number) {
   const safe = Math.max(0, totalSeconds);
@@ -142,6 +142,18 @@ export default function FocusPage() {
       }))
     }]
   };
+
+  function ChartFallback() {
+    return <Skeleton active paragraph={{ rows: 6 }} style={{ padding: '20px 0' }} />;
+  }
+
+  function LazyChart({ option }: { option: any }) {
+    return (
+      <Suspense fallback={<ChartFallback />}>
+        <ReactECharts option={option} style={{ height: 240 }} />
+      </Suspense>
+    );
+  }
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -355,18 +367,19 @@ export default function FocusPage() {
 
           <Card bordered={false} style={{ marginTop: 16, borderRadius: 24, background: 'rgba(255,255,255,0.92)' }}>
             <Tabs
-              defaultActiveKey="trend"
+              defaultActiveKey="timeline"
+              destroyInactiveTabPane
               items={[
                 {
                   key: 'trend',
                   label: '近 14 天',
-                  children: <ReactECharts option={barOpt} style={{ height: 240 }} />
+                  children: <LazyChart option={barOpt} />
                 },
                 {
                   key: 'mode',
                   label: '模式分布',
                   children: sessions.length > 0
-                    ? <ReactECharts option={pieOpt} style={{ height: 240 }} />
+                    ? <LazyChart option={pieOpt} />
                     : <div style={{ color: '#94a3b8', padding: 40, textAlign: 'center' }}>暂无数据</div>
                 },
                 {

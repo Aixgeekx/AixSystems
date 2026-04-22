@@ -19,9 +19,6 @@ export default defineConfig({
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router-dom')) {
             return 'react-core';
           }
-          if (id.includes('node_modules/antd') || id.includes('node_modules/@ant-design') || id.includes('@ctrl/tinycolor')) {
-            return 'antd-ui';
-          }
           if (id.includes('node_modules/dexie')) {
             return 'data-layer';
           }

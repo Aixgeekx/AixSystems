@@ -5,6 +5,11 @@ import { Timeline, Card, Typography, Tag } from 'antd';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.7.0', date: '2026-04-22', items: [
+    '专注页图表改为按需懒加载，进入统计标签时再拉取图表依赖',
+    '专注页默认先展示最近记录，降低首开页面时的资源压力',
+    '继续围绕离线便携场景优化首屏加载与本地响应速度'
+  ]},
   { ver: '0.6.0', date: '2026-04-22', items: [
     '路由页面改为按需懒加载，降低首屏加载体积',
     'Vite 构建加入 React / AntD / 数据层 / 编辑器 / 图表分包策略',
