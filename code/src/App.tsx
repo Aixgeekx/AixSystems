@@ -1,7 +1,7 @@
-// 应用路由根 - 锁屏守卫化 + 新增页面
-import React, { useEffect, useState } from 'react';
+// 应用路由根 - 锁屏守卫化 + 懒加载路由
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { ConfigProvider, App as AntApp } from 'antd';
+import { ConfigProvider, App as AntApp, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useReminder } from '@/hooks/useReminder';
 import { useHotkeys } from '@/hooks/useHotkeys';
@@ -10,39 +10,55 @@ import { seedIfEmpty } from '@/db/seed';
 import { THEMES } from '@/config/themes';
 import { ROUTES } from '@/config/routes';
 
-import Layout from '@/components/Layout';
-import MyDay from '@/pages/today/MyDay';
-import MyWeek from '@/pages/today/MyWeek';
-import MyMonth from '@/pages/today/MyMonth';
-import MyYear from '@/pages/today/MyYear';
-import All from '@/pages/matter/All';
-import Schedule from '@/pages/matter/Schedule';
-import CheckList from '@/pages/matter/CheckList';
-import Importance from '@/pages/matter/Importance';
-import Repeat from '@/pages/matter/Repeat';
-import Memo from '@/pages/memo';
-import Diary from '@/pages/diary';
-import Focus from '@/pages/focus';
-import ThemeSkin from '@/pages/themeskin';
-import System from '@/pages/systemsetting';
-import DataIO from '@/pages/dataio';
-import Feedback from '@/pages/feedback';
-import User from '@/pages/user';
-import Search from '@/pages/search';
-import Help from '@/pages/help';
-import Desktop from '@/pages/desktop';
-import AppLock from '@/pages/applicationlock';
-import Unlock from '@/pages/applicationlock/Unlock';
-import Classify from '@/pages/classify';
-import Trash from '@/pages/trash';
-import NewcomerGuide from '@/pages/help/Guide';
-import Characteristic from '@/pages/help/Characteristic';
-import NewFeatures from '@/pages/help/NewFeatures';
-import Functions from '@/pages/functions';
-import Syllabus from '@/pages/syllabus';
-import Aunt from '@/pages/aunt';
-import Loan from '@/pages/loan';
-import MenuSort from '@/pages/menusort';
+const Layout = lazy(() => import('@/components/Layout'));
+const MyDay = lazy(() => import('@/pages/today/MyDay'));
+const MyWeek = lazy(() => import('@/pages/today/MyWeek'));
+const MyMonth = lazy(() => import('@/pages/today/MyMonth'));
+const MyYear = lazy(() => import('@/pages/today/MyYear'));
+const All = lazy(() => import('@/pages/matter/All'));
+const Schedule = lazy(() => import('@/pages/matter/Schedule'));
+const CheckList = lazy(() => import('@/pages/matter/CheckList'));
+const Importance = lazy(() => import('@/pages/matter/Importance'));
+const Repeat = lazy(() => import('@/pages/matter/Repeat'));
+const Memo = lazy(() => import('@/pages/memo'));
+const Diary = lazy(() => import('@/pages/diary'));
+const Focus = lazy(() => import('@/pages/focus'));
+const ThemeSkin = lazy(() => import('@/pages/themeskin'));
+const System = lazy(() => import('@/pages/systemsetting'));
+const DataIO = lazy(() => import('@/pages/dataio'));
+const Feedback = lazy(() => import('@/pages/feedback'));
+const User = lazy(() => import('@/pages/user'));
+const Search = lazy(() => import('@/pages/search'));
+const Help = lazy(() => import('@/pages/help'));
+const Desktop = lazy(() => import('@/pages/desktop'));
+const AppLock = lazy(() => import('@/pages/applicationlock'));
+const Unlock = lazy(() => import('@/pages/applicationlock/Unlock'));
+const Classify = lazy(() => import('@/pages/classify'));
+const Trash = lazy(() => import('@/pages/trash'));
+const NewcomerGuide = lazy(() => import('@/pages/help/Guide'));
+const Characteristic = lazy(() => import('@/pages/help/Characteristic'));
+const NewFeatures = lazy(() => import('@/pages/help/NewFeatures'));
+const Functions = lazy(() => import('@/pages/functions'));
+const Syllabus = lazy(() => import('@/pages/syllabus'));
+const Aunt = lazy(() => import('@/pages/aunt'));
+const Loan = lazy(() => import('@/pages/loan'));
+const MenuSort = lazy(() => import('@/pages/menusort'));
+
+function PageFallback() {
+  return (
+    <div style={{
+      minHeight: '50vh',
+      display: 'grid',
+      placeItems: 'center',
+      color: '#475569'
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: 16 }}>正在加载页面资源...</div>
+      </div>
+    </div>
+  );
+}
 
 function AppShell() {                                           // 路由表 + 提醒 + 热键
   useReminder();
@@ -60,46 +76,48 @@ function AppShell() {                                           // 路由表 + �
   }, [appLocked, loc.pathname, nav]);
 
   return (
-    <Routes>
-      <Route path="/unlock" element={<Unlock />} />
-      <Route path="/" element={<Layout />}>
-        <Route index element={<Navigate to={startPage} replace />} />
-        <Route path="home" element={<Navigate to={startPage} replace />} />
-        <Route path="home/today/myDay" element={<MyDay />} />
-        <Route path="home/today/myWeek" element={<MyWeek />} />
-        <Route path="home/today/myMonth" element={<MyMonth />} />
-        <Route path="home/today/myYear" element={<MyYear />} />
-        <Route path="home/matter/all" element={<All />} />
-        <Route path="home/matter/schedule" element={<Schedule />} />
-        <Route path="home/matter/checkList" element={<CheckList />} />
-        <Route path="home/matter/importance" element={<Importance />} />
-        <Route path="home/matter/repeat" element={<Repeat />} />
-        <Route path="home/memo" element={<Memo />} />
-        <Route path="home/diary/calendar" element={<Diary />} />
-        <Route path="home/diary/list" element={<Diary />} />
-        <Route path="home/absorbed/tomatoAbsorbed" element={<Focus />} />
-        <Route path="home/applicationlock" element={<AppLock />} />
-        <Route path="home/desktop/dayPlugin" element={<Desktop />} />
-        <Route path="home/themeskin" element={<ThemeSkin />} />
-        <Route path="home/systemsetting" element={<System />} />
-        <Route path="home/feedback" element={<Feedback />} />
-        <Route path="home/user" element={<User />} />
-        <Route path="home/classify" element={<Classify />} />
-        <Route path="home/trash" element={<Trash />} />
-        <Route path="home/functions" element={<Functions />} />
-        <Route path="home/syllabus" element={<Syllabus />} />
-        <Route path="home/aunt" element={<Aunt />} />
-        <Route path="home/loan" element={<Loan />} />
-        <Route path="home/menusort" element={<MenuSort />} />
-        <Route path="search/index" element={<Search />} />
-        <Route path="dataio" element={<DataIO />} />
-        <Route path="help" element={<Help />} />
-        <Route path="newcomerGuide/newcomerGuide" element={<NewcomerGuide />} />
-        <Route path="characteristic/index" element={<Characteristic />} />
-        <Route path="newFeatures/index" element={<NewFeatures />} />
-        <Route path="*" element={<Navigate to={startPage} replace />} />
-      </Route>
-    </Routes>
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        <Route path="/unlock" element={<Unlock />} />
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Navigate to={startPage} replace />} />
+          <Route path="home" element={<Navigate to={startPage} replace />} />
+          <Route path="home/today/myDay" element={<MyDay />} />
+          <Route path="home/today/myWeek" element={<MyWeek />} />
+          <Route path="home/today/myMonth" element={<MyMonth />} />
+          <Route path="home/today/myYear" element={<MyYear />} />
+          <Route path="home/matter/all" element={<All />} />
+          <Route path="home/matter/schedule" element={<Schedule />} />
+          <Route path="home/matter/checkList" element={<CheckList />} />
+          <Route path="home/matter/importance" element={<Importance />} />
+          <Route path="home/matter/repeat" element={<Repeat />} />
+          <Route path="home/memo" element={<Memo />} />
+          <Route path="home/diary/calendar" element={<Diary />} />
+          <Route path="home/diary/list" element={<Diary />} />
+          <Route path="home/absorbed/tomatoAbsorbed" element={<Focus />} />
+          <Route path="home/applicationlock" element={<AppLock />} />
+          <Route path="home/desktop/dayPlugin" element={<Desktop />} />
+          <Route path="home/themeskin" element={<ThemeSkin />} />
+          <Route path="home/systemsetting" element={<System />} />
+          <Route path="home/feedback" element={<Feedback />} />
+          <Route path="home/user" element={<User />} />
+          <Route path="home/classify" element={<Classify />} />
+          <Route path="home/trash" element={<Trash />} />
+          <Route path="home/functions" element={<Functions />} />
+          <Route path="home/syllabus" element={<Syllabus />} />
+          <Route path="home/aunt" element={<Aunt />} />
+          <Route path="home/loan" element={<Loan />} />
+          <Route path="home/menusort" element={<MenuSort />} />
+          <Route path="search/index" element={<Search />} />
+          <Route path="dataio" element={<DataIO />} />
+          <Route path="help" element={<Help />} />
+          <Route path="newcomerGuide/newcomerGuide" element={<NewcomerGuide />} />
+          <Route path="characteristic/index" element={<Characteristic />} />
+          <Route path="newFeatures/index" element={<NewFeatures />} />
+          <Route path="*" element={<Navigate to={startPage} replace />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }
 

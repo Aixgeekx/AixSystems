@@ -5,6 +5,12 @@ import { Timeline, Card, Typography, Tag } from 'antd';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.6.0', date: '2026-04-22', items: [
+    '路由页面改为按需懒加载，降低首屏加载体积',
+    'Vite 构建加入 React / AntD / 数据层 / 编辑器 / 图表分包策略',
+    '离线便携版首次启动压力进一步下降，更适合本地直接打开',
+    '继续为后续缩小大体积依赖打基础'
+  ]},
   { ver: '0.5.0', date: '2026-04-22', items: [
     '新增全局本地状态条，实时显示事项、日记、备忘录数量与最近本地更新时间',
     '备份后会记录最近一次备份的时间、方式、大小和路径，方便本地追踪',
