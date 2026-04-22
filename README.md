@@ -39,6 +39,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 
 ## 最近更新
 
+- `v0.11.0`：新增首页工作台并改为默认首页，聚合总览、快捷入口和本地备份状态，界面主场更完整
 - `v0.10.0`：顶部工作台加入快速备份入口和最近备份状态，让本地数据保护更直接
 - `v0.9.0`：今日页农历信息改为按需加载，继续压缩离线便携版的全局启动路径
 - `v0.8.0`：日记和备忘录编辑器改为按需加载，并新增本地草稿恢复，减少离线便携场景下的误操作损失
@@ -54,6 +55,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 | 类别 | 能力 |
 |---|---|
 | **视图** | 我的一天 / 一周 / 一月 / 一年 |
+| **首页工作台** | 打开即见全局总览 / 最近内容 / 快捷入口 / 本地备份状态 |
 | **事项** | 全部 / 日程 / 清单 / 四象限(拖拽) / 重复 |
 | **事项类型** | 17 种:日程/清单/生日/纪念日/倒数日/节日/生理期/信用卡还款/贷款/吃药/起床闹钟/睡眠闹钟/作息/跑步/读书/穿衣搭配/课程表/上班打卡 |
 | **重复规则** | 每天/周/月/年 + 工作日 + 自定义间隔 + 周几 + **记忆曲线** |
@@ -105,7 +107,7 @@ AixSystems/
 │  │  ├─ hooks/             自定义 hooks
 │  │  ├─ utils/             工具 (time/rrule/lunar/crypto/audio/electron)
 │  │  ├─ components/        通用组件
-│  │  └─ pages/             21 个路由页面
+│  │  └─ pages/             首页工作台 + 多业务路由页面
 │  └─ public/
 ├─ desktop/                  Electron 桌面壳
 │  ├─ main.cjs              主进程 + IPC
@@ -136,7 +138,7 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物:`desktop/dist-installer/AixSystems-0.10.0-Setup.exe`(约 80MB NSIS 向导包)
+产物:`desktop/dist-installer/AixSystems-0.11.0-Setup.exe`(约 80MB NSIS 向导包)
 
 ## 维护约定
 

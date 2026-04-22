@@ -11,6 +11,7 @@ import { THEMES } from '@/config/themes';
 import { ROUTES } from '@/config/routes';
 
 const Layout = lazy(() => import('@/components/Layout'));
+const HomePage = lazy(() => import('@/pages/home'));
 const MyDay = lazy(() => import('@/pages/today/MyDay'));
 const MyWeek = lazy(() => import('@/pages/today/MyWeek'));
 const MyMonth = lazy(() => import('@/pages/today/MyMonth'));
@@ -82,6 +83,7 @@ function AppShell() {                                           // 路由表 + �
         <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to={startPage} replace />} />
           <Route path="home" element={<Navigate to={startPage} replace />} />
+          <Route path="home/index" element={<HomePage />} />
           <Route path="home/today/myDay" element={<MyDay />} />
           <Route path="home/today/myWeek" element={<MyWeek />} />
           <Route path="home/today/myMonth" element={<MyMonth />} />

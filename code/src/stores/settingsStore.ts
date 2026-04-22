@@ -25,7 +25,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   brightness: 100,
   blur: 0,
   appLocked: false,
-  startPage: '/home/today/myDay',
+  startPage: '/home/index',
   async load() {
     const rows = await db.settings.toArray();
     const kv: Record<string, any> = {};
@@ -36,7 +36,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       blur: kv.blur ?? 0,
       appLocked: !!kv.appLockPasswordHash,
       appLockPasswordHash: kv.appLockPasswordHash,
-      startPage: kv.startPage ?? '/home/today/myDay'
+      startPage: kv.startPage ?? '/home/index'
     });
   },
   async setTheme(k) { await save('theme', k); set({ theme: k }); },

@@ -1,6 +1,7 @@
 // 路由常量 - 对齐原版 /home/* 结构 + 新增 dataio/unlock
 export const ROUTES = {
   HOME: '/home',
+  HOME_DASH: '/home/index',                            // 首页工作台
   TODAY_DAY: '/home/today/myDay',                      // 我的一天
   TODAY_WEEK: '/home/today/myWeek',                    // 我的一周
   TODAY_MONTH: '/home/today/myMonth',                  // 我的一月
@@ -31,6 +32,12 @@ export const ROUTES = {
 };
 
 export const MENU_GROUPS = [                            // 左侧菜单分组
+  {
+    key: 'home', label: '首页',
+    children: [
+      { key: 'dashboard', label: '首页工作台', path: ROUTES.HOME_DASH, icon: 'home' }
+    ]
+  },
   {
     key: 'today', label: '今日规划',
     children: [
