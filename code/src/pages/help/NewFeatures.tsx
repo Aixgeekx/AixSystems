@@ -5,6 +5,11 @@ import { Timeline, Card, Typography, Tag } from 'antd';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.13.0', date: '2026-04-22', items: [
+    '主题页升级为完整主题工作台，增加当前主题摘要与更强的视觉层次',
+    '实用功能页改造成场景化功能中枢，入口卡片不再只是简单列表',
+    '进一步统一首页、功能页、主题页的设计语言'
+  ]},
   { ver: '0.12.0', date: '2026-04-22', items: [
     '侧栏导航重做了分组标题、悬停态、选中态和滚动条风格',
     '主内容区与导航区加入更完整的玻璃层、光斑和阴影层次',
