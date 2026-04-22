@@ -47,6 +47,7 @@ const Loan = lazy(() => import('@/pages/loan'));
 const MenuSort = lazy(() => import('@/pages/menusort'));
 const Habit = lazy(() => import('@/pages/habit'));
 const Goal = lazy(() => import('@/pages/goal'));
+const Growth = lazy(() => import('@/pages/growth'));
 
 function PageFallback() {
   return (
@@ -115,6 +116,7 @@ function AppShell() {                                           // 路由表 + �
           <Route path="home/menusort" element={<MenuSort />} />
           <Route path="home/habit" element={<Habit />} />
           <Route path="home/goal" element={<Goal />} />
+          <Route path="home/growth" element={<Growth />} />
           <Route path="search/index" element={<Search />} />
           <Route path="dataio" element={<DataIO />} />
           <Route path="help" element={<Help />} />
