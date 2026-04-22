@@ -89,10 +89,67 @@ export default function Layout() {
   const todayLabel = dayjs().format('YYYY 年 M 月 D 日 · dddd');
 
   return (
-    <AntLayout style={{ minHeight: '100vh', background: 'transparent' }}>
+    <AntLayout className="workspace-shell" style={{ minHeight: '100vh', background: 'transparent' }}>
+      <style>{`
+        .workspace-shell .workspace-sider .ant-layout-sider-trigger {
+          background: rgba(255,255,255,0.08);
+          color: #e2e8f0;
+          border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .workspace-shell .workspace-menu.ant-menu {
+          background: transparent;
+          color: #e2e8f0;
+        }
+        .workspace-shell .workspace-menu .ant-menu-item-group-title {
+          padding: 12px 12px 6px;
+          color: rgba(191,219,254,0.62);
+          font-size: 11px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+        }
+        .workspace-shell .workspace-menu .ant-menu-item {
+          height: auto;
+          line-height: 1.2;
+          margin: 6px 0;
+          padding-top: 12px;
+          padding-bottom: 12px;
+          border-radius: 16px;
+          color: rgba(226,232,240,0.9);
+          transition: background 0.18s ease, transform 0.18s ease, color 0.18s ease;
+        }
+        .workspace-shell .workspace-menu .ant-menu-item:hover {
+          background: rgba(255,255,255,0.08);
+          color: #fff;
+          transform: translateX(2px);
+        }
+        .workspace-shell .workspace-menu .ant-menu-item-selected {
+          background: linear-gradient(135deg, rgba(59,130,246,0.26), rgba(14,165,233,0.24));
+          color: #fff !important;
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 12px 24px rgba(15,23,42,0.18);
+        }
+        .workspace-shell .workspace-menu .ant-menu-item .ant-menu-title-content {
+          font-weight: 600;
+        }
+        .workspace-shell .workspace-content {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(59,130,246,0.4) rgba(148,163,184,0.12);
+        }
+        .workspace-shell .workspace-content::-webkit-scrollbar {
+          width: 10px;
+        }
+        .workspace-shell .workspace-content::-webkit-scrollbar-track {
+          background: rgba(148,163,184,0.08);
+          border-radius: 999px;
+        }
+        .workspace-shell .workspace-content::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, rgba(59,130,246,0.45), rgba(14,165,233,0.42));
+          border-radius: 999px;
+        }
+      `}</style>
       <ThemeBackground theme={themeMeta} />
 
       <Sider
+        className="workspace-sider"
         collapsible
         collapsed={collapsed}
         onCollapse={setCollapsed}
@@ -106,6 +163,26 @@ export default function Layout() {
           boxShadow: '0 24px 54px rgba(15, 23, 42, 0.18)'
         }}
       >
+        <div style={{
+          position: 'absolute',
+          top: -80,
+          right: -60,
+          width: 220,
+          height: 220,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${themeMeta.accent}33 0%, transparent 68%)`,
+          pointerEvents: 'none'
+        }} />
+        <div style={{
+          position: 'absolute',
+          bottom: -120,
+          left: -80,
+          width: 240,
+          height: 240,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)',
+          pointerEvents: 'none'
+        }} />
         <div style={{ padding: collapsed ? '22px 10px' : '22px 18px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{
@@ -152,6 +229,7 @@ export default function Layout() {
         </div>
 
         <Menu
+          className="workspace-menu"
           mode="inline"
           theme="dark"
           selectedKeys={[activeKey]}
@@ -225,6 +303,7 @@ export default function Layout() {
         </Header>
 
         <Content
+          className="workspace-content"
           style={{
             padding: 24,
             background: 'linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.84))',
