@@ -1,6 +1,6 @@
 // 应用外壳 Layout - 左侧菜单 + 顶部工作台 + 内容区
 import React from 'react';
-import { Layout as AntLayout, Menu, Button, Space, Dropdown, Avatar, Typography, Tag } from 'antd';
+import { Layout as AntLayout, Menu, Button, Space, Dropdown, Avatar, Typography, Tag, message } from 'antd';
 import * as Icons from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -15,6 +15,7 @@ import ItemFormDialog from '@/components/ItemForm/Dialog';
 import { db } from '@/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { fmtFromNow } from '@/utils/time';
+import { downloadBackup } from '@/utils/export';
 
 const { Sider, Header, Content } = AntLayout;
 
@@ -48,6 +49,13 @@ export default function Layout() {
       lastUpdate: allUpdates.length ? Math.max(...allUpdates) : 0
     };
   }, []) || { items: 0, diaries: 0, memos: 0, lastUpdate: 0 };
+  const lastBackup = useLiveQuery(() => db.cacheKv.get('lastBackupMeta'), []);
+
+  async function quickBackup() {
+    const result = await downloadBackup();
+    if (result.ok) message.success(result.msg);
+    else message.error(result.msg);
+  }
 
   const menuPref = useLiveQuery(() => db.settings.get('menuOrder'), []);
   const orderMap: Record<string, number> = {};
@@ -193,6 +201,9 @@ export default function Layout() {
           </div>
 
           <Space wrap size={10}>
+            <Button icon={<Icons.DownloadOutlined />} onClick={quickBackup}>
+              快速备份
+            </Button>
             <Button icon={<Icons.MacCommandOutlined />} onClick={openCommandPalette}>
               命令面板
             </Button>
@@ -239,6 +250,11 @@ export default function Layout() {
               <Tag color="blue">事项 {localPulse.items}</Tag>
               <Tag color="green">日记 {localPulse.diaries}</Tag>
               <Tag color="gold">备忘录 {localPulse.memos}</Tag>
+              {lastBackup?.value?.exportedAt ? (
+                <Tag color="purple">最近备份 {fmtFromNow(lastBackup.value.exportedAt)}</Tag>
+              ) : (
+                <Tag>尚未备份</Tag>
+              )}
             </Space>
             <Typography.Text type="secondary">
               {localPulse.lastUpdate ? `本地最近更新 ${fmtFromNow(localPulse.lastUpdate)}` : '等待本地数据写入'}

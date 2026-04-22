@@ -5,6 +5,11 @@ import { Timeline, Card, Typography, Tag } from 'antd';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.10.0', date: '2026-04-22', items: [
+    '顶部工作台加入全局快速备份按钮，不必进入数据中心也能立刻导出本地数据',
+    '本地状态条直接显示最近备份时间，备份状态在主界面可见',
+    '继续降低离线使用时的操作路径和认知负担'
+  ]},
   { ver: '0.9.0', date: '2026-04-22', items: [
     '今日页农历信息改为按需加载，避免把 lunar-javascript 提前压进全局启动路径',
     '继续压缩离线便携版的初始负担，为后续拆解剩余大块做准备'

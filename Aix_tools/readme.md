@@ -101,6 +101,6 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.9.0-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.10.0-Setup.exe` (NSIS 安装包,约 80MB)
 
-便携版: `npm run dist:portable` → `AixSystems-0.9.0-portable.exe`
+便携版: `npm run dist:portable` → `AixSystems-0.10.0-portable.exe`
