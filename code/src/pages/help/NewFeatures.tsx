@@ -5,6 +5,10 @@ import { Timeline, Card, Typography, Tag } from 'antd';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.9.0', date: '2026-04-22', items: [
+    '今日页农历信息改为按需加载，避免把 lunar-javascript 提前压进全局启动路径',
+    '继续压缩离线便携版的初始负担，为后续拆解剩余大块做准备'
+  ]},
   { ver: '0.8.0', date: '2026-04-22', items: [
     '日记与备忘录编辑器改为按需加载，打开列表页不再预先吞下富文本编辑器依赖',
     '新增本地草稿恢复，误关窗口后仍可继续编辑未保存内容',
