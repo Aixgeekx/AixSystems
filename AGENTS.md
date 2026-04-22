@@ -24,5 +24,8 @@ Tests use Vitest with a `jsdom` environment and live alongside source files as `
 ## Commit & Pull Request Guidelines
 The current history uses Conventional Commit prefixes, for example `feat: AixSystems v0.1.0 - ...`. Follow the same pattern with concise subjects. Pull requests should summarize user-visible changes, list the touched areas (`code`, `desktop`, scripts), note the commands you ran, and include screenshots for UI changes in browser or Electron views.
 
+## Autonomous Iteration
+When the user asks for ongoing iteration, continue improving features, UI, packaging, and delivery flow until the user explicitly stops. Treat each pass as a versioned release candidate: keep `results/` aligned, run `cd code && npm test` and `cd code && npm run build`, and back up stable milestones to GitHub.
+
 ## Security & Configuration Tips
 Do not commit `data/*.json`, `.env*`, or build output. Treat import/export and desktop file-system changes carefully: this app is local-first, and Electron writes backup files directly on the user machine.
