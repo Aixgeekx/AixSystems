@@ -166,6 +166,11 @@ export default function Layout() {
             <Typography.Text type="secondary">
               把今天的事项、笔记和专注安排在一个工作台里完成。
             </Typography.Text>
+            <Space wrap size={8} style={{ marginTop: 10 }}>
+              <Tag color="blue">本地离线</Tag>
+              <Tag color="green">实时保存</Tag>
+              <Tag color="gold">便携交付</Tag>
+            </Space>
           </div>
 
           <Space wrap size={10}>

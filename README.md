@@ -37,6 +37,11 @@ cd AixSystems
 cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 ```
 
+## 最近更新
+
+- `v0.3.0`：搜索页升级为检索工作台，专注页支持暂停恢复，数据中心改为本地实时统计视图，整体背景与界面层次继续增强
+- `v0.2.0`：新增全局命令面板，重构工作台外壳和交付脚本结构
+
 ## 功能速览
 
 | 类别 | 能力 |
@@ -47,6 +52,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 | **重复规则** | 每天/周/月/年 + 工作日 + 自定义间隔 + 周几 + **记忆曲线** |
 | **提醒** | 最多 5 个提醒(准时/提前 N 分/小时/天),浏览器 Notification 通道 |
 | **专注** | 倒计时 / 正计时 / 番茄钟,严格模式,5 款白噪音(Web Audio 实时合成) |
+| **工作台体验** | 全局命令面板 / 检索工作台 / 沉浸式专注界面 / 动态主题背景 |
 | **统计** | ECharts 近 14 天柱状图 / 饼图 / 时间轴 |
 | **日记** | TipTap 富文本 + 心情 + 那年今日 + AES-GCM 加密 |
 | **备忘录** | 富文本 + 文件夹 + 置顶 + 回收站 |
@@ -116,7 +122,7 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物:`desktop/dist-installer/AixSystems-0.2.0-Setup.exe`(约 80MB NSIS 向导包)
+产物:`desktop/dist-installer/AixSystems-0.3.0-Setup.exe`(约 80MB NSIS 向导包)
 
 ## 维护约定
 
