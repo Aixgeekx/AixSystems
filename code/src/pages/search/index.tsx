@@ -1,6 +1,6 @@
-// 全局搜索 - 跨 items/diaries/memos 的搜索工作台
+// 全局搜索 - 跨 items/diaries/memos 的搜索工作台 (v0.21.3 主题适配)
 import React, { useDeferredValue, useEffect, useState } from 'react';
-import { Button, Card, Col, Empty, Input, List, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { Button, Card, Col, Empty as AntEmpty, Input, List, Row, Space, Statistic, Tag, Typography } from 'antd';
 import {
   CalendarOutlined,
   HistoryOutlined,
@@ -18,6 +18,8 @@ import { previewOf } from '@/utils/html';
 import { ITEM_TYPE_MAP } from '@/config/itemTypes';
 import { ROUTES } from '@/config/routes';
 import { useAppStore } from '@/stores/appStore';
+import Empty from '@/components/Empty';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 const SEARCH_HISTORY_KEY = 'aix-search-history';
 
@@ -36,6 +38,15 @@ export default function SearchPage() {
   const deferredKw = useDeferredValue(kw.trim());
   const openItemForm = useAppStore(s => s.openItemForm);
   const nav = useNavigate();
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
+  const accent = theme.accent;
+
+  const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
+  const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
+  const titleColor = isDark ? '#f8fafc' : '#0f172a';
+  const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
+  const tintedBg = (color: string) => isDark ? `${color}1a` : `${color}12`;
 
   useEffect(() => {
     localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history.slice(0, 8)));
@@ -75,18 +86,26 @@ export default function SearchPage() {
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
       <Card
         bordered={false}
+        className="anim-fade-in-up"
         style={{
           borderRadius: 28,
           overflow: 'hidden',
-          background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,64,175,0.9) 50%, rgba(14,165,233,0.9) 100%)',
-          boxShadow: '0 28px 60px rgba(15, 23, 42, 0.18)'
+          background: isDark
+            ? `linear-gradient(135deg, ${accent}18 0%, rgba(10,14,28,0.95) 46%, rgba(6,8,18,0.98) 100%)`
+            : 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,64,175,0.9) 50%, rgba(14,165,233,0.9) 100%)',
+          boxShadow: isDark
+            ? `0 28px 60px ${accent}24, 0 0 40px ${accent}10`
+            : '0 28px 60px rgba(15, 23, 42, 0.18)',
+          border: isDark ? `1px solid ${accent}33` : 'none'
         }}
         bodyStyle={{ padding: 24 }}
       >
         <Row gutter={[24, 20]} align="middle">
           <Col xs={24} lg={15}>
-            <Typography.Text style={{ color: 'rgba(191,219,254,0.92)' }}>全局检索工作台</Typography.Text>
-            <Typography.Title level={2} style={{ margin: '8px 0 10px', color: '#f8fafc' }}>
+            <Typography.Text style={{ color: isDark ? `${accent}aa` : 'rgba(191,219,254,0.92)' }}>
+              全局检索工作台
+            </Typography.Text>
+            <Typography.Title level={2} style={{ margin: '8px 0 10px', color: '#fff', textShadow: isDark ? `0 0 20px ${accent}44` : 'none' }}>
               一次搜索事项、日记和备忘录
             </Typography.Title>
             <Typography.Paragraph style={{ marginBottom: 18, color: 'rgba(226,232,240,0.84)' }}>
@@ -94,14 +113,16 @@ export default function SearchPage() {
             </Typography.Paragraph>
             <Input
               size="large"
-              prefix={<SearchOutlined style={{ color: '#64748b' }} />}
+              prefix={<SearchOutlined style={{ color: subColor }} />}
               placeholder="搜索事项标题、描述、日记内容或备忘录"
               value={kw}
               onChange={e => setKw(e.target.value)}
               onPressEnter={() => commitHistory(kw)}
               style={{
                 borderRadius: 18,
-                background: 'rgba(255,255,255,0.92)'
+                background: isDark ? 'rgba(10,14,28,0.6)' : 'rgba(255,255,255,0.92)',
+                borderColor: isDark ? `${accent}44` : undefined,
+                color: titleColor
               }}
             />
           </Col>
@@ -109,12 +130,12 @@ export default function SearchPage() {
           <Col xs={24} lg={9}>
             <Row gutter={[12, 12]}>
               <Col span={12}>
-                <Card bordered={false} style={{ borderRadius: 22, background: 'rgba(255,255,255,0.14)' }}>
+                <Card bordered={false} className="hover-lift" style={{ borderRadius: 22, background: 'rgba(255,255,255,0.14)', transition: 'all 0.3s ease' }}>
                   <Statistic title="命中总数" value={totalHits} valueStyle={{ color: '#fff' }} />
                 </Card>
               </Col>
               <Col span={12}>
-                <Card bordered={false} style={{ borderRadius: 22, background: 'rgba(255,255,255,0.14)' }}>
+                <Card bordered={false} className="hover-lift" style={{ borderRadius: 22, background: 'rgba(255,255,255,0.14)', transition: 'all 0.3s ease' }}>
                   <Statistic title="当前关键字" value={deferredKw || '未输入'} valueStyle={{ color: '#fff', fontSize: 20 }} />
                 </Card>
               </Col>
@@ -124,9 +145,9 @@ export default function SearchPage() {
       </Card>
 
       {!deferredKw ? (
-        <Card bordered={false} style={{ borderRadius: 24, background: 'rgba(255,255,255,0.9)' }}>
-          <Typography.Text type="secondary">快捷入口</Typography.Text>
-          <Typography.Title level={4} style={{ margin: '4px 0 14px' }}>
+        <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+          <Typography.Text style={{ color: subColor }}>快捷入口</Typography.Text>
+          <Typography.Title level={4} style={{ margin: '4px 0 14px', color: titleColor }}>
             没有关键词时，可以直接跳转到常用页面
           </Typography.Title>
           <Space wrap size={12}>
@@ -138,12 +159,12 @@ export default function SearchPage() {
           {history.length ? (
             <div style={{ marginTop: 16 }}>
               <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
-                <Typography.Text type="secondary"><HistoryOutlined /> 最近搜索</Typography.Text>
+                <Typography.Text style={{ color: subColor }}><HistoryOutlined /> 最近搜索</Typography.Text>
                 <Button size="small" type="link" onClick={clearHistory}>清空历史</Button>
               </Space>
               <Space wrap size={[8, 8]} style={{ marginTop: 10 }}>
                 {history.map(item => (
-                  <Tag key={item} style={{ cursor: 'pointer' }} onClick={() => setKw(item)}>
+                  <Tag key={item} style={{ cursor: 'pointer', borderRadius: 6 }} onClick={() => setKw(item)}>
                     {item}
                   </Tag>
                 ))}
@@ -158,10 +179,11 @@ export default function SearchPage() {
           <Card
             title={<Space><CalendarOutlined /><span>事项 {result?.items.length || 0}</span></Space>}
             bordered={false}
-            style={{ borderRadius: 24, height: '100%', background: 'rgba(255,255,255,0.92)' }}
+            className="anim-fade-in-up stagger-2"
+            style={{ borderRadius: 24, height: '100%', background: cardBg, border: cardBorder }}
           >
             {(result?.items.length || 0) === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="没有匹配的事项" />
+              <Empty text="没有匹配的事项" />
             ) : (
               <List
                 split={false}
@@ -173,13 +195,13 @@ export default function SearchPage() {
                       style={{ paddingInline: 0 }}
                       actions={[<Button key="open" type="link" onClick={() => openItemForm(item.id)}>打开</Button>]}
                     >
-                      <div style={{ width: '100%', padding: 14, borderRadius: 18, background: 'rgba(59,130,246,0.06)' }}>
+                      <div style={{ width: '100%', padding: 14, borderRadius: 18, background: tintedBg('#3b82f6') }}>
                         <Space wrap size={[8, 8]}>
-                          <Tag color={meta.color}>{meta.label}</Tag>
-                          <Tag>{fmtDate(item.startTime)}</Tag>
+                          <Tag color={meta.color} style={{ borderRadius: 6 }}>{meta.label}</Tag>
+                          <Tag style={{ borderRadius: 6 }}>{fmtDate(item.startTime)}</Tag>
                         </Space>
-                        <Typography.Title level={5} style={{ margin: '10px 0 4px' }}>{item.title}</Typography.Title>
-                        <Typography.Text type="secondary">
+                        <Typography.Title level={5} style={{ margin: '10px 0 4px', color: titleColor }}>{item.title}</Typography.Title>
+                        <Typography.Text style={{ color: subColor }}>
                           {previewOf(item.description || item.title, 56)}
                         </Typography.Text>
                       </div>
@@ -195,10 +217,11 @@ export default function SearchPage() {
           <Card
             title={<Space><ReadOutlined /><span>日记 {result?.diaries.length || 0}</span></Space>}
             bordered={false}
-            style={{ borderRadius: 24, height: '100%', background: 'rgba(255,255,255,0.92)' }}
+            className="anim-fade-in-up stagger-3"
+            style={{ borderRadius: 24, height: '100%', background: cardBg, border: cardBorder }}
           >
             {(result?.diaries.length || 0) === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="没有匹配的日记" />
+              <Empty text="没有匹配的日记" />
             ) : (
               <List
                 split={false}
@@ -208,15 +231,15 @@ export default function SearchPage() {
                     style={{ paddingInline: 0 }}
                     actions={[<Button key="open" type="link" onClick={() => nav(ROUTES.DIARY_CAL)}>前往</Button>]}
                   >
-                    <div style={{ width: '100%', padding: 14, borderRadius: 18, background: 'rgba(16,185,129,0.07)' }}>
+                    <div style={{ width: '100%', padding: 14, borderRadius: 18, background: tintedBg('#16a34a') }}>
                       <Space wrap size={[8, 8]}>
-                        <Tag color="green">日记</Tag>
-                        <Tag>{fmtDate(diary.date)}</Tag>
+                        <Tag color="green" style={{ borderRadius: 6 }}>日记</Tag>
+                        <Tag style={{ borderRadius: 6 }}>{fmtDate(diary.date)}</Tag>
                       </Space>
-                      <Typography.Title level={5} style={{ margin: '10px 0 4px' }}>
+                      <Typography.Title level={5} style={{ margin: '10px 0 4px', color: titleColor }}>
                         {diary.title || '未命名日记'}
                       </Typography.Title>
-                      <Typography.Text type="secondary">
+                      <Typography.Text style={{ color: subColor }}>
                         {previewOf(diary.content, 72)}
                       </Typography.Text>
                     </div>
@@ -231,10 +254,11 @@ export default function SearchPage() {
           <Card
             title={<Space><FileTextOutlined /><span>备忘录 {result?.memos.length || 0}</span></Space>}
             bordered={false}
-            style={{ borderRadius: 24, height: '100%', background: 'rgba(255,255,255,0.92)' }}
+            className="anim-fade-in-up stagger-4"
+            style={{ borderRadius: 24, height: '100%', background: cardBg, border: cardBorder }}
           >
             {(result?.memos.length || 0) === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="没有匹配的备忘录" />
+              <Empty text="没有匹配的备忘录" />
             ) : (
               <List
                 split={false}
@@ -244,15 +268,15 @@ export default function SearchPage() {
                     style={{ paddingInline: 0 }}
                     actions={[<Button key="open" type="link" onClick={() => nav(ROUTES.MEMO)}>前往</Button>]}
                   >
-                    <div style={{ width: '100%', padding: 14, borderRadius: 18, background: 'rgba(245,158,11,0.08)' }}>
+                    <div style={{ width: '100%', padding: 14, borderRadius: 18, background: tintedBg('#f59e0b') }}>
                       <Space wrap size={[8, 8]}>
-                        <Tag color="gold">备忘录</Tag>
-                        <Tag>{fmtDate(memo.updatedAt)}</Tag>
+                        <Tag color="gold" style={{ borderRadius: 6 }}>备忘录</Tag>
+                        <Tag style={{ borderRadius: 6 }}>{fmtDate(memo.updatedAt)}</Tag>
                       </Space>
-                      <Typography.Title level={5} style={{ margin: '10px 0 4px' }}>
+                      <Typography.Title level={5} style={{ margin: '10px 0 4px', color: titleColor }}>
                         {memo.title || '未命名备忘'}
                       </Typography.Title>
-                      <Typography.Text type="secondary">
+                      <Typography.Text style={{ color: subColor }}>
                         {previewOf(memo.content, 72)}
                       </Typography.Text>
                     </div>
@@ -265,11 +289,11 @@ export default function SearchPage() {
       </Row>
 
       {deferredKw ? (
-        <Card bordered={false} style={{ borderRadius: 24, background: 'rgba(255,255,255,0.9)' }}>
+        <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
           <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
             <div>
-              <Typography.Text type="secondary">检索建议</Typography.Text>
-              <Typography.Title level={5} style={{ margin: '4px 0 0' }}>
+              <Typography.Text style={{ color: subColor }}>检索建议</Typography.Text>
+              <Typography.Title level={5} style={{ margin: '4px 0 0', color: titleColor }}>
                 没找到想要的内容时，换一个更具体的词，通常效果更好。
               </Typography.Title>
             </div>
