@@ -50,6 +50,7 @@ function AppShell() {                                           // 路由表 + �
   const nav = useNavigate();
   const loc = useLocation();
   const appLocked = useSettingsStore(s => s.appLocked);
+  const startPage = useSettingsStore(s => s.startPage) || ROUTES.TODAY_DAY;
 
   useEffect(() => {
     const unlocked = sessionStorage.getItem('unlocked') === '1';
@@ -62,8 +63,8 @@ function AppShell() {                                           // 路由表 + �
     <Routes>
       <Route path="/unlock" element={<Unlock />} />
       <Route path="/" element={<Layout />}>
-        <Route index element={<Navigate to={ROUTES.TODAY_DAY} replace />} />
-        <Route path="home" element={<Navigate to={ROUTES.TODAY_DAY} replace />} />
+        <Route index element={<Navigate to={startPage} replace />} />
+        <Route path="home" element={<Navigate to={startPage} replace />} />
         <Route path="home/today/myDay" element={<MyDay />} />
         <Route path="home/today/myWeek" element={<MyWeek />} />
         <Route path="home/today/myMonth" element={<MyMonth />} />
@@ -96,7 +97,7 @@ function AppShell() {                                           // 路由表 + �
         <Route path="newcomerGuide/newcomerGuide" element={<NewcomerGuide />} />
         <Route path="characteristic/index" element={<Characteristic />} />
         <Route path="newFeatures/index" element={<NewFeatures />} />
-        <Route path="*" element={<Navigate to={ROUTES.TODAY_DAY} replace />} />
+        <Route path="*" element={<Navigate to={startPage} replace />} />
       </Route>
     </Routes>
   );

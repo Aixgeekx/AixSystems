@@ -39,6 +39,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 
 ## 最近更新
 
+- `v0.4.0`：专注会话支持本地断点续跑，启动页设置正式生效，系统设置页升级为本地系统控制台
 - `v0.3.0`：搜索页升级为检索工作台，专注页支持暂停恢复，数据中心改为本地实时统计视图，整体背景与界面层次继续增强
 - `v0.2.0`：新增全局命令面板，重构工作台外壳和交付脚本结构
 
@@ -61,6 +62,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 | **桌面小部件** | 浮动小窗,三种样式 + 透明度调节 + 位置记忆 |
 | **搜索** | 跨事项 / 日记 / 备忘录 |
 | **备份** | JSON 全量导出导入(桌面版直写磁盘) |
+| **本地体验** | 专注断点续跑 / 启动页偏好生效 / 存储状态可见 |
 | **PWA** | 可安装 + Service Worker 离线缓存 |
 
 ## 技术栈
@@ -122,7 +124,7 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物:`desktop/dist-installer/AixSystems-0.3.0-Setup.exe`(约 80MB NSIS 向导包)
+产物:`desktop/dist-installer/AixSystems-0.4.0-Setup.exe`(约 80MB NSIS 向导包)
 
 ## 维护约定
 
