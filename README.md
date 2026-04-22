@@ -118,6 +118,12 @@ cd desktop && npm install && npm run dist
 
 产物:`desktop/dist-installer/AixSystems-0.2.0-Setup.exe`(约 80MB NSIS 向导包)
 
+## 维护约定
+
+- 每次功能、界面、脚本或交付结构发生变更时,同步更新本 `README.md`
+- 每一轮稳定修改完成后,提交并推送到 GitHub 作为远端备份
+- 持续迭代模式下,默认按“修改代码 → 更新 README → 测试/构建 → 推送 GitHub”执行
+
 ## License
 
 MIT
