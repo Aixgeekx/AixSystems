@@ -150,6 +150,13 @@ cd desktop && npm install && npm run dist
 
 产物:`desktop/dist-installer/AixSystems-0.16.0-Setup.exe`(约 80MB NSIS 向导包)
 
+## 便携路线
+
+- 保留网页版,同时继续强化桌面本地程序路线
+- 便携版目标是“解压即用”,适合拷到其他 Windows 电脑直接运行
+- 便携版在桌面环境下会把 `userData/` 放到程序目录旁边,让数据跟着程序一起迁移
+- 首页会显示应用本地占用和设备磁盘空间,方便判断当前电脑是否适合继续沉淀数据
+
 ## 维护约定
 
 - 每次功能、界面、脚本或交付结构发生变更时,同步更新本 `README.md`

@@ -4,6 +4,16 @@ const path = require('node:path');
 const fs = require('node:fs');
 
 const DEV = !!process.env.SGX_DEV;                                      // SGX_DEV=1 启用开发模式
+const PORTABLE_DIR = process.env.PORTABLE_EXECUTABLE_DIR
+  ? path.resolve(process.env.PORTABLE_EXECUTABLE_DIR)
+  : '';
+
+if (PORTABLE_DIR) {
+  const portableUserData = path.join(PORTABLE_DIR, 'userData');
+  fs.mkdirSync(portableUserData, { recursive: true });
+  app.setPath('userData', portableUserData);
+  app.setPath('sessionData', portableUserData);
+}
 
 // 打包后 dist 在 resourcesPath/app-dist,源码运行时在 ../code/dist
 function getDistIndex() {
