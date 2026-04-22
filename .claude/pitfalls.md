@@ -15,3 +15,15 @@
 - **原因**：`rcedit` 在写入可执行文件元信息时可能先失败并自动重试，electron-builder 后续仍能继续完成打包。
 - **解决**：以最终退出码和 `desktop/dist-installer/AixSystems-*.portable.exe` 是否生成作为判断标准，而不是只看中途一条日志。
 - **教训**：桌面打包链路要同时看过程日志和最终产物，必要时把“默认推荐路线”放到更稳定的目录式便携包上。
+
+### [2026-04-22] 在 Vite 浏览器运行时代码里混用 require 会导致整页白屏
+- **现象**：应用启动后一片空白，控制台报 `ReferenceError: require is not defined`。
+- **原因**：`code/src/hooks/useVariants.ts` 在 React 浏览器运行时调用了 `require('antd')`，而生产态前端没有 CommonJS `require`。
+- **解决**：改为顶部 `import { theme as antdTheme } from 'antd'`，运行时直接使用 `antdTheme.darkAlgorithm`。
+- **教训**：Vite + React 前端运行时代码一律使用 ESM import，不能把 Node/CommonJS 写法混进浏览器路径。
+
+### [2026-04-22] 界面显示版本号与实际打包版本可能脱节
+- **现象**：安装包和 `package.json` 已经升到新版本，但侧栏“工作台版本”仍显示旧号，例如还停在 `v0.18.0`。
+- **原因**：界面版本号来自 `code/src/config/constants.ts` 里的 `APP_VERSION` 常量，并不是自动读取 `package.json`。
+- **解决**：发布前同步更新 `APP_VERSION`，并和 `code/package.json`、`desktop/package.json` 一起检查。
+- **教训**：只改打包版本还不够，UI 里如果单独维护版本常量，也必须一起对齐，否则会误导验收和排错。

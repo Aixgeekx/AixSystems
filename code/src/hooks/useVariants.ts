@@ -1,5 +1,6 @@
+import { theme as antdTheme } from 'antd';
 import { useSettingsStore } from '@/stores/settingsStore';
-import { THEMES, DEFAULT_THEME, ThemeStyle } from '@/config/themes';
+import { THEMES, DEFAULT_THEME } from '@/config/themes';
 
 export function useThemeVariants() {
   const themeKey = useSettingsStore(s => s.theme);
@@ -143,9 +144,9 @@ export function useThemeVariants() {
     const base = {
       token: {
         colorPrimary: theme.accent,
-        fontFamily: theme.fontFamily,
+        fontFamily: '"Orbitron", "SF Pro Display", -apple-system, sans-serif',
       },
-      algorithm: style === 'dark' || style === 'cyberpunk' || theme.key === 'minimal_dark' ? require('antd').theme.darkAlgorithm : undefined
+      algorithm: style === 'dark' || style === 'cyberpunk' || theme.key === 'minimal_dark' ? antdTheme.darkAlgorithm : undefined
     };
     return base;
   };

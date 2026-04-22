@@ -33,6 +33,17 @@ export default function Layout() {
   const theme = useSettingsStore(s => s.theme);
   const themeMeta = THEMES.find(t => t.key === theme) || THEMES[0];
   const { getPanelStyle } = useThemeVariants();
+  const panelSkin = getPanelStyle() as any;
+  const shellTitle = panelSkin.titleColor || panelSkin.color || (themeMeta.style === 'dark' || themeMeta.style === 'cyberpunk' ? '#f8fafc' : '#0f172a');
+  const shellSub = panelSkin.subColor || (themeMeta.style === 'dark' || themeMeta.style === 'cyberpunk' ? 'rgba(226,232,240,0.74)' : '#64748b');
+  const shellButtonStyle = {
+    borderRadius: 12,
+    fontWeight: 600,
+    border: `1px solid ${themeMeta.accent}33`,
+    background: themeMeta.style === 'dark' || themeMeta.style === 'cyberpunk' ? 'rgba(8,16,30,0.82)' : 'rgba(255,255,255,0.82)',
+    color: shellTitle,
+    boxShadow: themeMeta.style === 'dark' || themeMeta.style === 'cyberpunk' ? `0 0 16px ${themeMeta.accent}22` : '0 12px 24px rgba(15,23,42,0.08)'
+  } as React.CSSProperties;
   const localPulse = useLiveQuery(async () => {
     const [items, diaries, memos] = await Promise.all([
       db.items.toArray(),
@@ -182,7 +193,7 @@ export default function Layout() {
           background: `radial-gradient(circle, ${themeMeta.accent}33 0%, transparent 60%)`,
           pointerEvents: 'none',
           transition: 'all 0.4s ease'
-        }} />
+          }} />
         <div style={{ 
           padding: collapsed ? '26px 12px' : '28px 22px 22px', 
             borderBottom: `1px solid ${themeMeta.accent}33`,
@@ -207,10 +218,10 @@ export default function Layout() {
               </div>
               {!collapsed && (
                 <div style={{ minWidth: 0 }}>
-                  <Typography.Text strong style={{ display: 'block', fontSize: 18, color: '#00f0ff', textShadow: '0 0 10px rgba(0,240,255,0.5)' }}>
+                  <Typography.Text strong style={{ display: 'block', fontSize: 18, color: shellTitle, textShadow: panelSkin.textShadow || 'none' }}>
                     {APP_NAME}
                   </Typography.Text>
-                  <Typography.Text style={{ fontSize: 12, color: 'rgba(0,240,255,0.6)' }}>
+                  <Typography.Text style={{ fontSize: 12, color: shellSub }}>
                     {APP_SUB}
                   </Typography.Text>
                 </div>
@@ -222,15 +233,15 @@ export default function Layout() {
                 marginTop: 16,
                 padding: '12px 14px',
                 borderRadius: 8,
-                background: 'rgba(0, 240, 255, 0.05)',
-                border: '1px solid rgba(0, 240, 255, 0.2)',
-                color: '#00f0ff'
+                background: themeMeta.style === 'dark' || themeMeta.style === 'cyberpunk' ? 'rgba(0, 240, 255, 0.05)' : 'rgba(255,255,255,0.45)',
+                border: `1px solid ${themeMeta.accent}33`,
+                color: shellTitle
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <Typography.Text style={{ color: '#00f0ff' }}>工作台版本</Typography.Text>
-                  <Tag color="cyan" style={{ marginInlineEnd: 0, background: 'transparent', border: '1px solid #00f0ff' }}>v{APP_VERSION}</Tag>
+                  <Typography.Text style={{ color: shellTitle }}>工作台版本</Typography.Text>
+                  <Tag color="cyan" style={{ marginInlineEnd: 0, background: 'transparent', border: `1px solid ${themeMeta.accent}`, color: shellTitle }}>v{APP_VERSION}</Tag>
                 </div>
-                <Typography.Text style={{ display: 'block', marginTop: 6, color: 'rgba(0,240,255,0.6)', fontSize: 12 }}>
+                <Typography.Text style={{ display: 'block', marginTop: 6, color: shellSub, fontSize: 12 }}>
                   Ctrl + K 打开命令面板，快速跳页与执行动作。
                 </Typography.Text>
               </div>
@@ -272,17 +283,17 @@ export default function Layout() {
             <Typography.Text style={{ 
               display: 'block', 
               marginBottom: 6, 
-              color: 'rgba(0, 240, 255, 0.6)',
+              color: shellSub,
               fontWeight: 500,
               fontSize: 13,
               letterSpacing: '0.04em'
             }}>
               {todayLabel}
             </Typography.Text>
-            <Typography.Title level={2} style={{ margin: 0, color: '#00f0ff', textShadow: '0 0 10px rgba(0,240,255,0.5)', fontWeight: 700, letterSpacing: '-0.02em' }}>
+            <Typography.Title level={2} style={{ margin: 0, color: shellTitle, textShadow: panelSkin.textShadow || 'none', fontWeight: 700, letterSpacing: '-0.02em' }}>
               {activeLabel}
             </Typography.Title>
-            <Typography.Text style={{ color: 'rgba(15, 23, 42, 0.6)', fontSize: 14 }}>
+            <Typography.Text style={{ color: shellSub, fontSize: 14 }}>
               把今天的事项、笔记和专注安排在一个工作台里完成。
             </Typography.Text>
             <Space wrap size={10} style={{ marginTop: 14 }}>
@@ -293,13 +304,13 @@ export default function Layout() {
           </div>
 
           <Space wrap size={10}>
-            <Button size="large" type="text" style={{ fontWeight: 500, color: 'rgba(0,0,0,0.65)' }} icon={<Icons.DownloadOutlined />} onClick={quickBackup}>
+            <Button size="large" style={shellButtonStyle} icon={<Icons.DownloadOutlined />} onClick={quickBackup}>
               快速备份
             </Button>
-            <Button size="large" style={{ borderRadius: 12, fontWeight: 500, background: 'rgba(255,255,255,0.8)' }} icon={<Icons.MacCommandOutlined />} onClick={openCommandPalette}>
+            <Button size="large" style={shellButtonStyle} icon={<Icons.MacCommandOutlined />} onClick={openCommandPalette}>
               命令面板
             </Button>
-            <Button size="large" style={{ borderRadius: 12, fontWeight: 500, background: 'rgba(255,255,255,0.8)' }} icon={<Icons.SearchOutlined />} onClick={() => nav(ROUTES.SEARCH)}>
+            <Button size="large" style={shellButtonStyle} icon={<Icons.SearchOutlined />} onClick={() => nav(ROUTES.SEARCH)}>
               完整搜索
             </Button>
             <Button size="large" type="primary" style={{ borderRadius: 12, fontWeight: 600, boxShadow: `0 8px 16px -4px ${themeMeta.accent}66` }} icon={<Icons.PlusOutlined />} onClick={() => openItemForm()}>
@@ -320,14 +331,14 @@ export default function Layout() {
           className="workspace-content"
           style={{
             padding: '24px 32px',
-            background: 'rgba(10, 10, 20, 0.85)',
-            backdropFilter: 'blur(40px)',
-            WebkitBackdropFilter: 'blur(40px)',
+            background: panelSkin.background,
+            backdropFilter: panelSkin.backdropFilter,
+            WebkitBackdropFilter: panelSkin.WebkitBackdropFilter,
             borderRadius: 8,
             minHeight: 'calc(100vh - 132px)',
             overflow: 'auto',
-            border: '1px solid rgba(0, 240, 255, 0.3)',
-            boxShadow: '0 0 20px rgba(0, 240, 255, 0.1), inset 0 0 10px rgba(0, 240, 255, 0.1)',
+            border: panelSkin.border,
+            boxShadow: panelSkin.boxShadow,
             animation: 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
             transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
             position: 'relative'
@@ -344,8 +355,8 @@ export default function Layout() {
             marginBottom: 18,
             padding: '12px 16px',
             borderRadius: 8,
-            background: 'rgba(0, 240, 255, 0.05)',
-            border: '1px solid rgba(0, 240, 255, 0.2)'
+            background: themeMeta.style === 'dark' || themeMeta.style === 'cyberpunk' ? 'rgba(0, 240, 255, 0.05)' : 'rgba(255,255,255,0.45)',
+            border: `1px solid ${themeMeta.accent}33`
           }}>
             <Space wrap size={8}>
               <Tag color="blue">事项 {localPulse.items}</Tag>
@@ -357,7 +368,7 @@ export default function Layout() {
                 <Tag>尚未备份</Tag>
               )}
             </Space>
-            <Typography.Text type="secondary">
+            <Typography.Text style={{ color: shellSub }}>
               {localPulse.lastUpdate ? `本地最近更新 ${fmtFromNow(localPulse.lastUpdate)}` : '等待本地数据写入'}
             </Typography.Text>
           </div>
