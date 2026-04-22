@@ -14,6 +14,7 @@ import CommandPalette from '@/components/CommandPalette';
 import ItemFormDialog from '@/components/ItemForm/Dialog';
 import { db } from '@/db';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { fmtFromNow } from '@/utils/time';
 
 const { Sider, Header, Content } = AntLayout;
 
@@ -29,6 +30,24 @@ export default function Layout() {
   const { collapsed, setCollapsed, openItemForm, openCommandPalette } = useAppStore();
   const theme = useSettingsStore(s => s.theme);
   const themeMeta = THEMES.find(t => t.key === theme) || THEMES[0];
+  const localPulse = useLiveQuery(async () => {
+    const [items, diaries, memos] = await Promise.all([
+      db.items.toArray(),
+      db.diaries.toArray(),
+      db.memos.toArray()
+    ]);
+    const allUpdates = [
+      ...items.map(item => item.updatedAt || item.createdAt || 0),
+      ...diaries.map(diary => diary.updatedAt || diary.createdAt || 0),
+      ...memos.map(memo => memo.updatedAt || memo.createdAt || 0)
+    ].filter(Boolean);
+    return {
+      items: items.filter(item => !item.deletedAt).length,
+      diaries: diaries.filter(diary => !diary.deletedAt).length,
+      memos: memos.filter(memo => !memo.deletedAt).length,
+      lastUpdate: allUpdates.length ? Math.max(...allUpdates) : 0
+    };
+  }, []) || { items: 0, diaries: 0, memos: 0, lastUpdate: 0 };
 
   const menuPref = useLiveQuery(() => db.settings.get('menuOrder'), []);
   const orderMap: Record<string, number> = {};
@@ -205,6 +224,26 @@ export default function Layout() {
             boxShadow: '0 26px 56px rgba(15, 23, 42, 0.1)'
           }}
         >
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            marginBottom: 18,
+            padding: '12px 16px',
+            borderRadius: 20,
+            background: 'rgba(15,23,42,0.04)',
+            border: '1px solid rgba(148,163,184,0.16)'
+          }}>
+            <Space wrap size={8}>
+              <Tag color="blue">事项 {localPulse.items}</Tag>
+              <Tag color="green">日记 {localPulse.diaries}</Tag>
+              <Tag color="gold">备忘录 {localPulse.memos}</Tag>
+            </Space>
+            <Typography.Text type="secondary">
+              {localPulse.lastUpdate ? `本地最近更新 ${fmtFromNow(localPulse.lastUpdate)}` : '等待本地数据写入'}
+            </Typography.Text>
+          </div>
           <Outlet />
         </Content>
       </AntLayout>

@@ -6,6 +6,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { downloadBackup, importAll, pickAndImport } from '@/utils/export';
 import { getElectron, isElectron } from '@/utils/electron';
+import { fmtDateTime, fmtFromNow } from '@/utils/time';
 
 export default function DataIOPage() {
   const electron = isElectron();
@@ -14,6 +15,7 @@ export default function DataIOPage() {
     for (const table of db.tables) next[table.name] = await table.count();
     return next;
   }, []) || {};
+  const lastBackup = useLiveQuery(() => db.cacheKv.get('lastBackupMeta'), []);
 
   const totalRows = Object.values(stats).reduce((sum, count) => sum + count, 0);
 
@@ -100,6 +102,19 @@ export default function DataIOPage() {
             <Typography.Paragraph type="secondary">
               备份会导出全部核心数据，适合换机、迁移或归档。建议在做大改动前先导出一份。
             </Typography.Paragraph>
+            {lastBackup?.value ? (
+              <div style={{ marginBottom: 14, padding: 12, borderRadius: 16, background: 'rgba(15,23,42,0.04)' }}>
+                <Typography.Text strong>最近一次备份</Typography.Text>
+                <Typography.Paragraph style={{ margin: '6px 0 0', color: '#475569' }}>
+                  {fmtDateTime(lastBackup.value.exportedAt)} · {fmtFromNow(lastBackup.value.exportedAt)}
+                </Typography.Paragraph>
+                <Space wrap size={[8, 8]}>
+                  <Tag color="blue">{lastBackup.value.mode === 'electron' ? '桌面直写' : '浏览器下载'}</Tag>
+                  <Tag>{Math.round((lastBackup.value.size || 0) / 1024)} KB</Tag>
+                  {lastBackup.value.path ? <Tag>{lastBackup.value.path}</Tag> : null}
+                </Space>
+              </div>
+            ) : null}
             <Space wrap>
               <Button type="primary" icon={<DownloadOutlined />} onClick={onBackup}>
                 {electron ? '保存备份到本地' : '下载备份 JSON'}

@@ -2,6 +2,16 @@
 import { db } from '@/db';
 import { getElectron } from './electron';
 
+async function saveBackupMeta(meta: { mode: 'electron' | 'browser'; path?: string; size: number }) {
+  await db.cacheKv.put({
+    key: 'lastBackupMeta',
+    value: {
+      ...meta,
+      exportedAt: Date.now()
+    }
+  });
+}
+
 export async function exportAll(): Promise<Blob> {                    // 导出全库
   const payload: Record<string, any[]> = {};
   const tables = db.tables;
@@ -20,6 +30,7 @@ export async function downloadBackup(): Promise<{ ok: boolean; path?: string; ms
     try {
       const text = await blob.text();
       const p = await electron.saveBackup(text);
+      await saveBackupMeta({ mode: 'electron', path: p, size: text.length });
       return { ok: true, path: p, msg: `已保存到 ${p}` };
     } catch (e: any) { return { ok: false, msg: '保存失败: ' + e.message }; }
   }
@@ -30,6 +41,7 @@ export async function downloadBackup(): Promise<{ ok: boolean; path?: string; ms
   a.download = `aixsystems-backup-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  await saveBackupMeta({ mode: 'browser', size: blob.size });
   return { ok: true, msg: '已触发浏览器下载' };
 }
 
