@@ -5,6 +5,11 @@ import { Timeline, Card, Typography, Tag } from 'antd';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.19.0', date: '2026-04-22', items: [
+    '主题工作台新增矩阵终端、森林氧气、余烬夜幕、极光薄暮等新主题，主题总数继续扩充',
+    '新增按时间自动切换主题，可分别设置白天/夜间主题和切换时间点',
+    '便携版打包改为默认输出 win-unpacked 目录压缩包，解压即可运行，同时保留单文件 portable.exe 作为可选路线'
+  ]},
   { ver: '0.18.1', date: '2026-04-22', items: [
     '浮动小组件新增“跟随全局主题”模式，会自动同步白天、黑夜、极简、赛博朋克、渐变、复古等主界面风格',
     '小组件设置面板改为主题按钮组，去掉原来容易发白的默认控件底色',

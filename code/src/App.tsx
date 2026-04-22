@@ -1,15 +1,15 @@
 // 应用路由根 - 锁屏守卫化 + 懒加载路由
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { ConfigProvider, App as AntApp, Spin, theme as antTheme } from 'antd';
+import { ConfigProvider, App as AntApp, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useReminder } from '@/hooks/useReminder';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { seedIfEmpty } from '@/db/seed';
-import { THEMES } from '@/config/themes';
 import { useThemeVariants } from '@/hooks/useVariants';
 import { ROUTES } from '@/config/routes';
+import { resolveAutoTheme } from '@/utils/themeAuto';
 
 const Layout = lazy(() => import('@/components/Layout'));
 const HomePage = lazy(() => import('@/pages/home'));
@@ -127,13 +127,33 @@ function AppShell() {                                           // 路由表 + �
 export default function App() {
   const [ready, setReady] = useState(false);
   const theme = useSettingsStore(s => s.theme);
+  const themeMode = useSettingsStore(s => s.themeMode);
+  const autoThemeDay = useSettingsStore(s => s.autoThemeDay);
+  const autoThemeNight = useSettingsStore(s => s.autoThemeNight);
+  const autoThemeDayStart = useSettingsStore(s => s.autoThemeDayStart);
+  const autoThemeNightStart = useSettingsStore(s => s.autoThemeNightStart);
   const load = useSettingsStore(s => s.load);
-  const themeMeta = THEMES.find(t => t.key === theme) || THEMES[0];
+  const setTheme = useSettingsStore(s => s.setTheme);
   const { getAntdTheme } = useThemeVariants();
 
   useEffect(() => {
     (async () => { await seedIfEmpty(); await load(); setReady(true); })();
   }, [load]);
+
+  useEffect(() => {
+    if (!ready || themeMode !== 'auto') return;
+    let stopped = false;
+    const syncTheme = async () => {
+      const next = resolveAutoTheme(Date.now(), autoThemeDay, autoThemeNight, autoThemeDayStart, autoThemeNightStart);
+      if (!stopped && theme !== next) await setTheme(next);
+    };
+    void syncTheme();
+    const timer = window.setInterval(() => { void syncTheme(); }, 60_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [autoThemeDay, autoThemeDayStart, autoThemeNight, autoThemeNightStart, ready, setTheme, theme, themeMode]);
 
   if (!ready) return <div style={{ padding: 40, textAlign: 'center' }}>加载中...</div>;
 

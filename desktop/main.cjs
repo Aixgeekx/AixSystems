@@ -4,9 +4,11 @@ const path = require('node:path');
 const fs = require('node:fs');
 
 const DEV = !!process.env.SGX_DEV;                                      // SGX_DEV=1 启用开发模式
+const PORTABLE_MARKERS = ['AixSystems.portable', 'portable.flag'];
+const EXEC_DIR = app.isPackaged ? path.dirname(process.execPath) : '';
 const PORTABLE_DIR = process.env.PORTABLE_EXECUTABLE_DIR
   ? path.resolve(process.env.PORTABLE_EXECUTABLE_DIR)
-  : '';
+  : (EXEC_DIR && PORTABLE_MARKERS.some(name => fs.existsSync(path.join(EXEC_DIR, name))) ? EXEC_DIR : '');
 
 if (PORTABLE_DIR) {
   const portableUserData = path.join(PORTABLE_DIR, 'userData');

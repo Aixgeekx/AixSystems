@@ -12,6 +12,13 @@ describe('widgetThemes', () => {
     expect(resolveWidgetTheme('retro_red')).toBe('retro');
   });
 
+  it('新增主题会按风格自动映射到对应小组件主题', () => {
+    expect(resolveWidgetTheme('forest')).toBe('daylight');
+    expect(resolveWidgetTheme('matrix')).toBe('cyberpunk');
+    expect(resolveWidgetTheme('ember')).toBe('night');
+    expect(resolveWidgetTheme('aurora')).toBe('gradient');
+  });
+
   it('极简暗色会落到夜间小组件，避免重新变白', () => {
     expect(resolveWidgetTheme('minimal_dark')).toBe('night');
     expect(getWidgetSkin('auto', 'minimal_dark').label).toBe('黑夜');

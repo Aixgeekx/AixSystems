@@ -1,5 +1,5 @@
 import type { ThemeConfig } from 'antd';
-import { DEFAULT_THEME } from './themes';
+import { DEFAULT_THEME, THEMES } from './themes';
 
 export type WidgetTheme = 'daylight' | 'night' | 'minimal' | 'cyberpunk' | 'gradient' | 'retro';
 export type WidgetThemeMode = 'auto' | WidgetTheme;
@@ -184,12 +184,14 @@ export function normalizeWidgetThemeMode(value?: string | null): WidgetThemeMode
 }
 
 export function resolveWidgetTheme(themeKey = DEFAULT_THEME): WidgetTheme {
-  if (themeKey === 'cyberpunk') return 'cyberpunk';
-  if (themeKey === 'day') return 'daylight';
-  if (themeKey === 'night' || themeKey === 'minimal_dark') return 'night';
-  if (themeKey === 'minimal') return 'minimal';
-  if (themeKey.startsWith('retro')) return 'retro';
-  if (themeKey.startsWith('grad_')) return 'gradient';
+  const theme = THEMES.find(item => item.key === themeKey) || THEMES.find(item => item.key === DEFAULT_THEME);
+  if (!theme) return 'night';
+  if (theme.key === 'minimal_dark' || theme.style === 'dark') return 'night';
+  if (theme.style === 'cyberpunk') return 'cyberpunk';
+  if (theme.style === 'light') return 'daylight';
+  if (theme.style === 'minimal') return 'minimal';
+  if (theme.style === 'retro') return 'retro';
+  if (theme.style === 'gradient') return 'gradient';
   return 'night';
 }
 

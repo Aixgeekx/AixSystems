@@ -1,6 +1,6 @@
 {
   "name": "aixsystems-desktop",
-  "version": "0.18.1",
+  "version": "0.19.0",
   "description": "AixSystems 时间管理系统 - Electron 桌面壳",
   "main": "main.cjs",
   "author": {
@@ -13,7 +13,8 @@
     "start": "electron .",
     "dev": "cross-env SGX_DEV=1 electron .",
     "dist": "electron-builder --win --x64",
-    "dist:portable": "electron-builder --win portable --x64"
+    "dist:portable": "electron-builder --win dir --x64",
+    "dist:portable-exe": "electron-builder --win portable --x64"
   },
   "devDependencies": {
     "electron": "^31.7.7",

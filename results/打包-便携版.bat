@@ -7,7 +7,7 @@ where npm >nul 2>nul || (echo 未检测到 npm,请先安装 Node.js 后重试 & pause & exi
 
 echo ========================================
 echo   打包 AixSystems 便携版压缩包
-echo   产物可解压后直接在 Windows 上运行
+echo   产物为解压即用的目录版,不会把所有资源压进单个 exe
 echo ========================================
 echo.
 
@@ -48,17 +48,16 @@ if not exist "desktop\node_modules\.bin\electron-builder.cmd" (
   popd
 )
 
-echo [4/5] 构建便携版 exe...
+echo [4/5] 构建便携目录...
 pushd desktop
 call npm run dist:portable
 set ERR=%errorlevel%
 popd
-if %ERR% neq 0 (echo 便携版构建失败 & pause & exit /b 1)
+if %ERR% neq 0 (echo 便携目录构建失败 & pause & exit /b 1)
 
-set "PORTABLE_EXE="
-for %%F in ("desktop\dist-installer\*portable*.exe") do set "PORTABLE_EXE=%%~fF"
-if not defined PORTABLE_EXE (
-  echo 未找到便携版 exe
+set "UNPACKED_DIR=desktop\dist-installer\win-unpacked"
+if not exist "%UNPACKED_DIR%\AixSystems.exe" (
+  echo 未找到便携目录产物
   pause
   exit /b 1
 )
@@ -70,10 +69,16 @@ set "PORTABLE_ZIP=%PORTABLE_ROOT%\AixSystems-Windows-Portable.zip"
 if exist "%PORTABLE_DIR%" rmdir /s /q "%PORTABLE_DIR%"
 if exist "%PORTABLE_ZIP%" del /f /q "%PORTABLE_ZIP%"
 if not exist "%PORTABLE_ROOT%" mkdir "%PORTABLE_ROOT%"
-mkdir "%PORTABLE_DIR%"
+mkdir "%PORTABLE_DIR%" >nul
 
 echo [5/5] 生成压缩包...
-copy /y "%PORTABLE_EXE%" "%PORTABLE_DIR%\" >nul
+xcopy "%UNPACKED_DIR%\*" "%PORTABLE_DIR%\" /e /i /h /y >nul
+type nul > "%PORTABLE_DIR%\AixSystems.portable"
+> "%PORTABLE_DIR%\启动AixSystems.bat" (
+  echo @echo off
+  echo cd /d "%%~dp0..\"
+  echo start "" "%%~dp0..\AixSystems.exe"
+)
 copy /y "results\使用说明.md" "%PORTABLE_DIR%\" >nul
 copy /y "LICENSE" "%PORTABLE_DIR%\" >nul
 

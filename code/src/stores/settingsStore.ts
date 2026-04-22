@@ -2,9 +2,15 @@
 import { create } from 'zustand';
 import { db } from '@/db';
 import { DEFAULT_THEME } from '@/config/themes';
+import { normalizeClock, sanitizeThemeKey } from '@/utils/themeAuto';
 
 interface SettingsState {
   theme: string;                                          // 主题 key
+  themeMode: 'manual' | 'auto';
+  autoThemeDay: string;
+  autoThemeNight: string;
+  autoThemeDayStart: string;
+  autoThemeNightStart: string;
   brightness: number;
   blur: number;
   appLocked: boolean;
@@ -23,6 +29,11 @@ async function save(key: string, value: any) {
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   theme: DEFAULT_THEME,
+  themeMode: 'manual',
+  autoThemeDay: 'forest',
+  autoThemeNight: DEFAULT_THEME,
+  autoThemeDayStart: '07:00',
+  autoThemeNightStart: '19:00',
   brightness: 100,
   blur: 0,
   appLocked: false,
@@ -32,7 +43,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const kv: Record<string, any> = {};
     rows.forEach(r => kv[r.key] = r.value);
     set({
-      theme: kv.theme ?? DEFAULT_THEME,
+      theme: sanitizeThemeKey(kv.theme, DEFAULT_THEME),
+      themeMode: kv.themeMode === 'auto' ? 'auto' : 'manual',
+      autoThemeDay: sanitizeThemeKey(kv.autoThemeDay, 'forest'),
+      autoThemeNight: sanitizeThemeKey(kv.autoThemeNight, DEFAULT_THEME),
+      autoThemeDayStart: normalizeClock(kv.autoThemeDayStart, '07:00'),
+      autoThemeNightStart: normalizeClock(kv.autoThemeNightStart, '19:00'),
       brightness: kv.brightness ?? 100,
       blur: kv.blur ?? 0,
       appLocked: !!kv.appLockPasswordHash,
