@@ -6,6 +6,12 @@ interface SgxBridge {
   pickImport: () => Promise<string | null>;
   openDataDir: () => Promise<string>;
   getVersion: () => Promise<string>;
+  getStorageStats: () => Promise<{
+    root: string;
+    total: number;
+    free: number;
+    used: number;
+  }>;
 }
 
 export function getElectron(): SgxBridge | null {

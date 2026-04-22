@@ -1,12 +1,14 @@
 // 首页工作台 - 全局概览 + 快捷入口 + 本地模式信息
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Col, List, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
 import {
+  DatabaseOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   DownloadOutlined,
   FireOutlined,
+  HddOutlined,
   PlusOutlined,
   ReadOutlined,
   SearchOutlined
@@ -20,10 +22,26 @@ import { useAppStore } from '@/stores/appStore';
 import { downloadBackup } from '@/utils/export';
 import { fmtDateTime, fmtFromNow } from '@/utils/time';
 import { previewOf } from '@/utils/html';
+import { getElectron, isElectron } from '@/utils/electron';
+
+function formatBytes(bytes?: number) {
+  if (!bytes || bytes < 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
 
 export default function HomePage() {
   const nav = useNavigate();
   const openItemForm = useAppStore(s => s.openItemForm);
+  const electron = isElectron();
+  const [originStorage, setOriginStorage] = useState<{ usage?: number; quota?: number }>({});
+  const [diskStats, setDiskStats] = useState<{ root: string; total: number; free: number; used: number } | null>(null);
 
   const dashboard = useLiveQuery(async () => {
     const [items, diaries, memos, sessions, lastBackup] = await Promise.all([
@@ -63,6 +81,46 @@ export default function HomePage() {
 
   const total = dashboard?.todayItems.length || 0;
   const completion = total ? Math.round(((dashboard?.done || 0) / total) * 100) : 0;
+  const diskPercent = diskStats?.total ? Math.round((diskStats.used / diskStats.total) * 100) : 0;
+  const appPercent = originStorage.quota ? Math.round(((originStorage.usage || 0) / originStorage.quota) * 100) : 0;
+
+  useEffect(() => {
+    navigator.storage?.estimate?.().then(result => {
+      setOriginStorage({ usage: result.usage, quota: result.quota });
+    }).catch(() => setOriginStorage({}));
+  }, []);
+
+  useEffect(() => {
+    if (!electron) return;
+    getElectron()?.getStorageStats().then(setDiskStats).catch(() => setDiskStats(null));
+  }, [electron]);
+
+  const storageCards = useMemo(() => ([
+    {
+      title: '应用占用',
+      value: formatBytes(originStorage.usage),
+      desc: originStorage.quota ? `当前源配额 ${formatBytes(originStorage.quota)}` : '当前环境未返回配额信息',
+      percent: appPercent,
+      icon: <DatabaseOutlined />,
+      color: '#2563eb'
+    },
+    {
+      title: '磁盘已用',
+      value: diskStats ? formatBytes(diskStats.used) : (electron ? '读取中' : '浏览器不可用'),
+      desc: diskStats ? `${diskStats.root} 总量 ${formatBytes(diskStats.total)}` : (electron ? '正在读取本机磁盘状态' : '浏览器无法直接访问系统磁盘'),
+      percent: diskPercent,
+      icon: <HddOutlined />,
+      color: '#7c3aed'
+    },
+    {
+      title: '磁盘剩余',
+      value: diskStats ? formatBytes(diskStats.free) : (electron ? '读取中' : '浏览器不可用'),
+      desc: diskStats ? `可用空间 ${formatBytes(diskStats.free)}` : '用于评估备份和便携运行空间',
+      percent: diskStats?.total ? 100 - diskPercent : 0,
+      icon: <DownloadOutlined />,
+      color: '#16a34a'
+    }
+  ]), [appPercent, diskPercent, diskStats, electron, originStorage.quota, originStorage.usage]);
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -146,6 +204,41 @@ export default function HomePage() {
           </Card>
         </Col>
       </Row>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: 'rgba(255,255,255,0.94)' }}>
+        <Typography.Text type="secondary">存储控件</Typography.Text>
+        <Typography.Title level={4} style={{ margin: '4px 0 16px' }}>应用存储与设备空间</Typography.Title>
+        <Row gutter={[16, 16]}>
+          {storageCards.map(card => (
+            <Col key={card.title} xs={24} md={8}>
+              <Card bordered={false} style={{ borderRadius: 20, background: `${card.color}12` }}>
+                <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 14,
+                      display: 'grid',
+                      placeItems: 'center',
+                      background: '#fff',
+                      color: card.color
+                    }}>
+                      {card.icon}
+                    </div>
+                    <Tag color="blue" style={{ marginInlineEnd: 0 }}>{card.percent}%</Tag>
+                  </div>
+                  <div>
+                    <div style={{ color: '#64748b', fontSize: 12 }}>{card.title}</div>
+                    <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, color: '#0f172a' }}>{card.value}</div>
+                  </div>
+                  <Progress percent={card.percent} strokeColor={card.color} showInfo={false} />
+                  <Typography.Text style={{ color: '#64748b' }}>{card.desc}</Typography.Text>
+                </Space>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </Card>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={10}>

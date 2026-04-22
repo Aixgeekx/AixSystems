@@ -18,6 +18,20 @@ function getDataDir() {
   return root;
 }
 
+function getDiskStats() {
+  const target = getDataDir();
+  const root = path.parse(target).root || target;
+  const stat = fs.statfsSync(root);
+  const total = stat.blocks * stat.bsize;
+  const free = stat.bavail * stat.bsize;
+  return {
+    root,
+    total,
+    free,
+    used: total - free
+  };
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
@@ -83,6 +97,7 @@ ipcMain.handle('sgx:open-data-dir', async () => {
 
 // IPC: 返回版本号
 ipcMain.handle('sgx:get-version', () => app.getVersion());
+ipcMain.handle('sgx:get-storage-stats', () => getDiskStats());
 
 Menu.setApplicationMenu(null);
 
