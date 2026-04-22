@@ -1,8 +1,9 @@
 // 全局搜索 - 跨 items/diaries/memos 的搜索工作台
-import React, { useDeferredValue, useState } from 'react';
+import React, { useDeferredValue, useEffect, useState } from 'react';
 import { Button, Card, Col, Empty, Input, List, Row, Space, Statistic, Tag, Typography } from 'antd';
 import {
   CalendarOutlined,
+  HistoryOutlined,
   FileTextOutlined,
   ReadOutlined,
   RightOutlined,
@@ -18,11 +19,38 @@ import { ITEM_TYPE_MAP } from '@/config/itemTypes';
 import { ROUTES } from '@/config/routes';
 import { useAppStore } from '@/stores/appStore';
 
+const SEARCH_HISTORY_KEY = 'aix-search-history';
+
+function readHistory(): string[] {
+  try {
+    const raw = localStorage.getItem(SEARCH_HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function SearchPage() {
   const [kw, setKw] = useState('');
+  const [history, setHistory] = useState<string[]>(() => readHistory());
   const deferredKw = useDeferredValue(kw.trim());
   const openItemForm = useAppStore(s => s.openItemForm);
   const nav = useNavigate();
+
+  useEffect(() => {
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history.slice(0, 8)));
+  }, [history]);
+
+  function commitHistory(term: string) {
+    const next = term.trim();
+    if (!next) return;
+    setHistory(prev => [next, ...prev.filter(item => item !== next)].slice(0, 8));
+  }
+
+  function clearHistory() {
+    localStorage.removeItem(SEARCH_HISTORY_KEY);
+    setHistory([]);
+  }
 
   const result = useLiveQuery(async () => {
     if (!deferredKw) return { items: [], diaries: [], memos: [] };
@@ -70,6 +98,7 @@ export default function SearchPage() {
               placeholder="搜索事项标题、描述、日记内容或备忘录"
               value={kw}
               onChange={e => setKw(e.target.value)}
+              onPressEnter={() => commitHistory(kw)}
               style={{
                 borderRadius: 18,
                 background: 'rgba(255,255,255,0.92)'
@@ -106,6 +135,21 @@ export default function SearchPage() {
             <Button icon={<FileTextOutlined />} onClick={() => nav(ROUTES.MEMO)}>打开备忘录</Button>
             <Button icon={<ThunderboltOutlined />} onClick={() => nav(ROUTES.FOCUS)}>开始专注</Button>
           </Space>
+          {history.length ? (
+            <div style={{ marginTop: 16 }}>
+              <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+                <Typography.Text type="secondary"><HistoryOutlined /> 最近搜索</Typography.Text>
+                <Button size="small" type="link" onClick={clearHistory}>清空历史</Button>
+              </Space>
+              <Space wrap size={[8, 8]} style={{ marginTop: 10 }}>
+                {history.map(item => (
+                  <Tag key={item} style={{ cursor: 'pointer' }} onClick={() => setKw(item)}>
+                    {item}
+                  </Tag>
+                ))}
+              </Space>
+            </div>
+          ) : null}
         </Card>
       ) : null}
 

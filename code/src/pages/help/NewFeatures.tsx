@@ -5,6 +5,10 @@ import { Timeline, Card, Typography, Tag } from 'antd';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.17.0', date: '2026-04-22', items: [
+    '搜索页新增本地搜索历史，可离线保留最近搜索词并一键复用',
+    '继续强化“本地程序路线”下的高频操作效率和可恢复性'
+  ]},
   { ver: '0.16.0', date: '2026-04-22', items: [
     '首页加入存储控件，展示应用本地占用、磁盘已用和磁盘剩余空间',
     '日记页升级为更完整的日记工作台，系统设置页升级为更完整的本地控制台',
