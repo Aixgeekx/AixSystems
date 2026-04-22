@@ -1,4 +1,4 @@
-// 番茄专注 - 三模式 + 暂停恢复 + 白噪音 + 统计
+// 番茄专注 - 三模式 + 暂停恢复 + 白噪音 + 统计 (v0.20.0 增强动画)
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Button, Card, Col, Input, InputNumber, List, Progress, Row, Skeleton, Slider, Space, Statistic, Switch, Tabs, Tag, Typography, Select } from 'antd';
 import {
@@ -6,7 +6,10 @@ import {
   PlayCircleOutlined,
   ReloadOutlined,
   SoundOutlined,
-  StopOutlined
+  StopOutlined,
+  FireOutlined,
+  TrophyOutlined,
+  FieldTimeOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
@@ -16,6 +19,8 @@ import { FOCUS_MODES, FOCUS_MODE_LABELS } from '@/config/constants';
 import { useFocusStore } from '@/stores/focusStore';
 import { currentNoise, NOISE_LABELS, playNoise, setVolume, stopNoise } from '@/utils/audio';
 import { fmtDateTime } from '@/utils/time';
+import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 const PRESETS = [15, 25, 45, 90];
 const ReactECharts = lazy(() => import('echarts-for-react'));
@@ -32,6 +37,10 @@ function formatClock(totalSeconds: number) {
 
 export default function FocusPage() {
   const f = useFocusStore();
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
+  const accent = theme.accent;
+
   const [mode, setMode] = useState<'countdown' | 'stopwatch' | 'pomodoro'>('pomodoro');
   const [minutes, setMinutes] = useState(25);
   const [title, setTitle] = useState('深度工作');
@@ -114,31 +123,38 @@ export default function FocusPage() {
     xAxis: {
       type: 'category',
       data: days14.map(day => day.date),
-      axisLine: { lineStyle: { color: '#cbd5e1' } }
+      axisLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.2)' : '#cbd5e1' } },
+      axisLabel: { color: isDark ? 'rgba(255,255,255,0.6)' : '#64748b' }
     },
     yAxis: {
       type: 'value',
       name: '分钟',
-      splitLine: { lineStyle: { color: 'rgba(148,163,184,0.18)' } }
+      nameTextStyle: { color: isDark ? 'rgba(255,255,255,0.5)' : '#94a3b8' },
+      splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(148,163,184,0.18)' } },
+      axisLabel: { color: isDark ? 'rgba(255,255,255,0.5)' : '#94a3b8' }
     },
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', backgroundColor: isDark ? 'rgba(10,14,28,0.9)' : 'rgba(255,255,255,0.95)', borderColor: isDark ? accent + '44' : '#e2e8f0', textStyle: { color: isDark ? '#f8fafc' : '#0f172a' } },
     series: [{
       type: 'bar',
       data: days14.map(day => day.mins),
-      itemStyle: { color: '#2563eb', borderRadius: [6, 6, 0, 0] }
+      itemStyle: { color: accent, borderRadius: [6, 6, 0, 0] },
+      emphasis: { itemStyle: { color: accent + 'dd' } }
     }]
   };
 
   const pieOpt = {
-    tooltip: {},
+    tooltip: { backgroundColor: isDark ? 'rgba(10,14,28,0.9)' : 'rgba(255,255,255,0.95)', borderColor: isDark ? accent + '44' : '#e2e8f0', textStyle: { color: isDark ? '#f8fafc' : '#0f172a' } },
     series: [{
       type: 'pie',
       radius: ['48%', '72%'],
+      center: ['50%', '50%'],
+      label: { color: isDark ? 'rgba(255,255,255,0.7)' : '#64748b' },
       data: FOCUS_MODES.map(currentMode => ({
         name: FOCUS_MODE_LABELS[currentMode],
         value: sessions
           .filter(session => session.mode === currentMode)
-          .reduce((sum, session) => sum + session.actualMs / 60_000, 0)
+          .reduce((sum, session) => sum + session.actualMs / 60_000, 0),
+        itemStyle: { color: currentMode === 'countdown' ? accent : currentMode === 'stopwatch' ? accent + 'cc' : accent + '88' }
       }))
     }]
   };
@@ -150,27 +166,46 @@ export default function FocusPage() {
   function LazyChart({ option }: { option: any }) {
     return (
       <Suspense fallback={<ChartFallback />}>
-        <ReactECharts option={option} style={{ height: 240 }} />
+        <ReactECharts option={option} style={{ height: 240 }} theme={isDark ? 'dark' : undefined} />
       </Suspense>
     );
   }
 
+  const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
+  const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
+
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
+      {/* Hero */}
       <Card
         bordered={false}
+        className="anim-fade-in-up"
         style={{
           borderRadius: 28,
           overflow: 'hidden',
-          background: 'linear-gradient(135deg, rgba(12,74,110,0.95), rgba(37,99,235,0.92) 55%, rgba(15,23,42,0.92) 100%)',
-          boxShadow: '0 28px 60px rgba(37,99,235,0.18)'
+          background: isDark
+            ? `linear-gradient(135deg, ${accent}18 0%, rgba(10,14,28,0.95) 50%, rgba(6,8,18,0.98) 100%)`
+            : 'linear-gradient(135deg, rgba(12,74,110,0.95), rgba(37,99,235,0.92) 55%, rgba(15,23,42,0.92) 100%)',
+          boxShadow: isDark
+            ? `0 28px 60px ${accent}24, 0 0 40px ${accent}10`
+            : '0 28px 60px rgba(37,99,235,0.18)',
+          border: isDark ? `1px solid ${accent}33` : 'none'
         }}
         bodyStyle={{ padding: 24 }}
       >
         <Row gutter={[24, 20]} align="middle">
           <Col xs={24} lg={15}>
-            <Typography.Text style={{ color: 'rgba(186,230,253,0.9)' }}>沉浸式专注工作台</Typography.Text>
-            <Typography.Title level={2} style={{ margin: '8px 0 10px', color: '#f8fafc' }}>
+            <Typography.Text style={{ color: isDark ? `${accent}aa` : 'rgba(186,230,253,0.9)' }}>
+              沉浸式专注工作台
+            </Typography.Text>
+            <Typography.Title
+              level={2}
+              style={{
+                margin: '8px 0 10px',
+                color: '#f8fafc',
+                textShadow: isDark ? `0 0 20px ${accent}44` : 'none'
+              }}
+            >
               {hasSession ? f.title : '把注意力收束到一件真正重要的事上'}
             </Typography.Title>
             <Typography.Paragraph style={{ marginBottom: 16, color: 'rgba(226,232,240,0.84)' }}>
@@ -181,11 +216,14 @@ export default function FocusPage() {
                 <Button
                   key={preset}
                   onClick={() => setMinutes(preset)}
+                  className="hover-scale"
                   style={{
                     borderRadius: 999,
                     borderColor: minutes === preset ? 'transparent' : 'rgba(255,255,255,0.22)',
-                    background: minutes === preset ? 'rgba(255,255,255,0.18)' : 'transparent',
-                    color: '#fff'
+                    background: minutes === preset ? 'rgba(255,255,255,0.22)' : 'transparent',
+                    color: '#fff',
+                    transition: 'all 0.25s ease',
+                    transform: minutes === preset ? 'scale(1.05)' : 'scale(1)'
                   }}
                 >
                   {preset} 分钟
@@ -195,21 +233,36 @@ export default function FocusPage() {
           </Col>
 
           <Col xs={24} lg={9}>
-            <div style={{
-              borderRadius: 24,
-              padding: 18,
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(255,255,255,0.16)',
-              backdropFilter: 'blur(12px)'
-            }}>
+            <div
+              className="anim-fade-in-up stagger-2"
+              style={{
+                borderRadius: 24,
+                padding: 18,
+                background: 'rgba(255,255,255,0.12)',
+                border: '1px solid rgba(255,255,255,0.16)',
+                backdropFilter: 'blur(12px)'
+              }}
+            >
               <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                <Tag color={f.running ? 'processing' : hasSession ? 'gold' : 'default'} style={{ width: 'fit-content' }}>
+                <Tag
+                  color={f.running ? 'processing' : hasSession ? 'gold' : 'default'}
+                  style={{ width: 'fit-content' }}
+                >
                   {f.running ? '专注进行中' : hasSession ? '专注已暂停' : '准备开始'}
                 </Tag>
                 <Typography.Text style={{ color: 'rgba(226,232,240,0.82)' }}>
                   模式: {FOCUS_MODE_LABELS[sessionMode]}
                 </Typography.Text>
-                <Typography.Title level={2} style={{ margin: 0, color: '#fff' }}>
+                <Typography.Title
+                  level={2}
+                  style={{
+                    margin: 0,
+                    color: '#fff',
+                    fontFamily: 'monospace',
+                    letterSpacing: '0.05em',
+                    textShadow: isDark ? `0 0 20px ${accent}66` : 'none'
+                  }}
+                >
                   {formatClock(displaySec)}
                 </Typography.Title>
                 <Progress
@@ -217,6 +270,7 @@ export default function FocusPage() {
                   strokeColor="#f8fafc"
                   trailColor="rgba(255,255,255,0.12)"
                   showInfo={false}
+                  strokeLinecap="round"
                 />
               </Space>
             </div>
@@ -226,12 +280,24 @@ export default function FocusPage() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={14}>
-          <Card bordered={false} style={{ borderRadius: 24, background: 'rgba(255,255,255,0.92)' }}>
+          {/* 专注控制 */}
+          <Card
+            bordered={false}
+            className="anim-fade-in-up stagger-2 hover-lift"
+            style={{
+              borderRadius: 24,
+              background: cardBg,
+              border: cardBorder,
+              boxShadow: isDark ? `0 12px 30px -10px rgba(0,0,0,0.3)` : '0 12px 30px -10px rgba(0,0,0,0.05)'
+            }}
+          >
             {!hasSession ? (
               <Space direction="vertical" size={16} style={{ width: '100%' }}>
                 <div>
                   <Typography.Text type="secondary">启动专注</Typography.Text>
-                  <Typography.Title level={4} style={{ margin: '4px 0 0' }}>先选模式，再开始计时</Typography.Title>
+                  <Typography.Title level={4} style={{ margin: '4px 0 0' }}>
+                    先选模式，再开始计时
+                  </Typography.Title>
                 </div>
 
                 <Space wrap>
@@ -255,9 +321,20 @@ export default function FocusPage() {
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                   placeholder="为这次专注起一个标题"
+                  style={{ borderRadius: 10 }}
                 />
 
-                <Button type="primary" size="large" icon={<PlayCircleOutlined />} onClick={start}>
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<PlayCircleOutlined />}
+                  onClick={start}
+                  style={{
+                    borderRadius: 12,
+                    boxShadow: `0 8px 20px -4px ${accent}66`,
+                    transition: 'all 0.25s ease'
+                  }}
+                >
                   开始专注
                 </Button>
               </Space>
@@ -274,51 +351,114 @@ export default function FocusPage() {
                 <div style={{
                   padding: 20,
                   borderRadius: 22,
-                  background: f.running ? 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(14,165,233,0.12))' : 'linear-gradient(135deg, rgba(250,204,21,0.1), rgba(249,115,22,0.12))'
+                  background: f.running
+                    ? `linear-gradient(135deg, ${accent}15, ${accent}08)`
+                    : 'linear-gradient(135deg, rgba(250,204,21,0.1), rgba(249,115,22,0.12))',
+                  border: `1px solid ${f.running ? accent + '33' : 'rgba(250,204,21,0.2)'}`,
+                  transition: 'all 0.4s ease'
                 }}>
                   <Typography.Text type="secondary">当前进度</Typography.Text>
-                  <Typography.Title level={1} style={{ margin: '8px 0 10px' }}>
+                  <Typography.Title
+                    level={1}
+                    style={{
+                      margin: '8px 0 10px',
+                      fontFamily: 'monospace',
+                      letterSpacing: '0.05em',
+                      color: f.running ? accent : '#f59e0b'
+                    }}
+                  >
                     {formatClock(displaySec)}
                   </Typography.Title>
-                  <Progress percent={progressPercent} strokeColor={f.running ? '#2563eb' : '#f59e0b'} />
+                  <Progress
+                    percent={progressPercent}
+                    strokeColor={f.running ? accent : '#f59e0b'}
+                    strokeLinecap="round"
+                    trailColor={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.08)'}
+                  />
                   <Input.TextArea
                     placeholder="记录本次专注的感想、结论或下一步动作"
                     value={impression}
                     onChange={e => setImpression(e.target.value)}
                     rows={3}
-                    style={{ marginTop: 16 }}
+                    style={{
+                      marginTop: 16,
+                      borderRadius: 10,
+                      background: isDark ? 'rgba(10,14,28,0.5)' : 'rgba(255,255,255,0.7)'
+                    }}
                   />
                 </div>
 
                 <Space wrap size={10}>
                   {!f.running && !f.strictMode ? (
-                    <Button type="primary" icon={<ReloadOutlined />} onClick={f.resume}>
+                    <Button
+                      type="primary"
+                      icon={<ReloadOutlined />}
+                      onClick={f.resume}
+                      style={{ borderRadius: 10, boxShadow: `0 8px 20px -4px ${accent}44` }}
+                    >
                       继续专注
                     </Button>
                   ) : null}
                   {f.running ? (
-                    <Button icon={<PauseCircleOutlined />} disabled={f.strictMode} onClick={f.pause}>
+                    <Button
+                      icon={<PauseCircleOutlined />}
+                      disabled={f.strictMode}
+                      onClick={f.pause}
+                      style={{ borderRadius: 10 }}
+                    >
                       暂停
                     </Button>
                   ) : null}
-                  <Button type="primary" icon={<StopOutlined />} disabled={f.strictMode} onClick={() => finish(false)}>
+                  <Button
+                    type="primary"
+                    icon={<StopOutlined />}
+                    disabled={f.strictMode}
+                    onClick={() => finish(false)}
+                    style={{ borderRadius: 10 }}
+                  >
                     完成
                   </Button>
-                  <Button danger onClick={() => finish(true)}>放弃</Button>
+                  <Button danger onClick={() => finish(true)} style={{ borderRadius: 10 }}>放弃</Button>
                 </Space>
               </Space>
             )}
           </Card>
 
-          <Card bordered={false} style={{ marginTop: 16, borderRadius: 24, background: 'rgba(255,255,255,0.92)' }}>
+          {/* 白噪音 */}
+          <Card
+            bordered={false}
+            className="anim-fade-in-up stagger-3 hover-lift"
+            style={{
+              marginTop: 16,
+              borderRadius: 24,
+              background: cardBg,
+              border: cardBorder,
+              boxShadow: isDark ? `0 12px 30px -10px rgba(0,0,0,0.3)` : '0 12px 30px -10px rgba(0,0,0,0.05)'
+            }}
+          >
             <Space direction="vertical" size={14} style={{ width: '100%' }}>
               <Typography.Title level={4} style={{ margin: 0 }}>
                 <SoundOutlined /> 白噪音工作室
               </Typography.Title>
               <Space wrap>
-                <Button type={!noise ? 'primary' : 'default'} onClick={() => toggleNoise(null)}>关闭</Button>
+                <Button
+                  type={!noise ? 'primary' : 'default'}
+                  onClick={() => toggleNoise(null)}
+                  style={{ borderRadius: 10 }}
+                >
+                  关闭
+                </Button>
                 {(['white', 'pink', 'brown', 'rain', 'keyboard'] as const).map(key => (
-                  <Button key={key} type={noise === key ? 'primary' : 'default'} onClick={() => toggleNoise(key)}>
+                  <Button
+                    key={key}
+                    type={noise === key ? 'primary' : 'default'}
+                    onClick={() => toggleNoise(key)}
+                    style={{
+                      borderRadius: 10,
+                      transition: 'all 0.25s ease',
+                      transform: noise === key ? 'scale(1.05)' : 'scale(1)'
+                    }}
+                  >
                     {NOISE_LABELS[key]}
                   </Button>
                 ))}
@@ -335,6 +475,8 @@ export default function FocusPage() {
                     setVolume(value);
                   }}
                   style={{ flex: 1 }}
+                  trackStyle={{ background: accent }}
+                  handleStyle={{ borderColor: accent }}
                 />
               </div>
             </Space>
@@ -342,30 +484,53 @@ export default function FocusPage() {
         </Col>
 
         <Col xs={24} lg={10}>
+          {/* 统计卡片 */}
           <Row gutter={[12, 12]}>
-            <Col span={12}>
-              <Card bordered={false} style={{ borderRadius: 20, background: 'rgba(255,255,255,0.92)' }}>
-                <Statistic title="今日专注" value={todayMin.toFixed(0)} suffix="分钟" />
-              </Card>
-            </Col>
-            <Col span={12}>
-              <Card bordered={false} style={{ borderRadius: 20, background: 'rgba(255,255,255,0.92)' }}>
-                <Statistic title="平均时长" value={averageMin} suffix="分钟" />
-              </Card>
-            </Col>
-            <Col span={12}>
-              <Card bordered={false} style={{ borderRadius: 20, background: 'rgba(255,255,255,0.92)' }}>
-                <Statistic title="完成率" value={successRate} suffix="%" valueStyle={{ color: '#16a34a' }} />
-              </Card>
-            </Col>
-            <Col span={12}>
-              <Card bordered={false} style={{ borderRadius: 20, background: 'rgba(255,255,255,0.92)' }}>
-                <Statistic title="总次数" value={sessions.length} />
-              </Card>
-            </Col>
+            {[
+              { title: '今日专注', value: todayMin.toFixed(0), suffix: '分钟', icon: <FireOutlined />, color: accent, key: 'today' },
+              { title: '平均时长', value: averageMin, suffix: '分钟', icon: <FieldTimeOutlined />, color: accent + 'cc', key: 'avg' },
+              { title: '完成率', value: successRate, suffix: '%', icon: <TrophyOutlined />, color: '#16a34a', key: 'rate' },
+              { title: '总次数', value: sessions.length, suffix: '', icon: <FireOutlined />, color: accent + '88', key: 'total' }
+            ].map((stat, i) => (
+              <Col span={12} key={stat.key}>
+                <Card
+                  bordered={false}
+                  className="anim-fade-in-up hover-lift"
+                  style={{
+                    borderRadius: 20,
+                    background: cardBg,
+                    border: cardBorder,
+                    animationDelay: `${0.1 + i * 0.06}s`,
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <Statistic
+                    title={
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: isDark ? `${accent}aa` : '#64748b' }}>
+                        {stat.icon} {stat.title}
+                      </span>
+                    }
+                    value={stat.value}
+                    suffix={stat.suffix}
+                    valueStyle={{ fontSize: 28, fontWeight: 700, color: stat.color }}
+                  />
+                </Card>
+              </Col>
+            ))}
           </Row>
 
-          <Card bordered={false} style={{ marginTop: 16, borderRadius: 24, background: 'rgba(255,255,255,0.92)' }}>
+          {/* 图表 */}
+          <Card
+            bordered={false}
+            className="anim-fade-in-up stagger-3"
+            style={{
+              marginTop: 16,
+              borderRadius: 24,
+              background: cardBg,
+              border: cardBorder,
+              boxShadow: isDark ? `0 12px 30px -10px rgba(0,0,0,0.3)` : '0 12px 30px -10px rgba(0,0,0,0.05)'
+            }}
+          >
             <Tabs
               defaultActiveKey="timeline"
               destroyInactiveTabPane
@@ -380,23 +545,39 @@ export default function FocusPage() {
                   label: '模式分布',
                   children: sessions.length > 0
                     ? <LazyChart option={pieOpt} />
-                    : <div style={{ color: '#94a3b8', padding: 40, textAlign: 'center' }}>暂无数据</div>
+                    : <Empty text="暂无数据" subtext="开始专注后会自动生成统计图表" />
                 },
                 {
                   key: 'timeline',
                   label: '最近记录',
                   children: sessions.length === 0 ? (
-                    <div style={{ color: '#94a3b8', padding: 40, textAlign: 'center' }}>暂无记录</div>
+                    <Empty text="暂无记录" subtext="完成第一次专注后这里会显示历史" />
                   ) : (
                     <List
                       split={false}
                       dataSource={sessions.slice(0, 10)}
                       renderItem={(session: any) => (
                         <List.Item style={{ paddingInline: 0 }}>
-                          <div style={{ width: '100%', padding: 14, borderRadius: 18, background: 'rgba(15,23,42,0.03)' }}>
+                          <div
+                            className="hover-lift"
+                            style={{
+                              width: '100%',
+                              padding: 14,
+                              borderRadius: 18,
+                              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)',
+                              border: isDark ? `1px solid ${accent}15` : '1px solid transparent',
+                              transition: 'all 0.3s ease',
+                              marginBottom: 8
+                            }}
+                          >
                             <Space wrap size={[8, 8]}>
-                              <Tag color={session.giveUp ? 'red' : 'green'}>{FOCUS_MODE_LABELS[session.mode]}</Tag>
-                              <Tag>{Math.round(session.actualMs / 60_000)} 分钟</Tag>
+                              <Tag
+                                color={session.giveUp ? 'red' : 'green'}
+                                style={{ borderRadius: 6 }}
+                              >
+                                {FOCUS_MODE_LABELS[session.mode]}
+                              </Tag>
+                              <Tag style={{ borderRadius: 6 }}>{Math.round(session.actualMs / 60_000)} 分钟</Tag>
                             </Space>
                             <Typography.Title level={5} style={{ margin: '10px 0 4px' }}>
                               {session.title}
