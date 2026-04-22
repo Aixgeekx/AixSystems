@@ -28,6 +28,9 @@ export const ROUTES = {
   NEW_FEATURES: '/newFeatures/index',                  // 新功能
   CHARACTERISTIC: '/characteristic/index',             // 特色功能
   DATAIO: '/dataio',                                   // 导入导出(新增)
+  HABIT: '/home/habit',                                // 习惯追踪
+  GOAL: '/home/goal',                                  // 目标管理
+  GROWTH: '/home/growth',                              // 成长仪表盘
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
 
@@ -55,6 +58,14 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
       { key: 'checkList', label: '清单', path: ROUTES.MATTER_CHECKLIST, icon: 'check-square' },
       { key: 'importance', label: '四象限', path: ROUTES.MATTER_IMPORTANCE, icon: 'appstore' },
       { key: 'repeat', label: '重复', path: ROUTES.MATTER_REPEAT, icon: 'reload' }
+    ]
+  },
+  {
+    key: 'growth', label: '成长系统',
+    children: [
+      { key: 'growth', label: '成长仪表盘', path: ROUTES.GROWTH, icon: 'dashboard' },
+      { key: 'habit', label: '习惯追踪', path: ROUTES.HABIT, icon: 'check-circle' },
+      { key: 'goal', label: '目标管理', path: ROUTES.GOAL, icon: 'trophy' }
     ]
   },
   {

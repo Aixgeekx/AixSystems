@@ -201,3 +201,41 @@ export interface AttachmentBlob {                           // 附件 Blob
   blob: Blob;
   createdAt: number;
 }
+
+export interface Habit {                                     // 习惯
+  id: string;
+  name: string;
+  icon?: string;
+  color: string;
+  description?: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  targetCount: number;
+  weekDays?: number[];
+  sortOrder: number;
+  deletedAt?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface HabitLog {                                  // 习惯打卡记录
+  id: string;
+  habitId: string;
+  date: number;
+  count: number;
+  note?: string;
+  createdAt: number;
+}
+
+export interface Goal {                                      // 目标
+  id: string;
+  title: string;
+  description?: string;
+  color: string;
+  status: 'active' | 'completed' | 'archived';
+  targetDate?: number;
+  milestones?: { title: string; done: boolean }[];
+  sortOrder: number;
+  deletedAt?: number;
+  createdAt: number;
+  updatedAt: number;
+}

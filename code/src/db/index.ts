@@ -3,7 +3,8 @@ import Dexie, { Table } from 'dexie';
 import { DB_NAME, DB_VERSION } from '@/config/constants';
 import type {
   Item, Classify, Folder, Tag, Diary, Memo, FocusSession, FocusRepeat,
-  ReminderQueueItem, ThemeRecord, Setting, UserProfile, EventLog, CacheKV, AttachmentBlob
+  ReminderQueueItem, ThemeRecord, Setting, UserProfile, EventLog, CacheKV, AttachmentBlob,
+  Habit, HabitLog, Goal
 } from '@/models';
 
 class ShiguangxuDB extends Dexie {
@@ -22,6 +23,9 @@ class ShiguangxuDB extends Dexie {
   eventLog!: Table<EventLog, string>;
   cacheKv!: Table<CacheKV, string>;
   attachments!: Table<AttachmentBlob, string>;
+  habits!: Table<Habit, string>;
+  habitLogs!: Table<HabitLog, string>;
+  goals!: Table<Goal, string>;
 
   constructor() {
     super(DB_NAME);
@@ -40,7 +44,10 @@ class ShiguangxuDB extends Dexie {
       userProfile:   'id',
       eventLog:      'id, level, createdAt',
       cacheKv:       'key',
-      attachments:   'id, itemId, createdAt'
+      attachments:   'id, itemId, createdAt',
+      habits:        'id, name, color, sortOrder, deletedAt',
+      habitLogs:     'id, habitId, date, createdAt',
+      goals:         'id, title, status, targetDate, sortOrder, deletedAt'
     });
   }
 }
