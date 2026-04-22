@@ -1,13 +1,14 @@
 // 应用路由根 - 锁屏守卫化 + 懒加载路由
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { ConfigProvider, App as AntApp, Spin } from 'antd';
+import { ConfigProvider, App as AntApp, Spin, theme as antTheme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useReminder } from '@/hooks/useReminder';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { seedIfEmpty } from '@/db/seed';
 import { THEMES } from '@/config/themes';
+import { useThemeVariants } from '@/hooks/useVariants';
 import { ROUTES } from '@/config/routes';
 
 const Layout = lazy(() => import('@/components/Layout'));
@@ -128,6 +129,7 @@ export default function App() {
   const theme = useSettingsStore(s => s.theme);
   const load = useSettingsStore(s => s.load);
   const themeMeta = THEMES.find(t => t.key === theme) || THEMES[0];
+  const { getAntdTheme } = useThemeVariants();
 
   useEffect(() => {
     (async () => { await seedIfEmpty(); await load(); setReady(true); })();
@@ -136,7 +138,10 @@ export default function App() {
   if (!ready) return <div style={{ padding: 40, textAlign: 'center' }}>加载中...</div>;
 
   return (
-    <ConfigProvider locale={zhCN} theme={{ token: { colorPrimary: themeMeta.accent, borderRadius: 6 } }}>
+    <ConfigProvider 
+      locale={zhCN} 
+      theme={getAntdTheme()}
+    >
       <AntApp>
         <HashRouter>
           <AppShell />

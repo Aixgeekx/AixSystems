@@ -24,7 +24,7 @@ AixSystems 时间管理系统(离线本地版)。基于调研原版 [时光序](
 |---|---|
 | **15 张表的 IndexedDB** | 事项 / 日记 / 备忘录 / 专注 / 分类 / 文件夹 / 标签 / 提醒队列 / 主题 / 设置 / 用户 / 日志 / 附件 / 缓存 KV |
 | **17 种事项类型** | 日程/清单/生日/纪念日/倒数日/节日/生理期/信用卡还款/贷款/吃药/起床闹钟/睡眠闹钟/作息/跑步/读书/穿衣搭配/课程表/上班打卡 |
-| **17 款主题** | 霜茶/草丛/静夜/浅海/极光/天空/雪地/海岸/房檐/融合/碧空/踏青/炽夏/桃桃/初暖/墙纸/纯色 |
+| **11 款主题风格** | 霓虹赛博 / 白天明亮 / 黑夜暗色 / 极简白白 / 极简黑黑 / 复古泛黄 / 复古暗红 / 渐变海洋 / 渐变炽夏 / 渐变天空 / 渐变水蜜 |
 | **40+ 路由** | 对齐原版 `/home/*` 路径结构 |
 
 ## 启动方式
@@ -101,6 +101,6 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.17.0-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.18.0-Setup.exe` (NSIS 安装包,约 80MB)
 
-便携版: `npm run dist:portable` → `AixSystems-0.17.0-portable.exe`
+便携版: `npm run dist:portable` → `AixSystems-0.18.0-portable.exe`

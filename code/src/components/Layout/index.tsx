@@ -9,6 +9,7 @@ import { APP_NAME, APP_SUB, APP_VERSION } from '@/config/constants';
 import { useAppStore } from '@/stores/appStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { THEMES } from '@/config/themes';
+import { useThemeVariants } from '@/hooks/useVariants';
 import ThemeBackground from './ThemeBackground';
 import CommandPalette from '@/components/CommandPalette';
 import ItemFormDialog from '@/components/ItemForm/Dialog';
@@ -31,6 +32,7 @@ export default function Layout() {
   const { collapsed, setCollapsed, openItemForm, openCommandPalette } = useAppStore();
   const theme = useSettingsStore(s => s.theme);
   const themeMeta = THEMES.find(t => t.key === theme) || THEMES[0];
+  const { getPanelStyle } = useThemeVariants();
   const localPulse = useLiveQuery(async () => {
     const [items, diaries, memos] = await Promise.all([
       db.items.toArray(),
@@ -97,38 +99,46 @@ export default function Layout() {
           border-top: 1px solid rgba(255,255,255,0.08);
         }
         .workspace-shell .workspace-menu.ant-menu {
-          background: transparent;
-          color: #e2e8f0;
+          background: 'transparent',
+          color: '#e2e8f0'
         }
         .workspace-shell .workspace-menu .ant-menu-item-group-title {
-          padding: 12px 12px 6px;
-          color: rgba(191,219,254,0.62);
+          padding: 18px 12px 8px;
+          color: rgba(255,255,255,0.45);
           font-size: 11px;
-          letter-spacing: 0.18em;
+          font-weight: 700;
+          letter-spacing: 0.22em;
           text-transform: uppercase;
         }
         .workspace-shell .workspace-menu .ant-menu-item {
           height: auto;
-          line-height: 1.2;
-          margin: 6px 0;
-          padding-top: 12px;
-          padding-bottom: 12px;
-          border-radius: 16px;
-          color: rgba(226,232,240,0.9);
-          transition: background 0.18s ease, transform 0.18s ease, color 0.18s ease;
+          line-height: 1.4;
+          margin: 6px 8px;
+          padding: 10px 14px;
+          border-radius: 12px;
+          color: rgba(255,255,255,0.7);
+          transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .workspace-shell .workspace-menu .ant-menu-item:hover {
-          background: rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.05);
           color: #fff;
-          transform: translateX(2px);
+          transform: translateX(4px);
+        }
+        .workspace-shell .workspace-menu .ant-menu-item:active {
+          transform: scale(0.96);
         }
         .workspace-shell .workspace-menu .ant-menu-item-selected {
-          background: linear-gradient(135deg, rgba(59,130,246,0.26), rgba(14,165,233,0.24));
+          background: rgba(255, 255, 255, 0.15) !important;
           color: #fff !important;
-          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 12px 24px rgba(15,23,42,0.18);
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1), 0 8px 16px rgba(0, 0, 0, 0.12);
         }
         .workspace-shell .workspace-menu .ant-menu-item .ant-menu-title-content {
+          font-weight: 500;
+          transition: font-weight 0.2s ease;
+        }
+        .workspace-shell .workspace-menu .ant-menu-item-selected .ant-menu-title-content {
           font-weight: 600;
+          text-shadow: 0 0 16px rgba(255,255,255,0.4);
         }
         .workspace-shell .workspace-content {
           scrollbar-width: thin;
@@ -153,80 +163,79 @@ export default function Layout() {
         collapsible
         collapsed={collapsed}
         onCollapse={setCollapsed}
-        width={248}
+        width={260}
         style={{
           margin: 16,
-          borderRadius: 28,
+          borderRadius: 8,
           overflow: 'hidden',
-          background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.78), rgba(30, 41, 59, 0.72))',
-          border: '1px solid rgba(255,255,255,0.14)',
-          boxShadow: '0 24px 54px rgba(15, 23, 42, 0.18)'
+          transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+          ...getPanelStyle()
         }}
       >
         <div style={{
           position: 'absolute',
           top: -80,
           right: -60,
-          width: 220,
-          height: 220,
+          width: 260,
+          height: 260,
           borderRadius: '50%',
-          background: `radial-gradient(circle, ${themeMeta.accent}33 0%, transparent 68%)`,
-          pointerEvents: 'none'
+          background: `radial-gradient(circle, ${themeMeta.accent}33 0%, transparent 60%)`,
+          pointerEvents: 'none',
+          transition: 'all 0.4s ease'
         }} />
-        <div style={{
-          position: 'absolute',
-          bottom: -120,
-          left: -80,
-          width: 240,
-          height: 240,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)',
-          pointerEvents: 'none'
-        }} />
-        <div style={{ padding: collapsed ? '22px 10px' : '22px 18px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{
-              width: 44,
-              height: 44,
-              borderRadius: 16,
-              display: 'grid',
-              placeItems: 'center',
-              background: `linear-gradient(135deg, ${themeMeta.accent}, rgba(255,255,255,0.28))`,
-              color: '#fff',
-              boxShadow: `0 12px 26px ${themeMeta.accent}44`
-            }}>
-              <Icons.CalendarOutlined />
+        <div style={{ 
+          padding: collapsed ? '26px 12px' : '28px 22px 22px', 
+            borderBottom: `1px solid ${themeMeta.accent}33`,
+            transition: 'all 0.3s ease'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: 8,
+                display: 'grid',
+                placeItems: 'center',
+                background: `linear-gradient(145deg, transparent, ${themeMeta.accent}11)`,
+                color: themeMeta.accent,
+                fontSize: 22,
+                border: '1px solid currentColor',
+                boxShadow: `0 0 15px ${themeMeta.accent}44, inset 0 0 5px ${themeMeta.accent}22`,
+                transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                transform: collapsed ? 'scale(0.9)' : 'scale(1)'
+              }}>
+                <Icons.CalendarOutlined />
+              </div>
+              {!collapsed && (
+                <div style={{ minWidth: 0 }}>
+                  <Typography.Text strong style={{ display: 'block', fontSize: 18, color: '#00f0ff', textShadow: '0 0 10px rgba(0,240,255,0.5)' }}>
+                    {APP_NAME}
+                  </Typography.Text>
+                  <Typography.Text style={{ fontSize: 12, color: 'rgba(0,240,255,0.6)' }}>
+                    {APP_SUB}
+                  </Typography.Text>
+                </div>
+              )}
             </div>
+  
             {!collapsed && (
-              <div style={{ minWidth: 0 }}>
-                <Typography.Text strong style={{ display: 'block', fontSize: 18, color: '#f8fafc' }}>
-                  {APP_NAME}
-                </Typography.Text>
-                <Typography.Text style={{ fontSize: 12, color: 'rgba(226,232,240,0.72)' }}>
-                  {APP_SUB}
+              <div style={{
+                marginTop: 16,
+                padding: '12px 14px',
+                borderRadius: 8,
+                background: 'rgba(0, 240, 255, 0.05)',
+                border: '1px solid rgba(0, 240, 255, 0.2)',
+                color: '#00f0ff'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <Typography.Text style={{ color: '#00f0ff' }}>工作台版本</Typography.Text>
+                  <Tag color="cyan" style={{ marginInlineEnd: 0, background: 'transparent', border: '1px solid #00f0ff' }}>v{APP_VERSION}</Tag>
+                </div>
+                <Typography.Text style={{ display: 'block', marginTop: 6, color: 'rgba(0,240,255,0.6)', fontSize: 12 }}>
+                  Ctrl + K 打开命令面板，快速跳页与执行动作。
                 </Typography.Text>
               </div>
             )}
           </div>
-
-          {!collapsed && (
-            <div style={{
-              marginTop: 16,
-              padding: '12px 14px',
-              borderRadius: 18,
-              background: 'rgba(255,255,255,0.08)',
-              color: '#e2e8f0'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <Typography.Text style={{ color: '#e2e8f0' }}>工作台版本</Typography.Text>
-                <Tag color="blue" style={{ marginInlineEnd: 0 }}>v{APP_VERSION}</Tag>
-              </div>
-              <Typography.Text style={{ display: 'block', marginTop: 6, color: 'rgba(226,232,240,0.7)', fontSize: 12 }}>
-                Ctrl + K 打开命令面板，快速跳页与执行动作。
-              </Typography.Text>
-            </div>
-          )}
-        </div>
 
         <Menu
           className="workspace-menu"
@@ -248,47 +257,52 @@ export default function Layout() {
         <Header
           style={{
             height: 'auto',
-            marginBottom: 16,
-            padding: '18px 22px',
-            borderRadius: 28,
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.86), rgba(248,250,252,0.72))',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255,255,255,0.48)',
-            boxShadow: '0 18px 44px rgba(15, 23, 42, 0.08)',
+            marginBottom: 20,
+            padding: '20px 28px',
+            borderRadius: 8,
+            ...getPanelStyle(),
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: 16
+            gap: 16,
+            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
-          <div style={{ minWidth: 0 }}>
-            <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+          <div style={{ minWidth: 0, animation: 'fadeIn 0.6s ease' }}>
+            <Typography.Text style={{ 
+              display: 'block', 
+              marginBottom: 6, 
+              color: 'rgba(0, 240, 255, 0.6)',
+              fontWeight: 500,
+              fontSize: 13,
+              letterSpacing: '0.04em'
+            }}>
               {todayLabel}
             </Typography.Text>
-            <Typography.Title level={3} style={{ margin: 0, color: '#0f172a' }}>
+            <Typography.Title level={2} style={{ margin: 0, color: '#00f0ff', textShadow: '0 0 10px rgba(0,240,255,0.5)', fontWeight: 700, letterSpacing: '-0.02em' }}>
               {activeLabel}
             </Typography.Title>
-            <Typography.Text type="secondary">
+            <Typography.Text style={{ color: 'rgba(15, 23, 42, 0.6)', fontSize: 14 }}>
               把今天的事项、笔记和专注安排在一个工作台里完成。
             </Typography.Text>
-            <Space wrap size={8} style={{ marginTop: 10 }}>
-              <Tag color="blue">本地离线</Tag>
-              <Tag color="green">实时保存</Tag>
-              <Tag color="gold">便携交付</Tag>
+            <Space wrap size={10} style={{ marginTop: 14 }}>
+              <Tag bordered={false} color="blue" style={{ borderRadius: 6, fontWeight: 500, padding: '2px 8px' }}>本地离线</Tag>
+              <Tag bordered={false} color="green" style={{ borderRadius: 6, fontWeight: 500, padding: '2px 8px' }}>实时保存</Tag>
+              <Tag bordered={false} color="gold" style={{ borderRadius: 6, fontWeight: 500, padding: '2px 8px' }}>便携交付</Tag>
             </Space>
           </div>
 
           <Space wrap size={10}>
-            <Button icon={<Icons.DownloadOutlined />} onClick={quickBackup}>
+            <Button size="large" type="text" style={{ fontWeight: 500, color: 'rgba(0,0,0,0.65)' }} icon={<Icons.DownloadOutlined />} onClick={quickBackup}>
               快速备份
             </Button>
-            <Button icon={<Icons.MacCommandOutlined />} onClick={openCommandPalette}>
+            <Button size="large" style={{ borderRadius: 12, fontWeight: 500, background: 'rgba(255,255,255,0.8)' }} icon={<Icons.MacCommandOutlined />} onClick={openCommandPalette}>
               命令面板
             </Button>
-            <Button icon={<Icons.SearchOutlined />} onClick={() => nav(ROUTES.SEARCH)}>
+            <Button size="large" style={{ borderRadius: 12, fontWeight: 500, background: 'rgba(255,255,255,0.8)' }} icon={<Icons.SearchOutlined />} onClick={() => nav(ROUTES.SEARCH)}>
               完整搜索
             </Button>
-            <Button type="primary" icon={<Icons.PlusOutlined />} onClick={() => openItemForm()}>
+            <Button size="large" type="primary" style={{ borderRadius: 12, fontWeight: 600, boxShadow: `0 8px 16px -4px ${themeMeta.accent}66` }} icon={<Icons.PlusOutlined />} onClick={() => openItemForm()}>
               添加事项
             </Button>
             <Dropdown menu={{ items: [
@@ -297,7 +311,7 @@ export default function Layout() {
               { key: 'menuSort', label: '菜单排序', onClick: () => nav('/home/menusort') },
               { key: 'setting', label: '系统设置', onClick: () => nav(ROUTES.SYSTEM) }
             ] }}>
-              <Avatar style={{ background: themeMeta.accent, cursor: 'pointer', boxShadow: `0 8px 20px ${themeMeta.accent}33` }} icon={<Icons.UserOutlined />} />
+              <Avatar style={{ marginLeft: 6, width: 42, height: 42, background: `linear-gradient(135deg, ${themeMeta.accent}, rgba(255,255,255,0.4))`, cursor: 'pointer', boxShadow: `0 8px 24px -6px ${themeMeta.accent}88`, transform: 'scale(1)', transition: 'transform 0.2s ease' }} icon={<Icons.UserOutlined />} />
             </Dropdown>
           </Space>
         </Header>
@@ -305,15 +319,23 @@ export default function Layout() {
         <Content
           className="workspace-content"
           style={{
-            padding: 24,
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.84))',
-            borderRadius: 32,
+            padding: '24px 32px',
+            background: 'rgba(10, 10, 20, 0.85)',
+            backdropFilter: 'blur(40px)',
+            WebkitBackdropFilter: 'blur(40px)',
+            borderRadius: 8,
             minHeight: 'calc(100vh - 132px)',
             overflow: 'auto',
-            border: '1px solid rgba(255,255,255,0.48)',
-            boxShadow: '0 26px 56px rgba(15, 23, 42, 0.1)'
+            border: '1px solid rgba(0, 240, 255, 0.3)',
+            boxShadow: '0 0 20px rgba(0, 240, 255, 0.1), inset 0 0 10px rgba(0, 240, 255, 0.1)',
+            animation: 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+            position: 'relative'
           }}
         >
+          <style>{`
+            @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); filter: blur(4px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+          `}</style>
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -321,9 +343,9 @@ export default function Layout() {
             gap: 12,
             marginBottom: 18,
             padding: '12px 16px',
-            borderRadius: 20,
-            background: 'rgba(15,23,42,0.04)',
-            border: '1px solid rgba(148,163,184,0.16)'
+            borderRadius: 8,
+            background: 'rgba(0, 240, 255, 0.05)',
+            border: '1px solid rgba(0, 240, 255, 0.2)'
           }}>
             <Space wrap size={8}>
               <Tag color="blue">事项 {localPulse.items}</Tag>
