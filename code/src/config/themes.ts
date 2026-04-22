@@ -1,4 +1,4 @@
-// 17 款主题壁纸 + 新增风格化主题
+// 11 款主题风格
 export type ThemeStyle = 'cyberpunk' | 'light' | 'dark' | 'minimal' | 'retro' | 'gradient';
 
 export interface ThemeMeta {

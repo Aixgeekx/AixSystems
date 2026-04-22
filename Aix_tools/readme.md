@@ -38,7 +38,7 @@ npm install
 npm run dev        # 开发服务 http://127.0.0.1:5173
 npm run build      # 生产打包 到 code/dist/
 npm run preview    # 预览生产产物
-npm test           # 跑单元测试 (25 用例)
+npm test           # 跑单元测试 (30 用例)
 ```
 
 ## 目录结构
@@ -80,7 +80,7 @@ AixSystems/
 - ECharts + echarts-for-react (图表)
 - @dnd-kit (拖拽)
 - Electron 31 + electron-builder (桌面版)
-- Vitest (单元测试,25 用例)
+- Vitest (单元测试,30 用例)
 
 ## 离线改造要点
 
@@ -91,7 +91,7 @@ AixSystems/
 | 会员 Gate | 全部解锁 |
 | 服务器同步 | JSON 导入导出手动备份(Electron 下直写磁盘) |
 | 电话/短信提醒 | 浏览器 Notification API |
-| 桌面小部件 | 浮动小窗 (position:fixed) |
+| 桌面小部件 | 浮动小窗 (position:fixed) + 跟随全局/白天/黑夜/简约/赛博朋克/渐变/复古主题 |
 | 附件 OSS | 存 IndexedDB blobs 表 |
 | 意见反馈 | 写入本地 `eventLog` 表 |
 
@@ -101,6 +101,6 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.18.0-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.18.1-Setup.exe` (NSIS 安装包,约 80MB)
 
-便携版: `npm run dist:portable` → `AixSystems-0.18.0-portable.exe`
+便携版: `npm run dist:portable` → `AixSystems-0.18.1-portable.exe`

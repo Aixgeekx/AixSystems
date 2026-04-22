@@ -39,6 +39,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 
 ## 最近更新
 
+- `v0.18.1`：浮动小组件新增“跟随全局主题”模式，赛博朋克等主题下的面板与设置项彻底去白底化，透明度调节同步生效
 - `v0.18.0`：加入赛博朋克风格主题系统，小组件支持白天/黑夜/简约/赛博朋克/渐变/复古多主题，不再固定白色
 - `v0.17.0`：搜索页新增本地搜索历史，离线环境下也能复用最近查询词
 - `v0.16.0`：首页加入存储控件，显示应用本地占用和设备磁盘空间；日记页与系统设置页进一步升级为完整工作台
@@ -80,7 +81,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 | **备忘录** | 富文本 + 文件夹 + 置顶 + 回收站 |
 | **主题** | 赛博朋克 / 白天 / 黑夜 / 极简 / 渐变 / 复古等多种主题风格 |
 | **安全** | PBKDF2 派生密钥 + AES-GCM 密码保护(应用锁 / 日记锁) |
-| **桌面小部件** | 浮动小窗 + 三种样式 + 六种主题风格 + 透明度调节 + 位置记忆 |
+| **桌面小部件** | 浮动小窗 + 三种样式 + 跟随全局/白天/黑夜/简约/赛博朋克/渐变/复古主题 + 透明度调节 + 位置记忆 |
 | **搜索** | 跨事项 / 日记 / 备忘录 |
 | **备份** | JSON 全量导出导入(桌面版直写磁盘) |
 | **本地体验** | 专注断点续跑 / 启动页偏好生效 / 存储状态可见 |
@@ -104,7 +105,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 图表     ECharts 5
 拖拽     @dnd-kit/core + /sortable
 桌面     Electron 31 + electron-builder
-测试     Vitest + @testing-library/react (25 用例)
+测试     Vitest + @testing-library/react (30 用例)
 ```
 
 ## 目录结构
@@ -151,7 +152,7 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物:`desktop/dist-installer/AixSystems-0.18.0-Setup.exe`(约 80MB NSIS 向导包)
+产物:`desktop/dist-installer/AixSystems-0.18.1-Setup.exe`(约 80MB NSIS 向导包)
 
 ## 便携路线
 

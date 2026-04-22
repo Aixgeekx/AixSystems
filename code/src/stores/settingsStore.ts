@@ -1,6 +1,7 @@
 // 设置 store - 从 db.settings 同步并缓存
 import { create } from 'zustand';
 import { db } from '@/db';
+import { DEFAULT_THEME } from '@/config/themes';
 
 interface SettingsState {
   theme: string;                                          // 主题 key
@@ -21,7 +22,7 @@ async function save(key: string, value: any) {
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
-  theme: 'bikong',
+  theme: DEFAULT_THEME,
   brightness: 100,
   blur: 0,
   appLocked: false,
@@ -31,7 +32,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const kv: Record<string, any> = {};
     rows.forEach(r => kv[r.key] = r.value);
     set({
-      theme: kv.theme ?? 'bikong',
+      theme: kv.theme ?? DEFAULT_THEME,
       brightness: kv.brightness ?? 100,
       blur: kv.blur ?? 0,
       appLocked: !!kv.appLockPasswordHash,
