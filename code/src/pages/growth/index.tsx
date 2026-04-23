@@ -43,6 +43,14 @@ export default function GrowthPage() {
 
     const activeGoals = goals.filter(g => g.status === 'active');
     const completedGoals = goals.filter(g => g.status === 'completed');
+    const activeGoalsList = activeGoals.slice(0, 4).map(g => ({
+      id: g.id,
+      title: g.title,
+      color: g.color,
+      progress: g.milestones?.length ? Math.round((g.milestones.filter(m => m.done).length / g.milestones.length) * 100) : 0,
+      doneCount: g.milestones?.filter(m => m.done).length || 0,
+      totalCount: g.milestones?.length || 0
+    }));
 
     // 习惯本周打卡分布
     const weekDays = Array.from({ length: 7 }).map((_, i) => {
@@ -66,6 +74,7 @@ export default function GrowthPage() {
       totalGoals: goals.length,
       activeGoals: activeGoals.length,
       completedGoals: completedGoals.length,
+      activeGoalsList,
       weekDays
     };
   }, []);
@@ -273,12 +282,21 @@ export default function GrowthPage() {
           >
             <Typography.Text style={{ color: subColor }}>目标进度</Typography.Text>
             <Typography.Title level={4} style={{ margin: '4px 0 16px', color: titleColor }}>进行中目标概览</Typography.Title>
-            {dashboard?.activeGoals ? (
-              <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                {dashboard.activeGoals > 0 ? (
-                  <Tag color="blue" style={{ borderRadius: 6, fontSize: 14, padding: '4px 12px' }}>
-                    有 {dashboard.activeGoals} 个目标正在推进中
-                  </Tag>
+            {dashboard?.activeGoalsList ? (
+              <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                {dashboard.activeGoalsList.length > 0 ? (
+                  dashboard.activeGoalsList.map(goal => (
+                    <div key={goal.id}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ width: 10, height: 10, borderRadius: '50%', background: goal.color }} />
+                          <span style={{ color: titleColor, fontSize: 14, fontWeight: 500 }}>{goal.title}</span>
+                        </div>
+                        <span style={{ color: subColor, fontSize: 12 }}>{goal.doneCount} / {goal.totalCount}</span>
+                      </div>
+                      <Progress percent={goal.progress} strokeColor={goal.color} trailColor={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.08)'} showInfo={false} strokeLinecap="round" size={{ height: 6 }} />
+                    </div>
+                  ))
                 ) : (
                   <Tag style={{ borderRadius: 6 }}>暂无进行中的目标</Tag>
                 )}
