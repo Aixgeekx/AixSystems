@@ -38,7 +38,7 @@ Always test your changes by running the appropriate command. Change to the corre
 
 ### 4. Git & Release Workflow
 - **Commit Messages**: Use Conventional Commits format (e.g., `feat: AixSystems v0.1.0 - ...`).
-- **Documentation**: If the product functionality or workflow changes, update `README.md`.
+- **Documentation**: If the product functionality or workflow changes, update `README.md`, `code/README.md`, and user-facing docs in `results/` when relevant.
 - **Version Alignment**: Treat each completed iteration as a release candidate. Ensure `results/` wrappers remain aligned with scripts.
 
 ### 5. Security & Edge Cases

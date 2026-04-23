@@ -1,7 +1,7 @@
 // 系统设置 - 通知 / 启动页 / 快捷键 / 本地环境状态 / 系统诊断 (v0.21.5 诊断面板)
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Descriptions, Divider, Row, Select, Space, Statistic, Tag, Typography, message } from 'antd';
-import { CloudDownloadOutlined, DatabaseOutlined, NotificationOutlined, ThunderboltOutlined, DashboardOutlined, HistoryOutlined, WarningOutlined, CheckCircleOutlined, RiseOutlined, FallOutlined } from '@ant-design/icons';
+import { CloudDownloadOutlined, DatabaseOutlined, NotificationOutlined, ThunderboltOutlined, DashboardOutlined, HistoryOutlined, WarningOutlined, CheckCircleOutlined, RiseOutlined, FallOutlined, FontSizeOutlined } from '@ant-design/icons';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { APP_NAME, APP_VERSION } from '@/config/constants';
 import { MENU_GROUPS } from '@/config/routes';
@@ -27,7 +27,7 @@ export default function SystemPage() {
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
 
-  const { startPage, setKV } = useSettingsStore();
+  const { startPage, setKV, customFont } = useSettingsStore();
   const [storageEstimate, setStorageEstimate] = useState<{ usage?: number; quota?: number }>({});
   const [permissionState, setPermissionState] = useState(Notification.permission);
   const electron = isElectron();
@@ -237,6 +237,41 @@ export default function SystemPage() {
               <Tag style={{ background: isDark ? 'rgba(255,255,255,0.08)' : undefined }}>Ctrl + , 系统设置</Tag>
               <Tag style={{ background: isDark ? 'rgba(255,255,255,0.08)' : undefined }}>Ctrl + / 帮助中心</Tag>
             </Space>
+          </Card>
+        </Col>
+
+        <Col xs={24} lg={12}>
+          <Card bordered={false} className="anim-fade-in-up hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Text style={{ color: subColor }}>字体偏好</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '4px 0 12px', color: titleColor }}>
+              <FontSizeOutlined /> 界面字体
+            </Typography.Title>
+            <Typography.Paragraph style={{ color: subColor, marginBottom: 12 }}>
+              修改后会即时生效。可选择系统常见字体，或使用内置的 Maple Mono 编程字体。
+            </Typography.Paragraph>
+            <Select
+              style={{ width: '100%', borderRadius: 10 }}
+              value={customFont || 'default'}
+              onChange={value => setKV('customFont', value === 'default' ? '' : value)}
+              options={[
+                { value: 'default', label: '跟随主题默认' },
+                { value: '"Maple Mono NF CN", monospace', label: 'Maple Mono NF CN（编程字体）' },
+                { value: '"Segoe UI", "Microsoft YaHei", sans-serif', label: 'Segoe UI / 微软雅黑' },
+                { value: '"PingFang SC", "Hiragino Sans GB", sans-serif', label: '苹方 / 冬青黑体' },
+                { value: '"Source Han Sans SC", "Noto Sans SC", sans-serif', label: '思源黑体' },
+                { value: '"SimSun", "Songti SC", serif', label: '宋体' },
+                { value: '"SimHei", "Heiti SC", sans-serif', label: '黑体' },
+                { value: '"Consolas", "Courier New", monospace', label: 'Consolas' },
+                { value: '"Cascadia Code", "Fira Code", monospace', label: 'Cascadia Code' },
+                { value: '"Orbitron", sans-serif', label: 'Orbitron（科幻感）' },
+                { value: '"Georgia", "Times New Roman", serif', label: 'Georgia（衬线）' },
+              ]}
+            />
+            {customFont ? (
+              <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)', fontFamily: customFont, color: titleColor, fontSize: 14 }}>
+                预览：AixSystems 时间管理系统 123 ABC
+              </div>
+            ) : null}
           </Card>
         </Col>
       </Row>

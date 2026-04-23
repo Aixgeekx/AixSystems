@@ -22,9 +22,9 @@ AixSystems 时间管理系统(离线本地版)。基于调研原版 [时光序](
 
 | 模块 | 说明 |
 |---|---|
-| **15 张表的 IndexedDB** | 事项 / 日记 / 备忘录 / 专注 / 分类 / 文件夹 / 标签 / 提醒队列 / 主题 / 设置 / 用户 / 日志 / 附件 / 缓存 KV |
+| **18 张表的 IndexedDB** | 事项 / 日记 / 备忘录 / 专注 / 分类 / 文件夹 / 标签 / 提醒队列 / 主题 / 设置 / 用户 / 日志 / 附件 / 缓存 KV / 习惯 / 习惯打卡 / 目标 |
 | **17 种事项类型** | 日程/清单/生日/纪念日/倒数日/节日/生理期/信用卡还款/贷款/吃药/起床闹钟/睡眠闹钟/作息/跑步/读书/穿衣搭配/课程表/上班打卡 |
-| **15 款主题风格** | 霓虹赛博 / 矩阵终端 / 白天明亮 / 森林氧气 / 黑夜暗色 / 余烬夜幕 / 极简白白 / 极简黑黑 / 复古泛黄 / 复古暗红 / 渐变海洋 / 渐变炽夏 / 渐变天空 / 渐变水蜜 / 极光薄暮 |
+| **27 款主题风格** | 赛博系列 7 款 / 极简系列 7 款 / 渐变系列 7 款 / 经典保留 6 款 |
 | **40+ 路由** | 对齐原版 `/home/*` 路径结构 |
 
 ## 启动方式
@@ -55,7 +55,7 @@ AixSystems/
 │     ├─ utils/          # time/rrule/lunar/notify/export/crypto/audio/html/electron
 │     ├─ components/     # Layout/ItemForm/RepeatPicker/ReminderPicker/RichEditor/
 │     │                  # PasswordLock/FloatingReminder/ItemCard/Empty
-│     └─ pages/          # 21 个路由页面
+│     └─ pages/          # 24+ 个路由页面
 ├─ desktop/             # Electron 桌面壳
 │  ├─ main.cjs           # 主进程 + IPC
 │  ├─ preload.cjs        # 渲染进程桥 (window.sgx)
@@ -101,8 +101,8 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.19.2-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.21.9-Setup.exe` (NSIS 安装包,约 80MB)
 
 目录便携版: `npm run dist:portable` → `desktop/dist-installer/win-unpacked/`
 
-单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.19.2-portable.exe`
+单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.21.9-portable.exe`

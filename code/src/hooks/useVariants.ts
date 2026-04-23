@@ -140,11 +140,11 @@ export function useThemeVariants() {
 
   
   const getAntdTheme = () => {
-    // dynamically generate antd ConfigProvider theme
+    const customFont = (useSettingsStore.getState() as any).customFont;
     const base = {
       token: {
         colorPrimary: theme.accent,
-        fontFamily: theme.fontFamily,
+        fontFamily: customFont || theme.fontFamily,
       },
       algorithm: style === 'dark' || style === 'cyberpunk' || theme.key === 'minimal_dark' ? antdTheme.darkAlgorithm : undefined
     };

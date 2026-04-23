@@ -16,6 +16,7 @@ interface SettingsState {
   appLocked: boolean;
   appLockPasswordHash?: string;
   startPage: string;                                      // 启动页路由
+  customFont: string;                                     // 自定义字体（空则使用主题默认）
   setTheme: (k: string) => Promise<void>;
   setBrightness: (n: number) => Promise<void>;
   setBlur: (n: number) => Promise<void>;
@@ -38,6 +39,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   blur: 0,
   appLocked: false,
   startPage: '/home/index',
+  customFont: '',
   async load() {
     const rows = await db.settings.toArray();
     const kv: Record<string, any> = {};
@@ -53,7 +55,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       blur: kv.blur ?? 0,
       appLocked: !!kv.appLockPasswordHash,
       appLockPasswordHash: kv.appLockPasswordHash,
-      startPage: kv.startPage ?? '/home/index'
+      startPage: kv.startPage ?? '/home/index',
+      customFont: kv.customFont ?? ''
     });
   },
   async setTheme(k) { await save('theme', k); set({ theme: k }); },

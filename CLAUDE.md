@@ -57,7 +57,7 @@ The `results/` directory contains `.bat` scripts for everyday use. **Do not edit
 
 - **Build**: Vite 5 with `@vitejs/plugin-react`
 - **Frontend**: React 18 + TypeScript 5.6 + Ant Design 5 (zh_CN locale)
-- **Database**: Dexie 4 (IndexedDB wrapper), 15 tables
+- **Database**: Dexie 4 (IndexedDB wrapper), 18 tables
 - **State**: Zustand (`src/stores/settingsStore.ts`, `src/stores/appStore.ts`, etc.)
 - **Routing**: React Router v6 with `HashRouter` (supports `file://` protocol for Electron)
 - **Rich text**: TipTap 3 (`@tiptap/starter-kit` + image/link/placeholder extensions)
@@ -71,7 +71,7 @@ The `results/` directory contains `.bat` scripts for everyday use. **Do not edit
 All data lives locally in the browser's IndexedDB. There is **no backend server**.
 
 - **Database singleton**: `src/db/index.ts` exports `db` (instance of `ShiguangxuDB` extending Dexie)
-- **Schema**: 15 tables defined in the Dexie constructor with indexed fields
+- **Schema**: 18 tables defined in the Dexie constructor with indexed fields, including habits, habit logs, and goals for the growth system
 - **Models**: `src/models/index.ts` — TypeScript interfaces for all entities (`Item`, `Diary`, `Memo`, `FocusSession`, `Classify`, `Tag`, `Folder`, etc.)
 - **Reactivity**: Hooks like `useItems()` in `src/hooks/useItems.ts` use `useLiveQuery` from `dexie-react-hooks` for automatic UI updates when DB changes
 - **Seeding**: `src/db/seed.ts` provides `seedIfEmpty()` — runs on app startup to create default classifications, themes, and user profile
@@ -89,6 +89,9 @@ The unified `Item` model supports 17 item types (schedule, checklist, birthday, 
 - `/home/diary/calendar` — Diary calendar
 - `/home/absorbed/tomatoAbsorbed` — Focus/timer
 - `/home/desktop/dayPlugin` — Floating desktop widget
+- `/home/growth` — Growth dashboard
+- `/home/habit` — Habit tracker
+- `/home/goal` — Goal management
 - `/unlock` — App lock screen
 
 The `AppShell` component enforces the app lock — if `appLocked` is true and session is not unlocked, redirects to `/unlock`.
@@ -101,7 +104,7 @@ After any item is saved, `rescheduleItemReminders(itemId)` rebuilds that item's 
 
 ### Theme system
 
-15 built-in themes defined in `src/config/themes.ts`. The `settingsStore` manages:
+27 built-in themes defined in `src/config/themes.ts`. The `settingsStore` manages:
 - Manual theme selection
 - Auto theme switching (day/night based on configurable time windows)
 - Brightness and blur adjustments
@@ -169,7 +172,7 @@ Tests use Vitest with jsdom. Configuration in `code/vitest.config.ts`:
 
 - **Commit messages**: Use Conventional Commits (e.g. `feat: AixSystems v0.19.3 - ...`, `fix: ...`).
 - **Version alignment**: Each completed iteration is a release candidate. Keep `results/` wrappers aligned with scripts.
-- **Documentation**: Update `code/README.md` when product functionality or workflow changes.
+- **Documentation**: Update `README.md`, `code/README.md`, and user-facing docs in `results/` when product functionality or workflow changes.
 
 ## Important file locations
 

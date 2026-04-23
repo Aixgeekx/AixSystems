@@ -8,9 +8,10 @@ import { isDayThemeTime, normalizeClock, resolveAutoTheme } from '@/utils/themeA
 import { useThemeVariants } from '@/hooks/useVariants';
 
 const GROUPS: Array<{ key: string; label: string; desc: string; match: (theme: ThemeMeta) => boolean; }> = [
-  { key: 'night', label: '赛博与夜幕', desc: '更适合沉浸、深色和夜间场景', match: theme => theme.style === 'cyberpunk' || theme.style === 'dark' },
-  { key: 'light', label: '白昼与极简', desc: '更适合长时间阅读和办公', match: theme => theme.style === 'light' || theme.style === 'minimal' },
-  { key: 'mood', label: '复古与渐变', desc: '更强调情绪氛围和视觉识别度', match: theme => theme.style === 'retro' || theme.style === 'gradient' }
+  { key: 'cyber', label: '赛博系列', desc: '霓虹、终端、未来感，共 7 款', match: theme => theme.style === 'cyberpunk' },
+  { key: 'minimal', label: '极简系列', desc: '留白、克制、去装饰，共 7 款', match: theme => theme.style === 'minimal' },
+  { key: 'gradient', label: '渐变系列', desc: '色彩流动、情绪氛围，共 7 款', match: theme => theme.style === 'gradient' },
+  { key: 'classic', label: '经典系列', desc: '白天、黑夜、复古等保留风格', match: theme => theme.style === 'light' || theme.style === 'dark' || theme.style === 'retro' }
 ];
 
 function TimeField({ value, onChange, textColor, borderColor, background }: { value: string; onChange: (next: string) => void; textColor: string; borderColor: string; background: string; }) {
@@ -113,7 +114,7 @@ export default function ThemeSkinPage() {
               把 AixSystems 调成真正愿意长期打开的样子
             </Typography.Title>
             <Typography.Paragraph style={{ marginBottom: 16, color: 'rgba(255,255,255,0.84)', maxWidth: 720 }}>
-              当前主题是「{currentTheme.label}」。15 款内置主题覆盖赛博、极简、复古、渐变等多种风格，支持按时间自动切换。
+              当前主题是「{currentTheme.label}」。{THEMES.length} 款内置主题覆盖赛博、极简、渐变、复古等多种风格，支持按时间自动切换。
             </Typography.Paragraph>
             <Space wrap size={8}>
               <Tag color="blue" style={{ background: isDark ? 'rgba(59,130,246,0.2)' : undefined }}>当前 {currentTheme.label}</Tag>

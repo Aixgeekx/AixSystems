@@ -138,6 +138,7 @@ export default function App() {
   const autoThemeNight = useSettingsStore(s => s.autoThemeNight);
   const autoThemeDayStart = useSettingsStore(s => s.autoThemeDayStart);
   const autoThemeNightStart = useSettingsStore(s => s.autoThemeNightStart);
+  const customFont = useSettingsStore(s => s.customFont);
   const load = useSettingsStore(s => s.load);
   const setTheme = useSettingsStore(s => s.setTheme);
   const { getAntdTheme } = useThemeVariants();
@@ -161,11 +162,15 @@ export default function App() {
     };
   }, [autoThemeDay, autoThemeDayStart, autoThemeNight, autoThemeNightStart, ready, setTheme, theme, themeMode]);
 
+  useEffect(() => {
+    document.body.style.fontFamily = customFont || '';
+  }, [customFont]);
+
   if (!ready) return <div style={{ padding: 40, textAlign: 'center' }}>加载中...</div>;
 
   return (
-    <ConfigProvider 
-      locale={zhCN} 
+    <ConfigProvider
+      locale={zhCN}
       theme={getAntdTheme()}
     >
       <AntApp>

@@ -1,4 +1,4 @@
-# AixSystems v0.21.5 进度
+# AixSystems v0.21.9 进度
 
 ## 当前目标
 持续迭代增强功能，主导思想：**黑科技系统，个人成长和控制**
@@ -7,34 +7,37 @@
 - [x] growth 仪表盘目标进度增强：从纯数字标签升级为具体目标进度条展示
 - [x] 习惯追踪增加「撤销今日打卡」功能
 - [x] MyDay（今日工作台）增加「成长控制面板」侧边栏，聚合习惯、专注、目标、日记四大模块实时状态
-- [x] 系统设置页新增「系统诊断面板」：数据库健康度评分、15 张表记录数网格、近 7 天数据增长趋势、最近系统日志
+- [x] 系统设置页新增「系统诊断面板」：数据库健康度评分、18 张表记录数网格、近 7 天数据增长趋势、最近系统日志
+- [x] 成长仪表盘新增「成就徽章墙」：10 枚徽章基于 habit/focus/diary/goal/items 数据自动解锁，灰度/彩色视觉区分，状态持久化到 cacheKv
+- [x] 专注统计增强：新增「最佳时段」分析（按 startTime 小时聚合）和「周同比」趋势（本周 vs 上周时长变化百分比）
+- [x] 周期复盘：成长仪表盘新增「周期复盘」Card，支持本周/本月 Tab 切换，自动统计事项完成率、专注时长、习惯打卡、日记篇数，并展示环比变化标签
+- [x] 主题库扩展到 27 款：赛博/极简/渐变各 7 款 + 经典保留 6 款
+- [x] 支持系统设置中的自定义字体，主题默认字体可被用户偏好覆盖
+- [x] 发布收口：统一版本号、README、code/README、应用内 NewFeatures、results 使用说明、Agent/Claude 指南
 - [x] 构建通过（tsc + vite）
 - [x] 测试通过（36/36 Vitest）
-- [x] 已提交 4 个 commit 到 main
+- [x] 已提交自动迭代 commit 到 main，等待本轮 v0.21.9 收口提交并推送
 
 ## 关键洞察（来自时光序调研文档）
 - 时光序核心策略："一事 App 化"，对小白用户心智门槛极低
 - 差异化亮点：记忆曲线（艾宾浩斯）、严格模式专注、数据导出
-- AixApp 已覆盖核心 MVP：事项、日历、提醒、日记、番茄钟、主题、数据导出
-- 可继续增强方向：专注统计可视化、周结/月结、那年今日（已部分实现）、成就系统
+- AixApp 已覆盖核心 MVP：事项、日历、提醒、日记、番茄钟、主题、数据导出、成就系统、系统诊断、专注统计增强、周期复盘
+- 可继续增强方向：记忆曲线复习提醒、专注月同比趋势、数据导出增强、成长数据便携报告
 
 ## 下一步候选方向
-1. **专注统计增强** - 增加最佳专注时段分析、周同比/月同比趋势（黑科技+成长）
-2. **成就/徽章系统** - 基于数据触发徽章（连续打卡7天、专注100小时等），增强成长激励
-3. **周结/月结自动生成** - 基于当周数据生成总结报告
-4. **记忆曲线复习提醒** - 基于艾宾浩斯遗忘曲线的复习计划（调研文档差异化亮点）
+1. **记忆曲线复习提醒** - 基于艾宾浩斯遗忘曲线的复习计划（调研文档差异化亮点）【当前候选】
+2. **专注月同比趋势** - 本月 vs 上月专注时长对比
+3. **数据导出增强** - 支持更多格式或选择性导出
 
 ## 关键文件路径
-- `code/src/pages/growth/index.tsx` — 成长仪表盘
+- `code/src/pages/growth/index.tsx` — 成长仪表盘（含徽章墙、目标进度、周期复盘）
 - `code/src/pages/habit/index.tsx` — 习惯追踪（含撤销打卡）
 - `code/src/pages/today/MyDay.tsx` — 今日工作台（含成长控制面板）
 - `code/src/pages/systemsetting/index.tsx` — 系统设置（含诊断面板）
-- `code/src/pages/focus/index.tsx` — 番茄专注
-- `title/时光序app调研.md` — 竞品调研文档
-
-## 关键文件路径
-- `code/src/pages/growth/index.tsx` — 成长仪表盘
-- `code/src/pages/habit/index.tsx` — 习惯追踪（含撤销打卡）
-- `code/src/pages/today/MyDay.tsx` — 今日工作台（含成长控制面板）
-- `code/src/pages/focus/index.tsx` — 番茄专注
+- `code/src/pages/focus/index.tsx` — 番茄专注（含最佳时段、周同比）
+- `code/src/config/themes.ts` — 27 款主题定义
+- `code/src/config/achievements.ts` — 徽章定义配置
+- `code/src/hooks/useAchievements.ts` — 徽章解锁检测 hook
+- `code/src/hooks/useVariants.ts` — 主题/字体注入
+- `code/src/stores/settingsStore.ts` — 设置与自定义字体偏好
 - `title/时光序app调研.md` — 竞品调研文档
