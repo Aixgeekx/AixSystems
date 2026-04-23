@@ -1,4 +1,4 @@
-// 课程表网格 - 7 天 × N 节的时间表
+// 课程表网格 - 7 天 × N 节的时间表 (v0.21.4 主题适配)
 import React from 'react';
 import { Card, Typography } from 'antd';
 import { useItems } from '@/hooks/useItems';
@@ -7,6 +7,7 @@ import { WEEK_FULL } from '@/config/constants';
 import dayjs from 'dayjs';
 import { useAppStore } from '@/stores/appStore';
 import { useNavigate } from 'react-router-dom';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 const { Title, Paragraph } = Typography;
 
@@ -24,6 +25,9 @@ const PERIODS = [                                           // 8 节标准课表
 function toMin(t: string) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
 
 export default function SyllabusPage() {
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
+  const accent = theme.accent;
   const items = useItems({ type: 'syllabus' }) || [];
   const { openItemForm } = useAppStore();
 
@@ -45,32 +49,32 @@ export default function SyllabusPage() {
         <Paragraph type="secondary">按「课程表」类型创建事项后会自动排到此网格。点击空白格可添加一节课。</Paragraph>
       </Typography>
 
-      <Card size="small" style={{ overflowX: 'auto' }}>
+      <Card size="small" style={{ overflowX: 'auto', background: isDark ? 'rgba(10,14,28,0.5)' : undefined, border: isDark ? '1px solid rgba(255,255,255,0.08)' : undefined }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
           <thead>
             <tr>
-              <th style={{ width: 80, padding: 8, background: '#fafafa', border: '1px solid #eee' }}>节次</th>
+              <th style={{ width: 80, padding: 8, background: isDark ? 'rgba(255,255,255,0.04)' : '#fafafa', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #eee', color: isDark ? '#e2e8f0' : undefined }}>节次</th>
               {WEEK_FULL.slice(1).concat(WEEK_FULL[0]).map(w => (
-                <th key={w} style={{ padding: 8, background: '#fafafa', border: '1px solid #eee' }}>{w}</th>
+                <th key={w} style={{ padding: 8, background: isDark ? 'rgba(255,255,255,0.04)' : '#fafafa', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #eee', color: isDark ? '#e2e8f0' : undefined }}>{w}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {PERIODS.map((p, r) => (
               <tr key={r}>
-                <td style={{ padding: 8, border: '1px solid #eee', background: '#fafafa', textAlign: 'center' }}>
-                  <div style={{ fontWeight: 500 }}>{p.label}</div>
-                  <div style={{ fontSize: 11, color: '#888' }}>{p.start}-{p.end}</div>
+                <td style={{ padding: 8, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #eee', background: isDark ? 'rgba(255,255,255,0.04)' : '#fafafa', textAlign: 'center' }}>
+                  <div style={{ fontWeight: 500, color: isDark ? '#e2e8f0' : undefined }}>{p.label}</div>
+                  <div style={{ fontSize: 11, color: isDark ? '#64748b' : '#888' }}>{p.start}-{p.end}</div>
                 </td>
                 {Array.from({ length: 7 }).map((_, c) => {
                   const cell = grid[r][c];
                   return (
                     <td key={c} onClick={() => cell ? openItemForm(cell.id) : openItemForm(undefined, 'syllabus')}
-                      style={{ padding: 6, border: '1px solid #eee', height: 60, cursor: 'pointer',
-                        background: cell ? '#e6f4ff' : '#fff', verticalAlign: 'top' }}>
+                      style={{ padding: 6, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #eee', height: 60, cursor: 'pointer',
+                        background: cell ? (isDark ? `${accent}18` : '#e6f4ff') : (isDark ? 'rgba(10,14,28,0.3)' : '#fff'), verticalAlign: 'top', color: isDark ? '#e2e8f0' : undefined }}>
                       {cell && <>
                         <div style={{ fontWeight: 500 }}>{cell.title}</div>
-                        <div style={{ fontSize: 11, color: '#666' }}>{cell.extra?.classroom} {cell.extra?.teacher}</div>
+                        <div style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#666' }}>{cell.extra?.classroom} {cell.extra?.teacher}</div>
                       </>}
                     </td>
                   );

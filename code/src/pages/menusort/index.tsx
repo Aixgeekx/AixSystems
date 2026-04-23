@@ -1,4 +1,4 @@
-// 菜单排序 - 拖拽排序 + 显示/隐藏,写入 settings
+// 菜单排序 - 拖拽排序 + 显示/隐藏,写入 settings (v0.21.4 主题适配)
 import React, { useEffect, useState } from 'react';
 import { Card, Switch, Typography, Button, message } from 'antd';
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
@@ -8,6 +8,7 @@ import * as Icons from '@ant-design/icons';
 import { MenuOutlined, UndoOutlined } from '@ant-design/icons';
 import { MENU_GROUPS } from '@/config/routes';
 import { db } from '@/db';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 const { Title, Paragraph } = Typography;
 
@@ -19,13 +20,13 @@ function iconOf(name: string) {                              // 动态 AntD 图�
 
 interface Row { key: string; label: string; icon?: string; path: string; hidden: boolean; }
 
-function SortableRow({ row, onToggle }: { row: Row; onToggle: (k: string) => void }) {
+function SortableRow({ row, onToggle, isDark }: { row: Row; onToggle: (k: string) => void; isDark: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: row.key });
   const style = { transform: CSS.Transform.toString(transform), transition };
   return (
     <div ref={setNodeRef} style={{ ...style, display: 'flex', alignItems: 'center', padding: '10px 12px',
-      background: '#fff', border: '1px solid #f0f0f0', borderRadius: 6, marginBottom: 6 }}>
-      <span {...attributes} {...listeners} style={{ cursor: 'grab', marginRight: 10, color: '#bbb' }}><MenuOutlined /></span>
+      background: isDark ? 'rgba(255,255,255,0.06)' : '#fff', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #f0f0f0', borderRadius: 8, marginBottom: 6, color: isDark ? '#e2e8f0' : undefined }}>
+      <span {...attributes} {...listeners} style={{ cursor: 'grab', marginRight: 10, color: isDark ? '#64748b' : '#bbb' }}><MenuOutlined /></span>
       {row.icon && <span style={{ marginRight: 8 }}>{iconOf(row.icon)}</span>}
       <span style={{ flex: 1 }}>{row.label}</span>
       <Switch size="small" checked={!row.hidden} onChange={() => onToggle(row.key)} />
@@ -34,6 +35,8 @@ function SortableRow({ row, onToggle }: { row: Row; onToggle: (k: string) => voi
 }
 
 export default function MenuSortPage() {
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const [rows, setRows] = useState<Row[]>([]);
 
   useEffect(() => {
@@ -83,7 +86,7 @@ export default function MenuSortPage() {
       <Card>
         <DndContext collisionDetection={closestCenter} onDragEnd={onEnd}>
           <SortableContext items={rows.map(r => r.key)} strategy={verticalListSortingStrategy}>
-            {rows.map(r => <SortableRow key={r.key} row={r} onToggle={(k) => persist(rows.map(x => x.key === k ? { ...x, hidden: !x.hidden } : x))} />)}
+            {rows.map(r => <SortableRow key={r.key} row={r} isDark={isDark} onToggle={(k) => persist(rows.map(x => x.key === k ? { ...x, hidden: !x.hidden } : x))} />)}
           </SortableContext>
         </DndContext>
       </Card>
