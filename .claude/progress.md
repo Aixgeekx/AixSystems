@@ -1,34 +1,31 @@
-# AixSystems v0.21.4 进度
+# AixSystems v0.21.5 进度
 
 ## 当前目标
-v0.21.4 主题适配全覆盖 + 字体修复
+持续迭代增强功能，主导思想：**黑科技系统，个人成长和控制**
 
-## 已完成
-- [x] 全部 36 个页面文件引入 useThemeVariants 并适配 dark/cyberpunk 主题
-- [x] 关键组件适配：CommandPalette、ItemForm/Dialog、RichEditor、ExtraFields、ReminderPicker、ItemCard、Empty、Layout
-- [x] 修复 useVariants.ts 中 fontFamily 硬编码为 theme.fontFamily
-- [x] index.html 添加 Google Fonts 预加载（Orbitron、Rajdhani）
+## 已完成（本轮迭代）
+- [x] growth 仪表盘目标进度增强：从纯数字标签升级为具体目标进度条展示
+- [x] 习惯追踪增加「撤销今日打卡」功能
+- [x] MyDay（今日工作台）增加「成长控制面板」侧边栏，聚合习惯、专注、目标、日记四大模块实时状态
 - [x] 构建通过（tsc + vite）
 - [x] 测试通过（36/36 Vitest）
-- [x] 已提交 7 个 commit 到 main
+- [x] 已提交 3 个 commit 到 main
 
-## 适配模式
-```tsx
-const { theme } = useThemeVariants();
-const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
-const accent = theme.accent;
-```
-- Card: `background: isDark ? 'rgba(10,14,28,0.5)' : undefined, border: isDark ? '1px solid rgba(255,255,255,0.08)' : undefined`
-- 文字: `#f8fafc`(主)、`#e2e8f0`(次)、`#94a3b8`(辅助)
-- 进度/强调: `accent` 或 `#4ade80`/`#52c41a`
+## 关键洞察（来自时光序调研文档）
+- 时光序核心策略："一事 App 化"，对小白用户心智门槛极低
+- 差异化亮点：记忆曲线（艾宾浩斯）、严格模式专注、数据导出
+- AixApp 已覆盖核心 MVP：事项、日历、提醒、日记、番茄钟、主题、数据导出
+- 可继续增强方向：专注统计可视化、周结/月结、那年今日（已部分实现）、成就系统
 
-## 下一步方向（待决策）
-1. 继续完善功能：成长系统（growth/habit/goal）增强、数据可视化、性能优化
-2. 开始 v0.22.0 新功能开发
-3. 修复用户反馈的具体问题
+## 下一步候选方向
+1. **专注统计增强** - 增加最佳专注时段分析、周同比/月同比趋势（黑科技+成长）
+2. **成就/徽章系统** - 基于数据触发徽章（连续打卡7天、专注100小时等），增强成长激励
+3. **系统诊断面板** - 数据库健康度、存储使用、操作日志，强化"控制"感
+4. **周结/月结自动生成** - 基于当周数据生成总结报告
 
 ## 关键文件路径
-- `code/src/hooks/useVariants.ts` — 主题变量 hook
-- `code/src/config/themes.ts` — 15 款主题定义
-- `code/src/components/Layout/index.tsx` — 布局外壳
-- `code/index.html` — 字体预加载
+- `code/src/pages/growth/index.tsx` — 成长仪表盘
+- `code/src/pages/habit/index.tsx` — 习惯追踪（含撤销打卡）
+- `code/src/pages/today/MyDay.tsx` — 今日工作台（含成长控制面板）
+- `code/src/pages/focus/index.tsx` — 番茄专注
+- `title/时光序app调研.md` — 竞品调研文档
