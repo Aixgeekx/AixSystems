@@ -1,4 +1,4 @@
-// 番茄专注 - 三模式 + 暂停恢复 + 白噪音 + 统计 (v0.20.0 增强动画)
+// 番茄专注 - 三模式 + 暂停恢复 + 白噪音 + 统计 (v0.21.7 专注统计增强)
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Button, Card, Col, Input, InputNumber, List, Progress, Row, Skeleton, Slider, Space, Statistic, Switch, Tabs, Tag, Typography, Select } from 'antd';
 import {
@@ -9,7 +9,9 @@ import {
   StopOutlined,
   FireOutlined,
   TrophyOutlined,
-  FieldTimeOutlined
+  FieldTimeOutlined,
+  AreaChartOutlined,
+  RiseOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
@@ -73,6 +75,18 @@ export default function FocusPage() {
   const todayMin = todaySessions.reduce((sum, session) => sum + session.actualMs / 60_000, 0);
   const successRate = sessions.length ? Math.round((sessions.length - sessions.filter(session => session.giveUp).length) / sessions.length * 100) : 0;
   const averageMin = sessions.length ? Math.round(totalMin / sessions.length) : 0;
+
+  const hourMap: Record<number, number> = {};
+  for (const s of sessions) { hourMap[dayjs(s.startTime).hour()] = (hourMap[dayjs(s.startTime).hour()] || 0) + s.actualMs / 60_000; }
+  let bestHour = -1, bestHourMin = 0;
+  for (const [h, m] of Object.entries(hourMap)) { if (m > bestHourMin) { bestHourMin = m; bestHour = parseInt(h); } }
+  const bestHourLabel = bestHour >= 0 ? `${bestHour.toString().padStart(2, '0')}:00` : '--';
+
+  const weekStart = dayjs().startOf('week').valueOf();
+  const lastWeekStart = dayjs().subtract(1, 'week').startOf('week').valueOf();
+  const thisWeekMin = sessions.filter(s => s.startTime >= weekStart).reduce((sum, s) => sum + s.actualMs / 60_000, 0);
+  const lastWeekMin = sessions.filter(s => s.startTime >= lastWeekStart && s.startTime < weekStart).reduce((sum, s) => sum + s.actualMs / 60_000, 0);
+  const weekChange = lastWeekMin > 0 ? Math.round((thisWeekMin - lastWeekMin) / lastWeekMin * 100) : 0;
 
   function start() {
     f.start({ mode, plannedMs: minutes * 60_000, title, strict });
@@ -490,7 +504,9 @@ export default function FocusPage() {
               { title: '今日专注', value: todayMin.toFixed(0), suffix: '分钟', icon: <FireOutlined />, color: accent, key: 'today' },
               { title: '平均时长', value: averageMin, suffix: '分钟', icon: <FieldTimeOutlined />, color: accent + 'cc', key: 'avg' },
               { title: '完成率', value: successRate, suffix: '%', icon: <TrophyOutlined />, color: '#16a34a', key: 'rate' },
-              { title: '总次数', value: sessions.length, suffix: '', icon: <FireOutlined />, color: accent + '88', key: 'total' }
+              { title: '总次数', value: sessions.length, suffix: '', icon: <FireOutlined />, color: accent + '88', key: 'total' },
+              { title: '最佳时段', value: bestHourLabel, suffix: bestHourMin > 0 ? ` (${Math.round(bestHourMin)}分)` : '', icon: <AreaChartOutlined />, color: '#a78bfa', key: 'best' },
+              { title: '周同比', value: weekChange > 0 ? `+${weekChange}` : weekChange, suffix: '%', icon: <RiseOutlined />, color: weekChange >= 0 ? '#22c55e' : '#ef4444', key: 'week' }
             ].map((stat, i) => (
               <Col span={12} key={stat.key}>
                 <Card

@@ -1,4 +1,4 @@
-// 成长仪表盘 - 整合习惯、目标、专注、事项的成长可视化 + 成就徽章 (v0.21.6)
+// 成长仪表盘 - 整合习惯、目标、专注、事项的成长可视化 + 成就徽章 (v0.21.6 成就系统)
 import React, { Suspense, lazy } from 'react';
 import { Card, Col, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
 import {
