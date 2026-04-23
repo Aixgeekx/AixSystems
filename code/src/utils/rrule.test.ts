@@ -1,6 +1,6 @@
 // RRULE 工具单元测试
 import { describe, it, expect } from 'vitest';
-import { buildRRule, describeRRule, expandRepeat, isMemoryCurve, expandMemoryCurve, MEMORY_CURVE_DAYS } from './rrule';
+import { buildMemoryCurveReminderPlan, buildRRule, describeRRule, expandRepeat, isMemoryCurve, expandMemoryCurve, MEMORY_CURVE_DAYS } from './rrule';
 
 describe('buildRRule', () => {
   it('构造每日规则', () => {
@@ -16,7 +16,7 @@ describe('buildRRule', () => {
 
 describe('describeRRule', () => {
   it('undefined 返回不重复', () => { expect(describeRRule(undefined)).toBe('不重复'); });
-  it('memory_curve 返回记忆曲线', () => { expect(describeRRule('memory_curve')).toBe('记忆曲线'); });
+  it('memory_curve 返回记忆曲线说明', () => { expect(describeRRule('memory_curve')).toBe('记忆曲线 1/2/4/7/15/30 天'); });
 });
 
 describe('memoryCurve', () => {
@@ -41,5 +41,29 @@ describe('expandRepeat', () => {
   it('无效 RRULE 返回空数组', () => {
     const arr = expandRepeat('INVALID', Date.now(), Date.now(), Date.now() + 86_400_000);
     expect(arr).toEqual([]);
+  });
+});
+
+describe('buildMemoryCurveReminderPlan', () => {
+  it('没有提醒配置时默认生成 6 个准时复习提醒', () => {
+    const start = new Date(2026, 3, 23, 9, 0, 0).getTime();
+    const plan = buildMemoryCurveReminderPlan('i1', start, [], start - 1);
+    expect(plan).toHaveLength(MEMORY_CURVE_DAYS.length);
+    expect(plan[0]).toMatchObject({ id: 'i1_memory_1_0', curveDay: 1, label: '第 1 天复习 · 复习当天' });
+  });
+
+  it('有提前提醒配置时按每个复习节点生成提醒队列', () => {
+    const start = new Date(2026, 3, 23, 9, 0, 0).getTime();
+    const plan = buildMemoryCurveReminderPlan('i2', start, [{ offsetMs: -60_000, label: '提前 1 分钟' }], start - 1);
+    expect(plan).toHaveLength(MEMORY_CURVE_DAYS.length);
+    expect(plan[0].fireAt).toBe(expandMemoryCurve(start)[0] - 60_000);
+  });
+
+  it('会过滤已经过期的复习提醒', () => {
+    const start = new Date(2026, 3, 1, 9, 0, 0).getTime();
+    const now = new Date(2026, 3, 10, 9, 0, 0).getTime();
+    const plan = buildMemoryCurveReminderPlan('i3', start, [], now);
+    expect(plan.every(item => item.fireAt > now)).toBe(true);
+    expect(plan.length).toBeLessThan(MEMORY_CURVE_DAYS.length);
   });
 });

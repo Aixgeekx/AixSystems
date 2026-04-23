@@ -154,6 +154,9 @@ export interface ReminderQueueItem {                        // 提醒队列(加�
   itemId: string;
   fireAt: number;                                           // 触发时间
   fired: boolean;
+  label?: string;
+  reviewAt?: number;
+  curveDay?: number;
 }
 
 export interface ThemeRecord {                              // 主题记录

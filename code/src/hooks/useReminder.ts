@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { db } from '@/db';
 import { notify, requestPerm } from '@/utils/notify';
 import { REMINDER_POLL_MS } from '@/config/constants';
+import { buildMemoryCurveReminderPlan, isMemoryCurve } from '@/utils/rrule';
 
 export function useReminder() {                                        // 挂在 App 根节点
   const t = useRef<number | null>(null);
@@ -14,7 +15,7 @@ export function useReminder() {                                        // 挂在
       const pending = due.filter(r => !r.fired && r.fireAt <= nowTs);
       for (const r of pending) {
         const item = await db.items.get(r.itemId);
-        if (item) notify(item.title, item.description || '到点了,记得查看!');
+        if (item) notify(item.title, r.label || item.description || '到点了,记得查看!');
         await db.reminderQueue.update(r.id, { fired: true });
       }
     };
@@ -28,6 +29,11 @@ export async function rescheduleItemReminders(itemId: string) {        // 事项
   const item = await db.items.get(itemId);
   await db.reminderQueue.where('itemId').equals(itemId).delete();
   if (!item || item.deletedAt) return;
+  if (isMemoryCurve(item.repeatRule)) {
+    const plan = buildMemoryCurveReminderPlan(item.id, item.startTime, item.reminders || []);
+    if (plan.length) await db.reminderQueue.bulkAdd(plan);
+    return;
+  }
   for (const r of item.reminders || []) {
     const fireAt = item.startTime + r.offsetMs;
     if (fireAt > Date.now()) {

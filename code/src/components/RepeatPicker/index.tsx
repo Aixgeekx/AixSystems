@@ -1,6 +1,6 @@
 // 重复规则选择器 - 支持所有常见 RRULE + 记忆曲线
 import React, { useState, useEffect } from 'react';
-import { Select, InputNumber, Checkbox, Space } from 'antd';
+import { Alert, Select, InputNumber, Checkbox, Space } from 'antd';
 import { buildRRule } from '@/utils/rrule';
 
 interface Props { value?: string; onChange?: (v?: string) => void; }
@@ -49,6 +49,14 @@ export default function RepeatPicker({ value, onChange }: Props) {
       {mode === 'weekly' && (
         <Checkbox.Group value={weekdays} onChange={v => { setWeekdays(v as number[]); emit(mode, interval, v as number[]); }}
           options={[{label:'一',value:0},{label:'二',value:1},{label:'三',value:2},{label:'四',value:3},{label:'五',value:4},{label:'六',value:5},{label:'日',value:6}]} />
+      )}
+      {mode === 'memory_curve' && (
+        <Alert
+          type="info"
+          showIcon
+          message="按 1 / 2 / 4 / 7 / 15 / 30 天生成复习提醒；未设置提醒时默认复习当天准时提醒。"
+          style={{ width: '100%' }}
+        />
       )}
     </Space>
   );
