@@ -1,4 +1,4 @@
-// 重复事项 - 所有有 repeatRule 的事项
+// 重复事项 - 所有有 repeatRule 的事项 (v0.21.4 主题适配)
 import React from 'react';
 import { useItems } from '@/hooks/useItems';
 import ItemCard from '@/components/ItemCard';

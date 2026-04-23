@@ -1,13 +1,16 @@
-// 经期日历 - 经期事项的月历可视化 + 简单预测
+// 经期日历 - 经期事项的月历可视化 + 简单预测 (v0.21.4 主题适配)
 import React from 'react';
 import { Card, Calendar, Badge, Typography, Row, Col, Statistic } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import { useItems } from '@/hooks/useItems';
 import { isSameDay } from '@/utils/time';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 const { Title, Paragraph } = Typography;
 
 export default function AuntPage() {
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const items = useItems({ type: 'aunt' }) || [];
   const sorted = [...items].sort((a, b) => a.startTime - b.startTime);
 
@@ -40,18 +43,18 @@ export default function AuntPage() {
   return (
     <div>
       <Typography>
-        <Title level={4}>经期日历</Title>
-        <Paragraph type="secondary">创建「生理期」事项后,这里会展示历史记录与下次预测。</Paragraph>
+        <Title level={4} style={{ color: isDark ? '#f8fafc' : undefined }}>经期日历</Title>
+        <Paragraph type="secondary" style={{ color: isDark ? '#94a3b8' : undefined }}>创建「生理期」事项后,这里会展示历史记录与下次预测。</Paragraph>
       </Typography>
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}><Card><Statistic title="记录次数" value={items.length} /></Card></Col>
-        <Col span={6}><Card><Statistic title="周期(天)" value={cycle} /></Card></Col>
-        <Col span={6}><Card><Statistic title="持续(天)" value={duration} /></Card></Col>
-        <Col span={6}><Card><Statistic title="下次预计" value={nextStart ? dayjs(nextStart).format('MM-DD') : '-'} valueStyle={{ color: '#ff4d8f' }}/></Card></Col>
+        <Col span={6}><Card style={{ background: isDark ? 'rgba(10,14,28,0.5)' : undefined, border: isDark ? '1px solid rgba(255,255,255,0.08)' : undefined }}><Statistic title={<span style={{ color: isDark ? '#94a3b8' : undefined }}>记录次数</span>} value={items.length} valueStyle={{ color: isDark ? '#f8fafc' : undefined }} /></Card></Col>
+        <Col span={6}><Card style={{ background: isDark ? 'rgba(10,14,28,0.5)' : undefined, border: isDark ? '1px solid rgba(255,255,255,0.08)' : undefined }}><Statistic title={<span style={{ color: isDark ? '#94a3b8' : undefined }}>周期(天)</span>} value={cycle} valueStyle={{ color: isDark ? '#f8fafc' : undefined }} /></Card></Col>
+        <Col span={6}><Card style={{ background: isDark ? 'rgba(10,14,28,0.5)' : undefined, border: isDark ? '1px solid rgba(255,255,255,0.08)' : undefined }}><Statistic title={<span style={{ color: isDark ? '#94a3b8' : undefined }}>持续(天)</span>} value={duration} valueStyle={{ color: isDark ? '#f8fafc' : undefined }} /></Card></Col>
+        <Col span={6}><Card style={{ background: isDark ? 'rgba(10,14,28,0.5)' : undefined, border: isDark ? '1px solid rgba(255,255,255,0.08)' : undefined }}><Statistic title={<span style={{ color: isDark ? '#94a3b8' : undefined }}>下次预计</span>} value={nextStart ? dayjs(nextStart).format('MM-DD') : '-'} valueStyle={{ color: isDark ? '#fb7185' : '#ff4d8f' }}/></Card></Col>
       </Row>
 
-      <Card><Calendar fullscreen cellRender={(v, info) => info.type === 'date' ? cellRender(v as Dayjs) : null} /></Card>
+      <Card style={{ background: isDark ? 'rgba(10,14,28,0.5)' : undefined, border: isDark ? '1px solid rgba(255,255,255,0.08)' : undefined }}><Calendar fullscreen cellRender={(v, info) => info.type === 'date' ? cellRender(v as Dayjs) : null} /></Card>
     </div>
   );
 }

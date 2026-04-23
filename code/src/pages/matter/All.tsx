@@ -1,4 +1,4 @@
-// 全部事项 - 按分类聚合
+// 全部事项 - 按分类聚合 (v0.21.4 主题适配)
 import React, { useState } from 'react';
 import { Input, Space, Select, Button } from 'antd';
 import { SearchOutlined, PlusOutlined } from '@ant-design/icons';

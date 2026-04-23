@@ -1,4 +1,4 @@
-// 日程视图 - 仅 schedule 类型
+// 日程视图 - 仅 schedule 类型 (v0.21.4 主题适配)
 import React from 'react';
 import { Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';

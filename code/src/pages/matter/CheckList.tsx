@@ -1,4 +1,4 @@
-// 清单视图 - 仅 checklist 类型
+// 清单视图 - 仅 checklist 类型 (v0.21.4 主题适配)
 import React from 'react';
 import { Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';

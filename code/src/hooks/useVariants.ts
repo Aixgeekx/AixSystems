@@ -144,7 +144,7 @@ export function useThemeVariants() {
     const base = {
       token: {
         colorPrimary: theme.accent,
-        fontFamily: '"Orbitron", "SF Pro Display", -apple-system, sans-serif',
+        fontFamily: theme.fontFamily,
       },
       algorithm: style === 'dark' || style === 'cyberpunk' || theme.key === 'minimal_dark' ? antdTheme.darkAlgorithm : undefined
     };

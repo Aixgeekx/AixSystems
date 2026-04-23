@@ -1,6 +1,7 @@
-// 帮助中心 - 静态内容
+// 帮助中心 - 静态内容 (v0.21.4 主题适配)
 import React from 'react';
 import { Card, Collapse, Typography } from 'antd';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 const { Title, Paragraph } = Typography;
 
@@ -14,14 +15,16 @@ const FAQ = [
 ];
 
 export default function HelpPage() {
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   return (
     <div style={{ maxWidth: 900 }}>
       <Typography>
-        <Title level={3}>帮助中心</Title>
-        <Paragraph type="secondary">AixSystems 时间管理系统 · 离线本地版。</Paragraph>
+        <Title level={3} style={{ color: isDark ? '#f8fafc' : undefined }}>帮助中心</Title>
+        <Paragraph type="secondary" style={{ color: isDark ? '#94a3b8' : undefined }}>AixSystems 时间管理系统 · 离线本地版。</Paragraph>
       </Typography>
-      <Card>
-        <Collapse items={FAQ.map((f, i) => ({ key: i, label: f.q, children: <Paragraph>{f.a}</Paragraph> }))} />
+      <Card style={{ background: isDark ? 'rgba(10,14,28,0.5)' : undefined, border: isDark ? '1px solid rgba(255,255,255,0.08)' : undefined }}>
+        <Collapse items={FAQ.map((f, i) => ({ key: i, label: f.q, children: <Paragraph style={{ color: isDark ? '#e2e8f0' : undefined }}>{f.a}</Paragraph> }))} />
       </Card>
     </div>
   );
