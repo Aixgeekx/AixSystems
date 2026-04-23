@@ -1,7 +1,8 @@
-// 特色功能 - 宣传页
+// 特色功能 - 宣传页 (v0.21.4 主题适配)
 import React from 'react';
 import { Card, Row, Col, Typography, Tag, Space } from 'antd';
 import * as Icons from '@ant-design/icons';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 const { Title, Paragraph } = Typography;
 
@@ -17,6 +18,9 @@ const FEATURES = [
 ];
 
 export default function CharacteristicPage() {
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
+  const subColor = isDark ? '#94a3b8' : '#666';
   return (
     <div style={{ maxWidth: 1100 }}>
       <Typography><Title level={3}>特色功能</Title><Paragraph type="secondary">AixSystems 最具差异化的 8 个能力。</Paragraph></Typography>
@@ -30,7 +34,7 @@ export default function CharacteristicPage() {
                   {I && <I style={{ fontSize: 32, color: '#fa541c', marginRight: 12 }} />}
                   <div style={{ flex: 1 }}>
                     <Space><strong style={{ fontSize: 16 }}>{f.name}</strong><Tag color="orange">{f.tag}</Tag></Space>
-                    <div style={{ color: '#666', marginTop: 6 }}>{f.desc}</div>
+                    <div style={{ color: subColor, marginTop: 6 }}>{f.desc}</div>
                   </div>
                 </Space>
               </Card>

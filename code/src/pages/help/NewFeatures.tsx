@@ -1,6 +1,7 @@
-// 新功能 - 更新日志
+// 新功能 - 更新日志 (v0.21.4 主题适配)
 import React from 'react';
 import { Timeline, Card, Typography, Tag } from 'antd';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 const { Title, Paragraph } = Typography;
 
@@ -122,13 +123,16 @@ const UPDATES = [
 ];
 
 export default function NewFeaturesPage() {
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
+  const subColor = isDark ? '#64748b' : '#888';
   return (
     <div style={{ maxWidth: 800 }}>
       <Typography><Title level={3}>更新日志</Title><Paragraph type="secondary">AixSystems 迭代记录。</Paragraph></Typography>
       <Card>
         <Timeline items={UPDATES.map(u => ({
           children: <div>
-            <Tag color="blue">v{u.ver}</Tag><span style={{ color: '#888' }}>{u.date}</span>
+            <Tag color="blue">v{u.ver}</Tag><span style={{ color: subColor }}>{u.date}</span>
             <ul style={{ marginTop: 8 }}>{u.items.map((it, i) => <li key={i}>{it}</li>)}</ul>
           </div>
         }))} />

@@ -1,4 +1,4 @@
-// 回收站 - 事项/日记/备忘录已删除列表,可恢复或彻底删除
+// 回收站 - 事项/日记/备忘录已删除列表,可恢复或彻底删除 (v0.21.4 主题适配)
 import React, { useState } from 'react';
 import { Tabs, Button, List, Tag, Space, Popconfirm, message } from 'antd';
 import { DeleteOutlined, UndoOutlined } from '@ant-design/icons';
@@ -7,8 +7,12 @@ import { db } from '@/db';
 import { fmtDate, fmtDateTime } from '@/utils/time';
 import Empty from '@/components/Empty';
 import { ITEM_TYPE_MAP } from '@/config/itemTypes';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 export default function TrashPage() {
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
+  const subColor = isDark ? '#64748b' : '#888';
   const [tab, setTab] = useState('items');
   const items = useLiveQuery(() => db.items.filter(x => !!x.deletedAt).toArray(), []) || [];
   const diaries = useLiveQuery(() => db.diaries.filter(x => !!x.deletedAt).toArray(), []) || [];
@@ -52,19 +56,19 @@ export default function TrashPage() {
           <ItemList rows={items} table={db.items} render={(r: any) => (
             <Space><Tag color={ITEM_TYPE_MAP[r.type as keyof typeof ITEM_TYPE_MAP]?.color}>{ITEM_TYPE_MAP[r.type as keyof typeof ITEM_TYPE_MAP]?.label}</Tag>
               <strong>{r.title}</strong>
-              <span style={{ color: '#888' }}>{fmtDate(r.startTime)}</span></Space>
+              <span style={{ color: subColor }}>{fmtDate(r.startTime)}</span></Space>
           )} />
         )},
         { key: 'diaries', label: `日记 (${diaries.length})`, children: (
           <ItemList rows={diaries} table={db.diaries} render={(r: any) => (
             <Space><Tag>{fmtDate(r.date)}</Tag><strong>{r.title || '无题'}</strong>
-              <span style={{ color: '#888', maxWidth: 300, overflow: 'hidden' }}>{r.content?.slice(0, 40)}</span></Space>
+              <span style={{ color: subColor, maxWidth: 300, overflow: 'hidden' }}>{r.content?.slice(0, 40)}</span></Space>
           )} />
         )},
         { key: 'memos', label: `备忘 (${memos.length})`, children: (
           <ItemList rows={memos} table={db.memos} render={(r: any) => (
             <Space><Tag>{fmtDateTime(r.updatedAt)}</Tag><strong>{r.title || '无标题'}</strong>
-              <span style={{ color: '#888', maxWidth: 300, overflow: 'hidden' }}>{r.content?.slice(0, 40)}</span></Space>
+              <span style={{ color: subColor, maxWidth: 300, overflow: 'hidden' }}>{r.content?.slice(0, 40)}</span></Space>
           )} />
         )}
       ]} />

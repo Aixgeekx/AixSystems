@@ -1,7 +1,8 @@
-// 新手引导 - 功能介绍卡片
+// 新手引导 - 功能介绍卡片 (v0.21.4 主题适配)
 import React from 'react';
 import { Card, Row, Col, Typography, Space } from 'antd';
 import * as Icons from '@ant-design/icons';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 const { Title, Paragraph } = Typography;
 
@@ -17,6 +18,9 @@ const STEPS = [
 ];
 
 export default function GuidePage() {
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
+  const subColor = isDark ? '#94a3b8' : '#666';
   return (
     <div style={{ maxWidth: 1100 }}>
       <Typography>
@@ -33,7 +37,7 @@ export default function GuidePage() {
                   {I && <I style={{ fontSize: 28, color: '#1677ff', marginRight: 12 }} />}
                   <div>
                     <strong>{s.title}</strong>
-                    <div style={{ color: '#666', marginTop: 4 }}>{s.desc}</div>
+                    <div style={{ color: subColor, marginTop: 4 }}>{s.desc}</div>
                   </div>
                 </Space>
               </Card>

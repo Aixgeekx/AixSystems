@@ -1,14 +1,18 @@
-// 意见反馈 - 写入本地 eventLog 表
+// 意见反馈 - 写入本地 eventLog 表 (v0.21.4 主题适配)
 import React, { useState } from 'react';
 import { Card, Input, Button, Select, List, Tag, message } from 'antd';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { nanoid } from 'nanoid';
 import { fmtDateTime } from '@/utils/time';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 const { TextArea } = Input;
 
 export default function FeedbackPage() {
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
+  const subColor = isDark ? '#64748b' : '#999';
   const [type, setType] = useState('优化');
   const [content, setContent] = useState('');
   const logs = useLiveQuery(() => db.eventLog.where('level').equals('feedback').reverse().sortBy('createdAt'), []) || [];
@@ -32,7 +36,7 @@ export default function FeedbackPage() {
       </Card>
 
       <Card title="历史反馈" style={{ marginTop: 16 }}>
-        {logs.length === 0 ? <div style={{ color: '#999' }}>暂无</div> :
+        {logs.length === 0 ? <div style={{ color: subColor }}>暂无</div> :
           <List dataSource={logs} renderItem={(l: any) => (
             <List.Item><Tag>{fmtDateTime(l.createdAt)}</Tag> {l.message}</List.Item>
           )} />
