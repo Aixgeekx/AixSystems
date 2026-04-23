@@ -1,4 +1,4 @@
-// 成长仪表盘 - 整合习惯、目标、专注、事项的成长可视化 (v0.21.2)
+// 成长仪表盘 - 整合习惯、目标、专注、事项的成长可视化 + 成就徽章 (v0.21.6)
 import React, { Suspense, lazy } from 'react';
 import { Card, Col, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
 import {
@@ -8,12 +8,15 @@ import {
   FlagOutlined,
   TrophyOutlined,
   RiseOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  LockOutlined,
+  StarOutlined
 } from '@ant-design/icons';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
+import { useAchievements } from '@/hooks/useAchievements';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
 
@@ -119,6 +122,7 @@ export default function GrowthPage() {
   ];
 
   const todayCompletion = dashboard?.todayTotal ? Math.round((dashboard.todayDone / dashboard.todayTotal) * 100) : 0;
+  const achievements = useAchievements();
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -312,6 +316,59 @@ export default function GrowthPage() {
           </Card>
         </Col>
       </Row>
+
+      {/* 成就徽章墙 */}
+      <Card
+        bordered={false}
+        className="anim-fade-in-up stagger-6"
+        style={{ borderRadius: 24, background: cardBg, border: cardBorder, boxShadow: isDark ? `0 12px 30px -10px rgba(0,0,0,0.3)` : '0 12px 30px -10px rgba(0,0,0,0.05)' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <Typography.Text style={{ color: subColor }}>成长激励</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '4px 0 0', color: titleColor }}>成就徽章</Typography.Title>
+          </div>
+          <Tag color="gold" style={{ borderRadius: 6, fontSize: 14, padding: '4px 12px' }}>
+            <TrophyOutlined /> {achievements?.unlockedCount || 0} / {achievements?.total || 0}
+          </Tag>
+        </div>
+
+        {achievements ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+            {achievements.list.map(a => (
+              <div
+                key={a.id}
+                className="hover-scale"
+                style={{
+                  padding: '16px 12px',
+                  borderRadius: 18,
+                  textAlign: 'center',
+                  background: a.unlocked ? `${a.color}15` : isDark ? 'rgba(255,255,255,0.03)' : 'rgba(15,23,42,0.03)',
+                  border: a.unlocked ? `1px solid ${a.color}35` : `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)'}`,
+                  transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+                  filter: a.unlocked ? 'none' : 'grayscale(0.85) opacity(0.65)'
+                }}
+              >
+                <div style={{ fontSize: 32, marginBottom: 8, filter: a.unlocked ? 'none' : 'grayscale(1)' }}>{a.icon}</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: a.unlocked ? a.color : subColor, marginBottom: 4 }}>{a.name}</div>
+                <div style={{ fontSize: 11, color: subColor, lineHeight: 1.4 }}>{a.desc}</div>
+                {!a.unlocked && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: subColor }}>
+                    <LockOutlined style={{ fontSize: 10, marginRight: 4 }} />未解锁
+                  </div>
+                )}
+                {a.unlocked && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: a.color }}>
+                    <StarOutlined style={{ fontSize: 10, marginRight: 4 }} />已解锁
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ color: subColor }}>加载中...</div>
+        )}
+      </Card>
     </Space>
   );
 }
