@@ -118,6 +118,20 @@ export default function HabitPage() {
     message.success('打卡成功');
   }
 
+  async function undoCheckIn(habit: Habit) {
+    const todayStart = dayjs().startOf('day').valueOf();
+    const todayEnd = dayjs().endOf('day').valueOf();
+    const todayHabitLogs = logs
+      .filter(l => l.habitId === habit.id && l.date >= todayStart && l.date <= todayEnd)
+      .sort((a, b) => b.date - a.date);
+    if (todayHabitLogs.length === 0) {
+      message.info('今日无打卡记录');
+      return;
+    }
+    await db.habitLogs.delete(todayHabitLogs[0].id);
+    message.success('已撤销');
+  }
+
   async function del(habit: Habit) {
     await db.habits.update(habit.id, { deletedAt: Date.now() });
     message.success('已删除');
@@ -287,6 +301,12 @@ export default function HabitPage() {
                       />
                     </div>
                   </div>
+
+                  {todayCount > 0 && (
+                    <div style={{ textAlign: 'right', marginBottom: 8 }}>
+                      <a onClick={() => undoCheckIn(habit)} style={{ color: subColor, fontSize: 12, cursor: 'pointer' }}>撤销今日打卡</a>
+                    </div>
+                  )}
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 14 }}>
                     {WEEK_DAYS.map(d => (
