@@ -14,10 +14,13 @@ import ExtraFields from './ExtraFields';
 import { rescheduleItemReminders } from '@/hooks/useReminder';
 import { IMPORTANCE_LABELS } from '@/config/constants';
 import type { Item } from '@/models';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 const { TextArea } = Input;
 
 export default function ItemFormDialog() {
+  const { theme } = useThemeVariants();
+  const accent = theme.accent;
   const { itemFormOpen, itemFormId, itemFormType, closeItemForm } = useAppStore();
   const [form] = Form.useForm();
   const [type, setType] = useState<ItemType>('schedule');
@@ -96,7 +99,7 @@ export default function ItemFormDialog() {
       footer={[
         itemFormId ? <a key="del" onClick={onDelete} style={{ color: '#ff4d4f', marginRight: 'auto' }}>删除</a> : null,
         <a key="cancel" onClick={closeItemForm}>取消</a>,
-        <a key="ok" onClick={onOk} style={{ marginLeft: 16, color: '#1677ff', fontWeight: 500 }}>保存</a>
+        <a key="ok" onClick={onOk} style={{ marginLeft: 16, color: accent, fontWeight: 500 }}>保存</a>
       ]}>
       <Form form={form} layout="vertical">
         <Form.Item label="类型" name="type">

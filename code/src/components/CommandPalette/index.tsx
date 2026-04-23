@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { MENU_GROUPS, ROUTES } from '@/config/routes';
 import { ITEM_TYPES } from '@/config/itemTypes';
 import { useAppStore } from '@/stores/appStore';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 interface CommandItem {
   key: string;
@@ -41,6 +42,9 @@ export default function CommandPalette() {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const deferredQuery = useDeferredValue(query);
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
+  const accent = theme.accent;
 
   const pageCommands: CommandItem[] = MENU_GROUPS.flatMap(group =>
     group.children.map(child => ({
@@ -165,29 +169,29 @@ export default function CommandPalette() {
           borderRadius: 8,
           padding: 0,
           overflow: 'hidden',
-          background: 'rgba(5, 5, 10, 0.95)',
+          background: isDark ? 'rgba(10, 14, 28, 0.95)' : 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(0, 240, 255, 0.3)',
-          boxShadow: '0 0 30px rgba(0, 240, 255, 0.15)'
+          border: `1px solid ${accent}4d`,
+          boxShadow: `0 0 30px ${accent}26`
         },
         body: { padding: 0 }
       }}
     >
-      <div style={{ padding: 18, borderBottom: '1px solid rgba(0, 240, 255, 0.2)' }}>
+      <div style={{ padding: 18, borderBottom: `1px solid ${accent}33` }}>
         <Space direction="vertical" size={12} style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#00f0ff', textShadow: '0 0 10px rgba(0,240,255,0.5)' }}>命令面板</div>
-              <Typography.Text style={{ color: 'rgba(0, 240, 255, 0.6)' }}>搜索页面、动作和快捷创建入口</Typography.Text>
+              <div style={{ fontSize: 22, fontWeight: 700, color: accent, textShadow: `0 0 10px ${accent}80` }}>命令面板</div>
+              <Typography.Text style={{ color: `${accent}99` }}>搜索页面、动作和快捷创建入口</Typography.Text>
             </div>
-            <Tag style={{ borderRadius: 4, padding: '6px 10px', marginInlineEnd: 0, background: 'rgba(0,240,255,0.1)', color: '#00f0ff', border: '1px solid rgba(0,240,255,0.3)' }}>Ctrl + K</Tag>
+            <Tag style={{ borderRadius: 4, padding: '6px 10px', marginInlineEnd: 0, background: `${accent}1a`, color: accent, border: `1px solid ${accent}4d` }}>Ctrl + K</Tag>
           </div>
 
           <Input
             ref={inputRef}
             size="large"
             value={query}
-            prefix={<SearchOutlined style={{ color: 'rgba(0, 240, 255, 0.6)' }} />}
+            prefix={<SearchOutlined style={{ color: `${accent}99` }} />}
             placeholder="例如：搜索 / 新建日程 / 打开专注 / 系统设置"
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => {
@@ -208,9 +212,9 @@ export default function CommandPalette() {
             style={{
               borderRadius: 8,
               paddingBlock: 10,
-              background: 'rgba(0, 240, 255, 0.05)',
-              border: '1px solid rgba(0, 240, 255, 0.2)',
-              color: '#00f0ff'
+              background: `${accent}0d`,
+              border: `1px solid ${accent}33`,
+              color: accent
             }}
           />
         </Space>
@@ -218,7 +222,7 @@ export default function CommandPalette() {
 
       <div style={{ maxHeight: 420, overflow: 'auto', padding: 10 }}>
         {commands.length === 0 ? (
-          <div style={{ padding: 36, textAlign: 'center', color: 'rgba(0, 240, 255, 0.5)' }}>
+          <div style={{ padding: 36, textAlign: 'center', color: `${accent}80` }}>
             没找到匹配项，试试输入页面名、事项类型或常用动作。
           </div>
         ) : commands.map((item, index) => {
@@ -231,15 +235,15 @@ export default function CommandPalette() {
               onClick={() => runCommand(index)}
               style={{
                 width: '100%',
-                border: active ? '1px solid rgba(0, 240, 255, 0.4)' : '1px solid transparent',
-                background: active ? 'rgba(0, 240, 255, 0.1)' : 'transparent',
+                border: active ? `1px solid ${accent}66` : '1px solid transparent',
+                background: active ? `${accent}1a` : 'transparent',
                 borderRadius: 8,
                 padding: '14px 16px',
                 marginBottom: 8,
                 textAlign: 'left',
                 cursor: 'pointer',
                 transition: 'all 0.18s ease',
-                boxShadow: active ? '0 0 15px rgba(0, 240, 255, 0.15)' : 'none'
+                boxShadow: active ? `0 0 15px ${accent}26` : 'none'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -249,21 +253,21 @@ export default function CommandPalette() {
                   borderRadius: 8,
                   display: 'grid',
                   placeItems: 'center',
-                  background: active ? 'rgba(0, 240, 255, 0.2)' : 'rgba(0, 240, 255, 0.05)',
-                  color: active ? '#00f0ff' : 'rgba(0, 240, 255, 0.6)',
-                  border: active ? '1px solid rgba(0, 240, 255, 0.5)' : '1px solid transparent',
+                  background: active ? `${accent}33` : `${accent}0d`,
+                  color: active ? accent : `${accent}99`,
+                  border: active ? `1px solid ${accent}80` : '1px solid transparent',
                   flexShrink: 0
                 }}>
                   {item.icon}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                    <Typography.Text strong style={{ fontSize: 15, color: active ? '#00f0ff' : 'rgba(255,255,255,0.8)' }}>{item.title}</Typography.Text>
+                    <Typography.Text strong style={{ fontSize: 15, color: active ? accent : (isDark ? '#e2e8f0' : '#0f172a') }}>{item.title}</Typography.Text>
                     <Tag color={item.badge === '新建' ? 'cyan' : item.badge === '页面' ? 'purple' : 'magenta'} style={{ marginInlineEnd: 0, background: 'transparent', border: '1px solid currentColor' }}>
                       {item.badge}
                     </Tag>
                   </div>
-                  <Typography.Text style={{ fontSize: 13, color: 'rgba(0, 240, 255, 0.5)' }}>
+                  <Typography.Text style={{ fontSize: 13, color: `${accent}80` }}>
                     {item.subtitle}
                   </Typography.Text>
                 </div>
@@ -279,14 +283,14 @@ export default function CommandPalette() {
         justifyContent: 'space-between',
         gap: 12,
         padding: '12px 18px 18px',
-        color: 'rgba(0, 240, 255, 0.6)'
+        color: `${accent}99`
       }}>
         <Space size={8} wrap>
-          <Tag style={{ background: 'transparent', border: '1px solid rgba(0,240,255,0.3)', color: '#00f0ff' }}>Enter 执行</Tag>
-          <Tag style={{ background: 'transparent', border: '1px solid rgba(0,240,255,0.3)', color: '#00f0ff' }}>↑ ↓ 选择</Tag>
-          <Tag style={{ background: 'transparent', border: '1px solid rgba(0,240,255,0.3)', color: '#00f0ff' }}>Esc 关闭</Tag>
+          <Tag style={{ background: 'transparent', border: `1px solid ${accent}4d`, color: accent }}>Enter 执行</Tag>
+          <Tag style={{ background: 'transparent', border: `1px solid ${accent}4d`, color: accent }}>↑ ↓ 选择</Tag>
+          <Tag style={{ background: 'transparent', border: `1px solid ${accent}4d`, color: accent }}>Esc 关闭</Tag>
         </Space>
-        <Button type="text" style={{ color: '#00f0ff' }} onClick={() => nav(ROUTES.SEARCH)}>转到完整搜索页</Button>
+        <Button type="text" style={{ color: accent }} onClick={() => nav(ROUTES.SEARCH)}>转到完整搜索页</Button>
       </div>
     </Modal>
   );
