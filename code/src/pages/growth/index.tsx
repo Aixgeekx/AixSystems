@@ -1,6 +1,6 @@
-// 成长仪表盘 - 整合习惯、目标、专注、事项的成长可视化 + 成就徽章 (v0.21.6 成就系统)
+// 成长仪表盘 - 整合习惯、目标、专注、事项的成长可视化 + 成就徽章 + 周期复盘 (v0.21.8)
 import React, { Suspense, lazy } from 'react';
-import { Card, Col, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { Card, Col, Progress, Row, Space, Statistic, Tag, Typography, Tabs } from 'antd';
 import {
   CalendarOutlined,
   CheckCircleOutlined,
@@ -10,7 +10,9 @@ import {
   RiseOutlined,
   ClockCircleOutlined,
   LockOutlined,
-  StarOutlined
+  StarOutlined,
+  BookOutlined,
+  FallOutlined
 } from '@ant-design/icons';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -19,6 +21,56 @@ import { useThemeVariants } from '@/hooks/useVariants';
 import { useAchievements } from '@/hooks/useAchievements';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
+
+interface PeriodData {
+  itemsDone: number;
+  itemsTotal: number;
+  focusMin: number;
+  diaries: number;
+  checkins: number;
+}
+
+function diffTag(now: number, prev: number) {
+  if (prev === 0) return now > 0 ? { text: '新增', color: '#22c55e' as const } : { text: '持平', color: '#94a3b8' as const };
+  const pct = Math.round((now - prev) / prev * 100);
+  return pct >= 0 ? { text: `+${pct}%`, color: '#22c55e' as const } : { text: `${pct}%`, color: '#ef4444' as const };
+}
+
+function SummaryBlock({ data, prev, isDark, titleColor, subColor, cardBg, cardBorder }: { data?: PeriodData; prev?: PeriodData; isDark: boolean; titleColor: string; subColor: string; cardBg: string; cardBorder: string }) {
+  if (!data) return <div style={{ color: subColor }}>加载中...</div>;
+  const stats = [
+    { label: '事项完成', value: data.itemsDone, total: data.itemsTotal, prevValue: prev?.itemsDone, icon: <CheckCircleOutlined />, color: '#38bdf8' },
+    { label: '专注时长', value: data.focusMin, suffix: '分钟', prevValue: prev?.focusMin, icon: <FireOutlined />, color: '#f59e0b' },
+    { label: '习惯打卡', value: data.checkins, suffix: '次', prevValue: prev?.checkins, icon: <CalendarOutlined />, color: '#a78bfa' },
+    { label: '日记篇数', value: data.diaries, suffix: '篇', prevValue: prev?.diaries, icon: <BookOutlined />, color: '#34d399' }
+  ];
+  const completion = data.itemsTotal ? Math.round((data.itemsDone / data.itemsTotal) * 100) : 0;
+  const hint = completion >= 80 ? '效率极高，保持这种状态！' : completion >= 50 ? '进度不错，继续推进。' : '还有很大提升空间，加油！';
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Typography.Paragraph style={{ color: subColor, margin: 0 }}>
+        事项完成率 <strong style={{ color: titleColor }}>{completion}%</strong>，{hint}
+      </Typography.Paragraph>
+      <Row gutter={[12, 12]}>
+        {stats.map(stat => {
+          const d = stat.prevValue !== undefined ? diffTag(stat.value, stat.prevValue) : null;
+          return (
+            <Col span={12} key={stat.label}>
+              <Card bordered={false} style={{ borderRadius: 18, background: cardBg, border: cardBorder }}>
+                <Statistic title={<span style={{ color: subColor }}>{stat.icon} {stat.label}</span>} value={stat.value} suffix={stat.suffix} valueStyle={{ fontSize: 24, fontWeight: 700, color: stat.color }} />
+                {d && (
+                  <Tag style={{ marginTop: 8, borderRadius: 6, color: d.color, borderColor: d.color + '40', background: d.color + '10' }}>
+                    {d.text}
+                  </Tag>
+                )}
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+    </Space>
+  );
+}
 
 export default function GrowthPage() {
   const { theme } = useThemeVariants();
@@ -64,6 +116,27 @@ export default function GrowthPage() {
       return { day: d.format('ddd'), count };
     });
 
+    const weekStartTs = dayjs().startOf('week').valueOf();
+    const weekEndTs = dayjs().endOf('week').valueOf();
+    const lastWeekStartTs = dayjs().subtract(1, 'week').startOf('week').valueOf();
+    const lastWeekEndTs = dayjs().subtract(1, 'week').endOf('week').valueOf();
+    const monthStartTs = dayjs().startOf('month').valueOf();
+    const monthEndTs = dayjs().endOf('month').valueOf();
+    const lastMonthStartTs = dayjs().subtract(1, 'month').startOf('month').valueOf();
+    const lastMonthEndTs = dayjs().subtract(1, 'month').endOf('month').valueOf();
+
+    const mkPeriod = (s: number, e: number) => {
+      const its = items.filter(i => !i.deletedAt && i.startTime >= s && i.startTime <= e);
+      const foc = sessions.filter(x => x.startTime >= s && x.startTime <= e).reduce((sum, x) => sum + x.actualMs / 60_000, 0);
+      return {
+        itemsDone: its.filter(i => i.completeStatus === 'done').length,
+        itemsTotal: its.length,
+        focusMin: Math.round(foc),
+        diaries: diaries.filter(d => !d.deletedAt && d.createdAt >= s && d.createdAt <= e).length,
+        checkins: habitLogs.filter(l => l.date >= s && l.date <= e).length
+      };
+    };
+
     return {
       totalItems: items.filter(i => !i.deletedAt).length,
       todayDone: todayItems.filter(i => i.completeStatus === 'done').length,
@@ -78,7 +151,13 @@ export default function GrowthPage() {
       activeGoals: activeGoals.length,
       completedGoals: completedGoals.length,
       activeGoalsList,
-      weekDays
+      weekDays,
+      summary: {
+        week: mkPeriod(weekStartTs, weekEndTs),
+        lastWeek: mkPeriod(lastWeekStartTs, lastWeekEndTs),
+        month: mkPeriod(monthStartTs, monthEndTs),
+        lastMonth: mkPeriod(lastMonthStartTs, lastMonthEndTs)
+      }
     };
   }, []);
 
@@ -317,10 +396,34 @@ export default function GrowthPage() {
         </Col>
       </Row>
 
-      {/* 成就徽章墙 */}
+      {/* 周期复盘 */}
       <Card
         bordered={false}
         className="anim-fade-in-up stagger-6"
+        style={{ borderRadius: 24, background: cardBg, border: cardBorder, boxShadow: isDark ? `0 12px 30px -10px rgba(0,0,0,0.3)` : '0 12px 30px -10px rgba(0,0,0,0.05)' }}
+      >
+        <Typography.Text style={{ color: subColor }}>数据洞察</Typography.Text>
+        <Typography.Title level={4} style={{ margin: '4px 0 16px', color: titleColor }}>周期复盘</Typography.Title>
+        <Tabs
+          items={[
+            {
+              key: 'week',
+              label: '本周',
+              children: <SummaryBlock data={dashboard?.summary.week} prev={dashboard?.summary.lastWeek} isDark={isDark} titleColor={titleColor} subColor={subColor} cardBg={cardBg} cardBorder={cardBorder} />
+            },
+            {
+              key: 'month',
+              label: '本月',
+              children: <SummaryBlock data={dashboard?.summary.month} prev={dashboard?.summary.lastMonth} isDark={isDark} titleColor={titleColor} subColor={subColor} cardBg={cardBg} cardBorder={cardBorder} />
+            }
+          ]}
+        />
+      </Card>
+
+      {/* 成就徽章墙 */}
+      <Card
+        bordered={false}
+        className="anim-fade-in-up stagger-7"
         style={{ borderRadius: 24, background: cardBg, border: cardBorder, boxShadow: isDark ? `0 12px 30px -10px rgba(0,0,0,0.3)` : '0 12px 30px -10px rgba(0,0,0,0.05)' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
