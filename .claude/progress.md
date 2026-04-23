@@ -1,4 +1,4 @@
-# AixSystems v0.22.0 进度
+# AixSystems v0.22.1 进度
 
 ## 当前目标
 持续迭代增强功能，主导思想：**黑科技系统，个人成长和控制**
@@ -15,6 +15,7 @@
 - [x] 支持系统设置中的自定义字体，主题默认字体可被用户偏好覆盖
 - [x] 发布收口：统一版本号、README、code/README、应用内 NewFeatures、results 使用说明、Agent/Claude 指南
 - [x] 记忆曲线复习提醒闭环：自动写入 1/2/4/7/15/30 天复习提醒队列
+- [x] 首页新增「紧凑应用」模式：两列高密度功能入口矩阵，聚合所有核心功能
 - [x] 构建通过（tsc + vite）
 - [x] 测试通过（39/39 Vitest）
 - [x] 已提交自动迭代 commit 到 main，等待本轮 v0.21.9 收口提交并推送
@@ -23,7 +24,7 @@
 - 时光序核心策略："一事 App 化"，对小白用户心智门槛极低
 - 差异化亮点：记忆曲线（艾宾浩斯）、严格模式专注、数据导出
 - AixApp 已覆盖核心 MVP：事项、日历、提醒、日记、番茄钟、主题、数据导出、成就系统、系统诊断、专注统计增强、周期复盘
-- 可继续增强方向：专注月同比趋势、数据导出增强、成长数据便携报告、复习中心
+- 可继续增强方向：专注月同比趋势、数据导出增强、成长数据便携报告、复习中心、首页移动端布局继续优化
 
 ## 下一步候选方向
 1. **专注月同比趋势** - 本月 vs 上月专注时长对比
@@ -39,6 +40,7 @@
 - `code/src/pages/focus/index.tsx` — 番茄专注（含最佳时段、周同比）
 - `code/src/utils/rrule.ts` — RRULE 与记忆曲线复习计划生成
 - `code/src/hooks/useReminder.ts` — 提醒轮询与复习提醒队列调度
+- `code/src/pages/home/index.tsx` — 首页工作台与紧凑应用模式
 - `code/src/config/themes.ts` — 27 款主题定义
 - `code/src/config/achievements.ts` — 徽章定义配置
 - `code/src/hooks/useAchievements.ts` — 徽章解锁检测 hook

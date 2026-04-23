@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.22.1', date: '2026-04-23', items: [
+    '首页新增“紧凑应用”模式，可在工作台和紧凑应用之间切换',
+    '紧凑应用模式用高密度两列卡片聚合所有核心功能入口',
+    '支持从首页直接进入页面或新建对应业务类型'
+  ]},
   { ver: '0.22.0', date: '2026-04-23', items: [
     '记忆曲线从“重复规则标签”升级为真实复习提醒队列',
     '选择记忆曲线后自动生成 1/2/4/7/15/30 天复习节点',
