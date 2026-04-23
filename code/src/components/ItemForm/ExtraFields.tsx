@@ -1,8 +1,9 @@
-// 各 type 特有字段渲染 - 按 itemType 的 extraFields 定义动态生成
+// 各 type 特有字段渲染 - 按 itemType 的 extraFields 定义动态生成 (v0.21.4 主题适配)
 import React from 'react';
 import { Form, InputNumber, Input, Select } from 'antd';
 import { ITEM_TYPE_MAP } from '@/config/itemTypes';
 import type { ItemType } from '@/config/itemTypes';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 interface Props { type: ItemType; }
 
@@ -28,12 +29,14 @@ const EXTRA_META: Record<string, { label: string; widget: 'number' | 'text' | 's
 };
 
 export default function ExtraFields({ type }: Props) {
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const meta = ITEM_TYPE_MAP[type];
   const fields = meta.extraFields || [];
   if (!fields.length) return null;
   return (
-    <div style={{ padding: 12, background: '#fafafa', borderRadius: 6, marginBottom: 16 }}>
-      <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>{meta.label}·专属字段</div>
+    <div style={{ padding: 12, background: isDark ? 'rgba(10,14,28,0.5)' : '#fafafa', borderRadius: 6, marginBottom: 16, border: isDark ? '1px solid rgba(255,255,255,0.08)' : undefined }}>
+      <div style={{ fontSize: 13, color: isDark ? '#94a3b8' : '#666', marginBottom: 8 }}>{meta.label}·专属字段</div>
       {fields.map(key => {
         const f = EXTRA_META[key];
         if (!f) return null;

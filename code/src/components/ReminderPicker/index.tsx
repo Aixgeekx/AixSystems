@@ -1,9 +1,10 @@
-// 提醒选择器 - 最多 5 条,每条是 offsetMs
+// 提醒选择器 - 最多 5 条,每条是 offsetMs (v0.21.4 主题适配)
 import React from 'react';
 import { Select, Space, Tag, Button } from 'antd';
 import { MAX_REMINDERS } from '@/config/constants';
 import { PlusOutlined, CloseOutlined } from '@ant-design/icons';
 import type { Reminder } from '@/models';
+import { useThemeVariants } from '@/hooks/useVariants';
 
 interface Props { value?: Reminder[]; onChange?: (v: Reminder[]) => void; }
 
@@ -18,6 +19,8 @@ const PRESETS: Array<{ label: string; offsetMs: number }> = [
 ];
 
 export default function ReminderPicker({ value = [], onChange }: Props) {
+  const { theme } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const list = value || [];
   const canAdd = list.length < MAX_REMINDERS;
 
@@ -40,7 +43,7 @@ export default function ReminderPicker({ value = [], onChange }: Props) {
           options={PRESETS.map(p => ({ value: p.offsetMs, label: p.label }))}
           onChange={(v) => add(v)} />
       )}
-      {!canAdd && <span style={{ color: '#999' }}>最多 {MAX_REMINDERS} 个提醒</span>}
+      {!canAdd && <span style={{ color: isDark ? '#64748b' : '#999' }}>最多 {MAX_REMINDERS} 个提醒</span>}
     </Space>
   );
 }
