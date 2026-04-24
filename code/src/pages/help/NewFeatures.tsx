@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.23.0', date: '2026-04-25', items: [
+    '数据中心新增选择性导出，可按事项提醒、记录内容、成长系统、组织配置和系统状态分模块备份',
+    '导出的 JSON 会标记 partial/full 范围并自动写入 manifest 表记录清单，方便审计备份内容',
+    '新增数据主权评分和选中表/记录数预估，让本地数据控制状态更直观'
+  ]},
   { ver: '0.22.9', date: '2026-04-25', items: [
     '首页紧凑应用模式新增拖拽排序，可把高频入口拖到自己的控制台顺序',
     '拖拽排序会本地持久化，并继续保留搜索、分组筛选和收藏置顶能力'

@@ -12,19 +12,21 @@ async function saveBackupMeta(meta: { mode: 'electron' | 'browser'; path?: strin
   });
 }
 
-export async function exportAll(): Promise<Blob> {                    // 导出全库
+export async function exportAll(tableNames?: string[]): Promise<Blob> {                    // 导出全库或指定表
   const payload: Record<string, any[]> = {};
-  const tables = db.tables;
+  const allow = tableNames?.length ? new Set(tableNames) : null;
+  const tables = allow ? db.tables.filter(t => allow.has(t.name)) : db.tables;
   for (const t of tables) {
     payload[t.name] = await t.toArray();
   }
-  const wrapper = { version: 1, exportedAt: Date.now(), data: payload };
+  const manifest = Object.fromEntries(Object.entries(payload).map(([name, rows]) => [name, rows.length]));
+  const wrapper = { version: 1, exportedAt: Date.now(), scope: allow ? 'partial' : 'full', manifest, data: payload };
   const json = JSON.stringify(wrapper, null, 2);
   return new Blob([json], { type: 'application/json' });
 }
 
-export async function downloadBackup(): Promise<{ ok: boolean; path?: string; msg: string }> {
-  const blob = await exportAll();
+export async function downloadBackup(tableNames?: string[]): Promise<{ ok: boolean; path?: string; msg: string }> {
+  const blob = await exportAll(tableNames);
   const electron = getElectron();
   if (electron) {                                                       // 桌面版 - 直写文件系统
     try {
@@ -38,7 +40,7 @@ export async function downloadBackup(): Promise<{ ok: boolean; path?: string; ms
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `aixsystems-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `aixsystems-${tableNames?.length ? 'partial' : 'backup'}-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   await saveBackupMeta({ mode: 'browser', size: blob.size });

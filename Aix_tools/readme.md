@@ -23,6 +23,7 @@ AixSystems 时间管理系统(离线本地版)。基于调研原版 [时光序](
 | 模块 | 说明 |
 |---|---|
 | **18 张表的 IndexedDB** | 事项 / 日记 / 备忘录 / 专注 / 分类 / 文件夹 / 标签 / 提醒队列 / 主题 / 设置 / 用户 / 日志 / 附件 / 缓存 KV / 习惯 / 习惯打卡 / 目标 |
+| **数据主权导出** | 全量备份 + 选择性模块导出 + Manifest 表记录清单 + 数据主权评分 |
 | **17 种事项类型** | 日程/清单/生日/纪念日/倒数日/节日/生理期/信用卡还款/贷款/吃药/起床闹钟/睡眠闹钟/作息/跑步/读书/穿衣搭配/课程表/上班打卡 |
 | **记忆曲线复习提醒** | 选择记忆曲线后自动生成 1/2/4/7/15/30 天复习提醒队列 |
 | **复习中心** | 聚合今日待复习、未来 7 天分布、已过期复习、待反馈提醒、完成记录、掌握率、巩固回流和复习强度配置 |
@@ -104,8 +105,8 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.22.9-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.23.0-Setup.exe` (NSIS 安装包,约 80MB)
 
 目录便携版: `npm run dist:portable` → `desktop/dist-installer/win-unpacked/`
 
-单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.22.9-portable.exe`
+单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.23.0-portable.exe`
