@@ -279,6 +279,18 @@ export default function HomePage() {
     { key: 'help', title: '帮助中心', desc: '新手引导与特性', icon: <Icons.QuestionCircleOutlined />, color: '#22c55e', group: 'settings', onClick: routeGo(ROUTES.HELP) },
     { key: 'feedback', title: '意见反馈', desc: '写入本地日志', icon: <Icons.MessageOutlined />, color: '#f97316', group: 'settings', onClick: routeGo(ROUTES.FEEDBACK) }
   ];
+  const compactTemplates = [
+    { key: 'study', label: '学习', color: '#8b5cf6', order: ['review', 'growth', 'goal', 'focus', 'book', 'diary', 'memo', 'syllabus'] },
+    { key: 'work', label: '工作', color: '#0ea5e9', order: ['today', 'week', 'schedule', 'all', 'checklist', 'importance', 'focus', 'dataio'] },
+    { key: 'health', label: '健康', color: '#10b981', order: ['habit', 'run', 'medicine', 'sleep', 'wakeup', 'aunt', 'focus', 'diary'] },
+    { key: 'allround', label: '全能', color: '#f59e0b', order: compactApps.map(app => app.key) }
+  ];
+  const applyCompactTemplate = (order: string[]) => {
+    const keys = compactApps.map(app => app.key);
+    const next = [...order.filter(key => keys.includes(key)), ...keys.filter(key => !order.includes(key))];
+    setCompactOrder(next);
+    localStorage.setItem('home.compactOrder', JSON.stringify(next));
+  };
   const compactOrderIndex = new Map(compactOrder.map((key, index) => [key, index]));
   const filteredCompactApps = compactApps
     .filter(app => compactFilter === 'all' || (compactFilter === 'favorites' ? favoriteKeys.includes(app.key) : app.group === compactFilter))
@@ -361,6 +373,19 @@ export default function HomePage() {
               }}
             />
           </div>
+          <Space wrap size={8} style={{ marginTop: 12 }}>
+            <Typography.Text style={{ color: subColor, fontSize: 12 }}>控制台模板</Typography.Text>
+            {compactTemplates.map(template => (
+              <Button
+                key={template.key}
+                size="small"
+                onClick={() => applyCompactTemplate(template.order)}
+                style={{ borderRadius: 999, color: template.color, borderColor: `${template.color}66`, background: isDark ? `${template.color}18` : `${template.color}10` }}
+              >
+                {template.label}
+              </Button>
+            ))}
+          </Space>
         </Card>
 
         <Row gutter={[10, 10]}>

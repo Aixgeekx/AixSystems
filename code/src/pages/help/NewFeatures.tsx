@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.23.1', date: '2026-04-25', items: [
+    '复习中心新增智能复习强度推荐，可根据“需巩固/已掌握”反馈自动建议回流间隔',
+    '首页紧凑应用新增学习、工作、健康、全能控制台模板，一键重排高频入口',
+    '成长仪表盘新增 HTML 可视化报告导出，适合归档、分享或打印复盘'
+  ]},
   { ver: '0.23.0', date: '2026-04-25', items: [
     '数据中心新增选择性导出，可按事项提醒、记录内容、成长系统、组织配置和系统状态分模块备份',
     '导出的 JSON 会标记 partial/full 范围并自动写入 manifest 表记录清单，方便审计备份内容',

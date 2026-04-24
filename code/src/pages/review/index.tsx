@@ -46,6 +46,8 @@ export default function ReviewCenterPage() {
     const recentFired = reviewQueue.filter(entry => entry.fired && !entry.completedAt).slice(-12).reverse();
     const completed = reviewQueue.filter(entry => entry.completedAt).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
     const mastered = completed.filter(entry => entry.reviewFeedback === 'mastered').length;
+    const fuzzy = completed.filter(entry => entry.reviewFeedback === 'fuzzy').length;
+    const recommendedDays = fuzzy >= mastered ? 1 : fuzzy * 3 >= mastered ? 2 : fuzzy ? 3 : 7;
 
     const byDay = Array.from({ length: 7 }).map((_, i) => {
       const d = dayjs().add(i, 'day');
@@ -55,7 +57,7 @@ export default function ReviewCenterPage() {
       return { day: d.format('M/D'), count };
     });
 
-    return { todayPending, overdue, upcoming, recentFired, completed, mastered, byDay, total: reviewQueue.length };
+    return { todayPending, overdue, upcoming, recentFired, completed, mastered, fuzzy, recommendedDays, byDay, total: reviewQueue.length };
   }, []);
 
   const statCards = [
@@ -156,6 +158,11 @@ export default function ReviewCenterPage() {
           <div>
             <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>复习强度配置</Typography.Title>
             <Typography.Text style={{ color: subColor }}>标记“需巩固”后，系统会按这里的间隔生成下一次巩固回流。</Typography.Text>
+            <div style={{ marginTop: 8 }}>
+              <Tag color="gold" style={{ borderRadius: 6 }}>AI 推荐 {dashboard?.recommendedDays || 7} 天</Tag>
+              <Tag color="orange" style={{ borderRadius: 6 }}>需巩固 {dashboard?.fuzzy || 0} 次</Tag>
+              <Button size="small" type="link" onClick={() => updateReinforceDays(dashboard?.recommendedDays || 7)} style={{ paddingInline: 0 }}>应用推荐</Button>
+            </div>
           </div>
           <Radio.Group
             value={reinforceDays || 1}

@@ -41,8 +41,14 @@ function buildGrowthReport(dashboard: any, achievements: any) {
   return `# AixSystems 成长复盘报告\n\n- 生成时间：${dayjs().format('YYYY-MM-DD HH:mm')}\n- 总事项：${dashboard.totalItems}\n- 总专注：${Math.round(dashboard.totalFocusMin)} 分钟\n- 习惯数：${dashboard.totalHabits}\n- 目标数：${dashboard.totalGoals}（已完成 ${dashboard.completedGoals}）\n- 成就：${achievements?.unlockedCount || 0}/${achievements?.total || 0}\n\n## 周期复盘\n\n| 周期 | 事项完成 | 专注时长 | 习惯打卡 | 日记 | 专注环比 |\n|---|---:|---:|---:|---:|---:|\n${line('本周', dashboard.summary.week, dashboard.summary.lastWeek)}\n${line('本月', dashboard.summary.month, dashboard.summary.lastMonth)}\n\n## 进行中目标\n\n${dashboard.activeGoalsList.length ? dashboard.activeGoalsList.map((g: any) => `- ${g.title}：${g.progress}%（${g.doneCount}/${g.totalCount}）`).join('\n') : '- 暂无进行中的目标'}\n`;
 }
 
-function downloadMarkdown(filename: string, text: string) {
-  const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+function buildGrowthHtmlReport(dashboard: any, achievements: any) {
+  const cell = (data?: PeriodData, prev?: PeriodData) => data ? `<tr><td>${data.itemsDone}/${data.itemsTotal}</td><td>${data.focusMin} 分钟</td><td>${data.checkins} 次</td><td>${data.diaries} 篇</td><td>${diffTag(data.focusMin, prev?.focusMin || 0).text}</td></tr>` : '';
+  const goals = dashboard.activeGoalsList.length ? dashboard.activeGoalsList.map((g: any) => `<li><span>${g.title}</span><b>${g.progress}%</b><em style="width:${g.progress}%"></em></li>`).join('') : '<li><span>暂无进行中的目标</span><b>0%</b><em style="width:0%"></em></li>';
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>AixSystems 成长报告</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f172a;color:#e2e8f0}.wrap{max-width:980px;margin:0 auto;padding:42px 24px}.hero{padding:34px;border-radius:28px;background:linear-gradient(135deg,#7c3aed,#06b6d4);box-shadow:0 30px 80px #0006}h1{margin:0 0 10px;font-size:36px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:18px 0}.card{padding:20px;border-radius:22px;background:#ffffff12;border:1px solid #ffffff1f}.num{font-size:30px;font-weight:800;color:#fff}table{width:100%;border-collapse:collapse;overflow:hidden;border-radius:18px;background:#ffffff0d}th,td{padding:14px;text-align:left;border-bottom:1px solid #ffffff14}li{position:relative;list-style:none;margin:12px 0;padding:14px 16px;border-radius:16px;background:#ffffff0d;overflow:hidden}li em{position:absolute;left:0;bottom:0;height:4px;background:#22d3ee}li span,li b{position:relative;z-index:1}li b{float:right;color:#86efac}.section{margin-top:24px}</style></head><body><main class="wrap"><section class="hero"><p>${dayjs().format('YYYY-MM-DD HH:mm')}</p><h1>AixSystems 成长复盘报告</h1><p>用本地数据生成的个人成长控制台快照。</p></section><section class="grid"><div class="card"><p>总事项</p><div class="num">${dashboard.totalItems}</div></div><div class="card"><p>总专注</p><div class="num">${Math.round(dashboard.totalFocusMin)} 分</div></div><div class="card"><p>习惯数</p><div class="num">${dashboard.totalHabits}</div></div><div class="card"><p>成就</p><div class="num">${achievements?.unlockedCount || 0}/${achievements?.total || 0}</div></div></section><section class="section"><h2>周期复盘</h2><table><thead><tr><th>事项完成</th><th>专注时长</th><th>习惯打卡</th><th>日记</th><th>专注环比</th></tr></thead><tbody>${cell(dashboard.summary.week, dashboard.summary.lastWeek)}${cell(dashboard.summary.month, dashboard.summary.lastMonth)}</tbody></table></section><section class="section"><h2>进行中目标</h2><ul>${goals}</ul></section></main></body></html>`;
+}
+
+function downloadText(filename: string, text: string, type: string) {
+  const blob = new Blob([text], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -218,10 +224,11 @@ export default function GrowthPage() {
 
   const todayCompletion = dashboard?.todayTotal ? Math.round((dashboard.todayDone / dashboard.todayTotal) * 100) : 0;
   const achievements = useAchievements();
-  const exportReport = () => {
+  const exportReport = (format: 'md' | 'html') => {
     if (!dashboard) return message.warning('成长数据仍在加载中');
-    downloadMarkdown(`aixsystems-growth-${dayjs().format('YYYY-MM-DD')}.md`, buildGrowthReport(dashboard, achievements));
-    message.success('成长报告已导出');
+    if (format === 'html') downloadText(`aixsystems-growth-${dayjs().format('YYYY-MM-DD')}.html`, buildGrowthHtmlReport(dashboard, achievements), 'text/html;charset=utf-8');
+    else downloadText(`aixsystems-growth-${dayjs().format('YYYY-MM-DD')}.md`, buildGrowthReport(dashboard, achievements), 'text/markdown;charset=utf-8');
+    message.success(format === 'html' ? '可视化成长报告已导出' : '成长报告已导出');
   };
 
   return (
@@ -253,9 +260,14 @@ export default function GrowthPage() {
             <Typography.Paragraph style={{ marginBottom: 16, color: 'rgba(226,232,240,0.84)' }}>
               整合习惯、目标、专注和事项数据，用一个页面看清自己每天都在向哪个方向前进。
             </Typography.Paragraph>
-            <Button icon={<DownloadOutlined />} onClick={exportReport} style={{ borderRadius: 12, fontWeight: 700 }}>
-              导出成长报告
-            </Button>
+            <Space wrap>
+              <Button icon={<DownloadOutlined />} onClick={() => exportReport('md')} style={{ borderRadius: 12, fontWeight: 700 }}>
+                导出 Markdown
+              </Button>
+              <Button type="primary" icon={<DownloadOutlined />} onClick={() => exportReport('html')} style={{ borderRadius: 12, fontWeight: 700 }}>
+                导出 HTML 报告
+              </Button>
+            </Space>
           </Col>
 
           <Col xs={24} lg={9}>
