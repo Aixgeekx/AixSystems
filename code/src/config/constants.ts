@@ -1,7 +1,7 @@
 // 全局常量配置 - 所有静态值唯一定义处 (遵循 CLAUDE.md: 变量统一配置)
 export const APP_NAME = 'AixSystems';                                        // 应用名
 export const APP_SUB = '时间管理系统';                                        // 副标题
-export const APP_VERSION = '0.22.4';                                         // 版本
+export const APP_VERSION = '0.22.5';                                         // 版本
 export const DB_NAME = 'aixsystems_db';                                      // IndexedDB 库名
 export const DB_VERSION = 2;                                                 // schema 版本
 export const MAX_REMINDERS = 5;                                              // 单事项最多提醒数

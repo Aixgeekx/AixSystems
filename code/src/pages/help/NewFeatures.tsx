@@ -6,6 +6,10 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.22.5', date: '2026-04-25', items: [
+    '成长仪表盘新增“导出成长报告”，可一键下载 Markdown 复盘文件',
+    '报告聚合总事项、总专注、习惯、目标、成就、本周/本月复盘和进行中目标进度'
+  ]},
   { ver: '0.22.4', date: '2026-04-25', items: [
     '专注统计新增月同比卡片，自动对比本月与上月专注时长变化',
     '专注趋势图新增“月同比”Tab，用柱状图展示上月/本月分钟数'

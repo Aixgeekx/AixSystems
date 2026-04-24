@@ -1,6 +1,6 @@
 // 成长仪表盘 - 整合习惯、目标、专注、事项的成长可视化 + 成就徽章 + 周期复盘 (v0.21.8)
 import React, { Suspense, lazy } from 'react';
-import { Card, Col, Progress, Row, Space, Statistic, Tag, Typography, Tabs } from 'antd';
+import { App as AntApp, Button, Card, Col, Progress, Row, Space, Statistic, Tag, Typography, Tabs } from 'antd';
 import {
   CalendarOutlined,
   CheckCircleOutlined,
@@ -12,7 +12,7 @@ import {
   LockOutlined,
   StarOutlined,
   BookOutlined,
-  FallOutlined
+  DownloadOutlined
 } from '@ant-design/icons';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -34,6 +34,21 @@ function diffTag(now: number, prev: number) {
   if (prev === 0) return now > 0 ? { text: '新增', color: '#22c55e' as const } : { text: '持平', color: '#94a3b8' as const };
   const pct = Math.round((now - prev) / prev * 100);
   return pct >= 0 ? { text: `+${pct}%`, color: '#22c55e' as const } : { text: `${pct}%`, color: '#ef4444' as const };
+}
+
+function buildGrowthReport(dashboard: any, achievements: any) {
+  const line = (name: string, data?: PeriodData, prev?: PeriodData) => data ? `| ${name} | ${data.itemsDone}/${data.itemsTotal} | ${data.focusMin} 分钟 | ${data.checkins} 次 | ${data.diaries} 篇 | ${diffTag(data.focusMin, prev?.focusMin || 0).text} |` : '';
+  return `# AixSystems 成长复盘报告\n\n- 生成时间：${dayjs().format('YYYY-MM-DD HH:mm')}\n- 总事项：${dashboard.totalItems}\n- 总专注：${Math.round(dashboard.totalFocusMin)} 分钟\n- 习惯数：${dashboard.totalHabits}\n- 目标数：${dashboard.totalGoals}（已完成 ${dashboard.completedGoals}）\n- 成就：${achievements?.unlockedCount || 0}/${achievements?.total || 0}\n\n## 周期复盘\n\n| 周期 | 事项完成 | 专注时长 | 习惯打卡 | 日记 | 专注环比 |\n|---|---:|---:|---:|---:|---:|\n${line('本周', dashboard.summary.week, dashboard.summary.lastWeek)}\n${line('本月', dashboard.summary.month, dashboard.summary.lastMonth)}\n\n## 进行中目标\n\n${dashboard.activeGoalsList.length ? dashboard.activeGoalsList.map((g: any) => `- ${g.title}：${g.progress}%（${g.doneCount}/${g.totalCount}）`).join('\n') : '- 暂无进行中的目标'}\n`;
+}
+
+function downloadMarkdown(filename: string, text: string) {
+  const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function SummaryBlock({ data, prev, isDark, titleColor, subColor, cardBg, cardBorder }: { data?: PeriodData; prev?: PeriodData; isDark: boolean; titleColor: string; subColor: string; cardBg: string; cardBorder: string }) {
@@ -73,6 +88,7 @@ function SummaryBlock({ data, prev, isDark, titleColor, subColor, cardBg, cardBo
 }
 
 export default function GrowthPage() {
+  const { message } = AntApp.useApp();
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
@@ -202,6 +218,11 @@ export default function GrowthPage() {
 
   const todayCompletion = dashboard?.todayTotal ? Math.round((dashboard.todayDone / dashboard.todayTotal) * 100) : 0;
   const achievements = useAchievements();
+  const exportReport = () => {
+    if (!dashboard) return message.warning('成长数据仍在加载中');
+    downloadMarkdown(`aixsystems-growth-${dayjs().format('YYYY-MM-DD')}.md`, buildGrowthReport(dashboard, achievements));
+    message.success('成长报告已导出');
+  };
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -232,6 +253,9 @@ export default function GrowthPage() {
             <Typography.Paragraph style={{ marginBottom: 16, color: 'rgba(226,232,240,0.84)' }}>
               整合习惯、目标、专注和事项数据，用一个页面看清自己每天都在向哪个方向前进。
             </Typography.Paragraph>
+            <Button icon={<DownloadOutlined />} onClick={exportReport} style={{ borderRadius: 12, fontWeight: 700 }}>
+              导出成长报告
+            </Button>
           </Col>
 
           <Col xs={24} lg={9}>
