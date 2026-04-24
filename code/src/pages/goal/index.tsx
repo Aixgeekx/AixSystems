@@ -34,6 +34,14 @@ export default function GoalPage() {
 
   const activeGoals = goals.filter(g => g.status === 'active');
   const completedGoals = goals.filter(g => g.status === 'completed');
+  const riskGoals = activeGoals.map(goal => {
+    const ms = goal.milestones || [];
+    const progress = ms.length ? Math.round(ms.filter(m => m.done).length / ms.length * 100) : 0;
+    const daysLeft = goal.targetDate ? dayjs(goal.targetDate).diff(dayjs().startOf('day'), 'day') : 999;
+    const expected = goal.targetDate ? Math.min(100, Math.max(0, Math.round((Date.now() - goal.createdAt) / Math.max(1, goal.targetDate - goal.createdAt) * 100))) : 0;
+    const level = daysLeft < 0 ? '已逾期' : goal.targetDate && progress + 20 < expected ? '高风险' : goal.targetDate && daysLeft <= 7 && progress < 80 ? '临期' : '稳定';
+    return { goal, progress, daysLeft, expected, level };
+  }).filter(item => item.level !== '稳定').slice(0, 3);
 
   async function save() {
     if (!title.trim()) return message.warning('目标标题不能为空');
@@ -273,6 +281,26 @@ export default function GoalPage() {
           </Col>
         </Row>
       </Card>
+
+      {riskGoals.length > 0 && (
+        <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+          <Typography.Text style={{ color: subColor }}>目标风险预警</Typography.Text>
+          <Typography.Title level={4} style={{ margin: '4px 0 14px', color: titleColor }}>可能延期的目标</Typography.Title>
+          <Space direction="vertical" size={10} style={{ width: '100%' }}>
+            {riskGoals.map(item => (
+              <div key={item.goal.id} style={{ padding: 12, borderRadius: 16, background: item.level === '高风险' || item.level === '已逾期' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)', border: `1px solid ${(item.level === '高风险' || item.level === '已逾期') ? '#ef444455' : '#f59e0b55'}` }}>
+                <Space wrap size={8} style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <Typography.Text strong style={{ color: titleColor }}>{item.goal.title}</Typography.Text>
+                  <Tag color={item.level === '高风险' || item.level === '已逾期' ? 'red' : 'gold'}>{item.level}</Tag>
+                </Space>
+                <Typography.Paragraph style={{ margin: '6px 0 0', color: subColor, fontSize: 12 }}>
+                  当前 {item.progress}% / 期望 {item.expected}%，{item.daysLeft >= 0 ? `剩余 ${item.daysLeft} 天` : `已超期 ${Math.abs(item.daysLeft)} 天`}，建议今天至少推进 1 个里程碑。
+                </Typography.Paragraph>
+              </div>
+            ))}
+          </Space>
+        </Card>
+      )}
 
       {activeGoals.length > 0 && (
         <div className="anim-fade-in-up stagger-2">

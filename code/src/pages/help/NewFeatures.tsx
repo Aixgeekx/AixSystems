@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.23.3', date: '2026-04-25', items: [
+    '目标管理新增风险预警，根据截止时间、创建时间和里程碑进度识别高风险目标',
+    '习惯追踪新增恢复计划，自动识别中断 3 天以上的习惯并给出重启动作',
+    '复习中心新增未来 30 天复习压力热力图，提前看见复习负载峰值'
+  ]},
   { ver: '0.23.2', date: '2026-04-25', items: [
     '今日工作台新增 AI 日计划编排，把待办、习惯、专注和日记自动排成行动顺序',
     'MyDay 新增自动化执行面板，可快速新建日程、开始专注、处理复习和写日记',

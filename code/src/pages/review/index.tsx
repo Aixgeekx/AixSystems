@@ -56,8 +56,16 @@ export default function ReviewCenterPage() {
       const count = openQueue.filter(entry => entry.fireAt >= start && entry.fireAt <= end).length;
       return { day: d.format('M/D'), count };
     });
+    const heatmap = Array.from({ length: 30 }).map((_, i) => {
+      const d = dayjs().add(i, 'day');
+      const start = d.startOf('day').valueOf();
+      const end = d.endOf('day').valueOf();
+      const count = openQueue.filter(entry => entry.fireAt >= start && entry.fireAt <= end).length;
+      const level = count >= 6 ? '爆发' : count >= 3 ? '高压' : count >= 1 ? '轻压' : '空闲';
+      return { day: d.format('M/D'), date: d.format('YYYY-MM-DD'), count, level };
+    });
 
-    return { todayPending, overdue, upcoming, recentFired, completed, mastered, fuzzy, recommendedDays, byDay, total: reviewQueue.length };
+    return { todayPending, overdue, upcoming, recentFired, completed, mastered, fuzzy, recommendedDays, byDay, heatmap, total: reviewQueue.length };
   }, []);
 
   const statCards = [
@@ -215,6 +223,22 @@ export default function ReviewCenterPage() {
           </Card>
         </Col>
       </Row>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>未来 30 天复习压力热力图</Typography.Title>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(54px, 1fr))', gap: 8 }}>
+          {dashboard?.heatmap.map(day => {
+            const color = day.count >= 6 ? '#ef4444' : day.count >= 3 ? '#f59e0b' : day.count >= 1 ? '#22c55e' : '#94a3b8';
+            return (
+              <div key={day.date} title={`${day.date} · ${day.count} 条`} style={{ borderRadius: 14, padding: '10px 6px', textAlign: 'center', background: isDark ? `${color}18` : `${color}12`, border: `1px solid ${color}44` }}>
+                <div style={{ color: subColor, fontSize: 11 }}>{day.day}</div>
+                <div style={{ color, fontWeight: 800, fontSize: 18 }}>{day.count}</div>
+                <div style={{ color: subColor, fontSize: 10 }}>{day.level}</div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={12}>

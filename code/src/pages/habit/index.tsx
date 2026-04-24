@@ -166,6 +166,12 @@ export default function HabitPage() {
     const todayCount = todayLogs.filter(l => l.habitId === h.id).reduce((s, l) => s + l.count, 0);
     return todayCount >= h.targetCount;
   }).length;
+  const recoveryPlans = habits.map(habit => {
+    const lastLog = logs.filter(l => l.habitId === habit.id).sort((a, b) => b.date - a.date)[0];
+    const missedDays = lastLog ? dayjs().startOf('day').diff(dayjs(lastLog.date).startOf('day'), 'day') : 999;
+    const level = missedDays >= 7 ? '重启' : missedDays >= 3 ? '修复' : '';
+    return { habit, missedDays, level, action: missedDays >= 7 ? '连续 3 天降到最低目标，先恢复手感' : '今天完成 1 次轻量打卡，明天恢复正常目标' };
+  }).filter(item => item.level).slice(0, 3);
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -224,6 +230,29 @@ export default function HabitPage() {
           </Col>
         </Row>
       </Card>
+
+      {recoveryPlans.length > 0 && (
+        <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+          <Typography.Text style={{ color: subColor }}>习惯恢复计划</Typography.Text>
+          <Typography.Title level={4} style={{ margin: '4px 0 14px', color: titleColor }}>中断习惯修复队列</Typography.Title>
+          <Row gutter={[12, 12]}>
+            {recoveryPlans.map(item => (
+              <Col xs={24} md={8} key={item.habit.id}>
+                <div style={{ padding: 14, borderRadius: 18, background: `${item.habit.color}12`, border: `1px solid ${item.habit.color}33` }}>
+                  <Space wrap size={8} style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Typography.Text strong style={{ color: titleColor }}>{item.habit.name}</Typography.Text>
+                    <Tag color={item.level === '重启' ? 'red' : 'orange'}>{item.level}</Tag>
+                  </Space>
+                  <Typography.Paragraph style={{ margin: '8px 0 0', color: subColor, fontSize: 12 }}>
+                    已中断 {item.missedDays} 天，{item.action}。
+                  </Typography.Paragraph>
+                  <Button size="small" type="primary" onClick={() => checkIn(item.habit)} style={{ borderRadius: 10 }}>立即恢复</Button>
+                </div>
+              </Col>
+            ))}
+          </Row>
+        </Card>
+      )}
 
       {habits.length === 0 ? (
         <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
