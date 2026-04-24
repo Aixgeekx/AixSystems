@@ -6,6 +6,10 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.22.4', date: '2026-04-25', items: [
+    '专注统计新增月同比卡片，自动对比本月与上月专注时长变化',
+    '专注趋势图新增“月同比”Tab，用柱状图展示上月/本月分钟数'
+  ]},
   { ver: '0.22.3', date: '2026-04-25', items: [
     '新增复习中心页面，聚合今日待复习、未来 7 天分布、已过期复习和最近已触发提醒',
     '首页紧凑应用模式同步加入复习中心入口'

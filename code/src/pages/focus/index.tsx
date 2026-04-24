@@ -84,9 +84,14 @@ export default function FocusPage() {
 
   const weekStart = dayjs().startOf('week').valueOf();
   const lastWeekStart = dayjs().subtract(1, 'week').startOf('week').valueOf();
+  const monthStart = dayjs().startOf('month').valueOf();
+  const lastMonthStart = dayjs().subtract(1, 'month').startOf('month').valueOf();
   const thisWeekMin = sessions.filter(s => s.startTime >= weekStart).reduce((sum, s) => sum + s.actualMs / 60_000, 0);
   const lastWeekMin = sessions.filter(s => s.startTime >= lastWeekStart && s.startTime < weekStart).reduce((sum, s) => sum + s.actualMs / 60_000, 0);
+  const thisMonthMin = sessions.filter(s => s.startTime >= monthStart).reduce((sum, s) => sum + s.actualMs / 60_000, 0);
+  const lastMonthMin = sessions.filter(s => s.startTime >= lastMonthStart && s.startTime < monthStart).reduce((sum, s) => sum + s.actualMs / 60_000, 0);
   const weekChange = lastWeekMin > 0 ? Math.round((thisWeekMin - lastWeekMin) / lastWeekMin * 100) : 0;
+  const monthChange = lastMonthMin > 0 ? Math.round((thisMonthMin - lastMonthMin) / lastMonthMin * 100) : 0;
 
   function start() {
     f.start({ mode, plannedMs: minutes * 60_000, title, strict });
@@ -170,6 +175,30 @@ export default function FocusPage() {
           .reduce((sum, session) => sum + session.actualMs / 60_000, 0),
         itemStyle: { color: currentMode === 'countdown' ? accent : currentMode === 'stopwatch' ? accent + 'cc' : accent + '88' }
       }))
+    }]
+  };
+
+  const monthOpt = {
+    grid: { top: 34, right: 16, bottom: 30, left: 42 },
+    xAxis: {
+      type: 'category',
+      data: ['上月', '本月'],
+      axisLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.2)' : '#cbd5e1' } },
+      axisLabel: { color: isDark ? 'rgba(255,255,255,0.68)' : '#64748b' }
+    },
+    yAxis: {
+      type: 'value',
+      name: '分钟',
+      nameTextStyle: { color: isDark ? 'rgba(255,255,255,0.5)' : '#94a3b8' },
+      splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(148,163,184,0.18)' } },
+      axisLabel: { color: isDark ? 'rgba(255,255,255,0.5)' : '#94a3b8' }
+    },
+    tooltip: { trigger: 'axis', backgroundColor: isDark ? 'rgba(10,14,28,0.9)' : 'rgba(255,255,255,0.95)', borderColor: isDark ? accent + '44' : '#e2e8f0', textStyle: { color: isDark ? '#f8fafc' : '#0f172a' } },
+    series: [{
+      type: 'bar',
+      data: [Math.round(lastMonthMin), Math.round(thisMonthMin)],
+      itemStyle: { color: (params: any) => params.dataIndex === 0 ? accent + '66' : accent, borderRadius: [8, 8, 0, 0] },
+      label: { show: true, position: 'top', color: isDark ? '#e2e8f0' : '#334155' }
     }]
   };
 
@@ -506,7 +535,8 @@ export default function FocusPage() {
               { title: '完成率', value: successRate, suffix: '%', icon: <TrophyOutlined />, color: '#16a34a', key: 'rate' },
               { title: '总次数', value: sessions.length, suffix: '', icon: <FireOutlined />, color: accent + '88', key: 'total' },
               { title: '最佳时段', value: bestHourLabel, suffix: bestHourMin > 0 ? ` (${Math.round(bestHourMin)}分)` : '', icon: <AreaChartOutlined />, color: '#a78bfa', key: 'best' },
-              { title: '周同比', value: weekChange > 0 ? `+${weekChange}` : weekChange, suffix: '%', icon: <RiseOutlined />, color: weekChange >= 0 ? '#22c55e' : '#ef4444', key: 'week' }
+              { title: '周同比', value: weekChange > 0 ? `+${weekChange}` : weekChange, suffix: '%', icon: <RiseOutlined />, color: weekChange >= 0 ? '#22c55e' : '#ef4444', key: 'week' },
+              { title: '月同比', value: monthChange > 0 ? `+${monthChange}` : monthChange, suffix: '%', icon: <AreaChartOutlined />, color: monthChange >= 0 ? '#22c55e' : '#ef4444', key: 'month' }
             ].map((stat, i) => (
               <Col span={12} key={stat.key}>
                 <Card
@@ -562,6 +592,13 @@ export default function FocusPage() {
                   children: sessions.length > 0
                     ? <LazyChart option={pieOpt} />
                     : <Empty text="暂无数据" subtext="开始专注后会自动生成统计图表" />
+                },
+                {
+                  key: 'month',
+                  label: '月同比',
+                  children: sessions.length > 0
+                    ? <LazyChart option={monthOpt} />
+                    : <Empty text="暂无数据" subtext="完成专注后会自动对比本月与上月" />
                 },
                 {
                   key: 'timeline',
