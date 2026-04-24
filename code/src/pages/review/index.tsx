@@ -1,6 +1,6 @@
 // 复习中心 - 聚合记忆曲线的今日待复习、未来复习与最近已触发提醒
 import React from 'react';
-import { Button, Card, Col, List, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { Button, Card, Col, List, Radio, Row, Space, Statistic, Tag, Typography } from 'antd';
 import { BookOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, NotificationOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -19,6 +19,7 @@ export default function ReviewCenterPage() {
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
   const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
+  const reinforceDays = useLiveQuery(async () => (await db.cacheKv.get('review_reinforce_days'))?.value || 1, []);
 
   const dashboard = useLiveQuery(async () => {
     const [queue, items] = await Promise.all([
@@ -32,17 +33,18 @@ export default function ReviewCenterPage() {
       .filter(entry => entry.curveDay)
       .map(entry => ({
         ...entry,
+        completedAt: entry.completedAt || (entry.reviewFeedback ? entry.reviewAt : undefined),
         item: itemMap.get(entry.itemId)
       }))
       .filter(entry => entry.item && !entry.item.deletedAt)
       .sort((a, b) => a.fireAt - b.fireAt);
 
-    const openQueue = reviewQueue.filter(entry => !entry.reviewAt);
+    const openQueue = reviewQueue.filter(entry => !entry.completedAt);
     const todayPending = openQueue.filter(entry => entry.fireAt >= todayStart && entry.fireAt <= todayEnd);
     const overdue = openQueue.filter(entry => entry.fireAt < todayStart);
     const upcoming = openQueue.filter(entry => entry.fireAt > todayEnd).slice(0, 12);
-    const recentFired = reviewQueue.filter(entry => entry.fired && !entry.reviewAt).slice(-12).reverse();
-    const completed = reviewQueue.filter(entry => entry.reviewAt).sort((a, b) => (b.reviewAt || 0) - (a.reviewAt || 0));
+    const recentFired = reviewQueue.filter(entry => entry.fired && !entry.completedAt).slice(-12).reverse();
+    const completed = reviewQueue.filter(entry => entry.completedAt).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
     const mastered = completed.filter(entry => entry.reviewFeedback === 'mastered').length;
 
     const byDay = Array.from({ length: 7 }).map((_, i) => {
@@ -63,11 +65,15 @@ export default function ReviewCenterPage() {
     { label: '掌握率', value: dashboard?.completed.length ? Math.round(dashboard.mastered / dashboard.completed.length * 100) : 0, suffix: '%', color: '#f59e0b', icon: <NotificationOutlined /> }
   ];
 
+  const updateReinforceDays = async (value: number) => {
+    await db.cacheKv.put({ key: 'review_reinforce_days', value });
+  };
+
   const completeReview = async (entry: any, reviewFeedback: 'mastered' | 'fuzzy') => {
-    const reviewAt = Date.now();
-    await db.reminderQueue.update(entry.id, { fired: true, reviewAt, reviewFeedback });
+    const completedAt = Date.now();
+    await db.reminderQueue.update(entry.id, { fired: true, completedAt, reviewFeedback });
     if (reviewFeedback === 'fuzzy') {
-      const fireAt = dayjs(reviewAt).add(1, 'day').startOf('hour').valueOf();
+      const fireAt = dayjs(completedAt).add(reinforceDays || 1, 'day').startOf('hour').valueOf();
       await db.reminderQueue.put({
         id: `${entry.id}_reinforce_${fireAt}`,
         itemId: entry.itemId,
@@ -95,7 +101,7 @@ export default function ReviewCenterPage() {
           <div onClick={() => openItemForm(entry.itemId)} style={{ minWidth: 0, flex: 1, cursor: 'pointer' }}>
             <div style={{ fontWeight: 700, color: titleColor }}>{entry.item?.title || '已删除事项'}</div>
             <div style={{ color: subColor, fontSize: 12, marginTop: 4 }}>
-              {entry.label || `第 ${entry.curveDay} 天复习`} · {fmtDateTime(entry.fireAt)} · {entry.reviewAt ? `完成于 ${fmtDateTime(entry.reviewAt)}` : fmtFromNow(entry.fireAt)}
+              {entry.label || `第 ${entry.curveDay} 天复习`} · {fmtDateTime(entry.fireAt)} · {entry.completedAt ? `完成于 ${fmtDateTime(entry.completedAt)}` : fmtFromNow(entry.fireAt)}
             </div>
           </div>
           <Space size={8} wrap>
@@ -143,6 +149,27 @@ export default function ReviewCenterPage() {
           <Tag color="gold">掌握反馈</Tag>
           <Tag color="purple">巩固回流</Tag>
         </Space>
+      </Card>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>复习强度配置</Typography.Title>
+            <Typography.Text style={{ color: subColor }}>标记“需巩固”后，系统会按这里的间隔生成下一次巩固回流。</Typography.Text>
+          </div>
+          <Radio.Group
+            value={reinforceDays || 1}
+            optionType="button"
+            buttonStyle="solid"
+            onChange={e => updateReinforceDays(e.target.value)}
+            options={[
+              { label: '1 天', value: 1 },
+              { label: '2 天', value: 2 },
+              { label: '3 天', value: 3 },
+              { label: '7 天', value: 7 }
+            ]}
+          />
+        </div>
       </Card>
 
       <Row gutter={[16, 16]}>

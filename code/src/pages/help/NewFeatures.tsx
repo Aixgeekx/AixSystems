@@ -6,6 +6,10 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.22.8', date: '2026-04-25', items: [
+    '复习中心新增复习强度配置，可选择“需巩固”后的 1/2/3/7 天回流间隔',
+    '复习完成状态改用独立完成时间记录，避免计划复习时间和实际完成时间混用'
+  ]},
   { ver: '0.22.7', date: '2026-04-25', items: [
     '复习中心新增“需巩固”自动回流，标记后会生成次日巩固复习节点',
     '巩固节点会以“巩固回流”标签显示，让记忆曲线从反馈继续进入下一次行动'
