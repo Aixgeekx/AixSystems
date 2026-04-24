@@ -156,6 +156,7 @@ export interface ReminderQueueItem {                        // 提醒队列(加�
   fired: boolean;
   label?: string;
   reviewAt?: number;
+  reviewFeedback?: 'mastered' | 'fuzzy';
   curveDay?: number;
 }
 

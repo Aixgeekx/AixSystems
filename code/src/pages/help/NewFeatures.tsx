@@ -6,6 +6,10 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.22.6', date: '2026-04-25', items: [
+    '复习中心新增复习完成态追踪，可直接标记“已掌握”或“需巩固”',
+    '新增已完成复习记录、待反馈提醒和掌握率统计，让记忆曲线形成真正闭环'
+  ]},
   { ver: '0.22.5', date: '2026-04-25', items: [
     '成长仪表盘新增“导出成长报告”，可一键下载 Markdown 复盘文件',
     '报告聚合总事项、总专注、习惯、目标、成就、本周/本月复盘和进行中目标进度'
