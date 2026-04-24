@@ -6,6 +6,10 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.22.2', date: '2026-04-25', items: [
+    '紧凑应用模式新增搜索、分组筛选和收藏置顶',
+    '收藏功能会本地持久化，让首页更像真正可用的应用抽屉'
+  ]},
   { ver: '0.22.1', date: '2026-04-23', items: [
     '首页新增“紧凑应用”模式，可在工作台和紧凑应用之间切换',
     '紧凑应用模式用高密度两列卡片聚合所有核心功能入口',

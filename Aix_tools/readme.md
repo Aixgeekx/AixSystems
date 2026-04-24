@@ -25,7 +25,7 @@ AixSystems 时间管理系统(离线本地版)。基于调研原版 [时光序](
 | **18 张表的 IndexedDB** | 事项 / 日记 / 备忘录 / 专注 / 分类 / 文件夹 / 标签 / 提醒队列 / 主题 / 设置 / 用户 / 日志 / 附件 / 缓存 KV / 习惯 / 习惯打卡 / 目标 |
 | **17 种事项类型** | 日程/清单/生日/纪念日/倒数日/节日/生理期/信用卡还款/贷款/吃药/起床闹钟/睡眠闹钟/作息/跑步/读书/穿衣搭配/课程表/上班打卡 |
 | **记忆曲线复习提醒** | 选择记忆曲线后自动生成 1/2/4/7/15/30 天复习提醒队列 |
-| **首页紧凑应用模式** | 两列功能入口矩阵，聚合事项、成长、记录、工具、设置等所有核心入口 |
+| **首页紧凑应用模式** | 两列功能入口矩阵 + 搜索/筛选/收藏，聚合事项、成长、记录、工具、设置等所有核心入口 |
 | **27 款主题风格** | 赛博系列 7 款 / 极简系列 7 款 / 渐变系列 7 款 / 经典保留 6 款 |
 | **40+ 路由** | 对齐原版 `/home/*` 路径结构 |
 
@@ -103,8 +103,8 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.22.1-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.22.2-Setup.exe` (NSIS 安装包,约 80MB)
 
 目录便携版: `npm run dist:portable` → `desktop/dist-installer/win-unpacked/`
 
-单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.22.1-portable.exe`
+单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.22.2-portable.exe`

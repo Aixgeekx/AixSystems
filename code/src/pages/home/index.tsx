@@ -28,6 +28,17 @@ import { getElectron, isElectron } from '@/utils/electron';
 import { useThemeVariants } from '@/hooks/useVariants';
 import type { ItemType } from '@/config/itemTypes';
 
+type CompactFilter = 'all' | 'favorites' | 'agenda' | 'growth' | 'records' | 'tools' | 'settings';
+type CompactApp = {
+  key: string;
+  title: string;
+  desc: string;
+  icon: React.ReactNode;
+  color: string;
+  group: Exclude<CompactFilter, 'all' | 'favorites'>;
+  onClick: () => void;
+};
+
 function formatBytes(bytes?: number) {
   if (!bytes || bytes < 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -48,6 +59,11 @@ export default function HomePage() {
   const isDark = style === 'cyberpunk' || style === 'dark' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const [mode, setMode] = useState<'dashboard' | 'compact'>(() => (localStorage.getItem('home.viewMode') as 'dashboard' | 'compact') || 'dashboard');
+  const [compactQuery, setCompactQuery] = useState('');
+  const [compactFilter, setCompactFilter] = useState<CompactFilter>(() => (localStorage.getItem('home.compactFilter') as CompactFilter) || 'all');
+  const [favoriteKeys, setFavoriteKeys] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('home.compactFavorites') || '[]'); } catch { return []; }
+  });
   const [originStorage, setOriginStorage] = useState<{ usage?: number; quota?: number }>({});
   const [diskStats, setDiskStats] = useState<{ root: string; total: number; free: number; used: number } | null>(null);
 
@@ -92,6 +108,15 @@ export default function HomePage() {
   const switchMode = (next: 'dashboard' | 'compact') => {
     setMode(next);
     localStorage.setItem('home.viewMode', next);
+  };
+  const switchCompactFilter = (next: CompactFilter) => {
+    setCompactFilter(next);
+    localStorage.setItem('home.compactFilter', next);
+  };
+  const toggleFavorite = (key: string) => {
+    const next = favoriteKeys.includes(key) ? favoriteKeys.filter(item => item !== key) : [key, ...favoriteKeys];
+    setFavoriteKeys(next);
+    localStorage.setItem('home.compactFavorites', JSON.stringify(next));
   };
 
   const total = dashboard?.todayItems.length || 0;
@@ -190,42 +215,51 @@ export default function HomePage() {
   const countType = (type: ItemType) => dashboard?.activeItems.filter(item => item.type === type).length || 0;
   const routeGo = (path: string) => () => nav(path);
   const createType = (type: ItemType) => () => openItemForm(undefined, type);
-  const compactApps = [
-    { title: '每日先知', desc: `${dashboard?.todayItems.length || 0} 个今日事项`, icon: <Icons.BulbOutlined />, color: '#ff4d6d', onClick: routeGo(ROUTES.TODAY_DAY) },
-    { title: '番茄专注', desc: `累计 ${Math.round(dashboard?.focusMinutes || 0)} 分钟`, icon: <Icons.HourglassOutlined />, color: '#6366f1', onClick: routeGo(ROUTES.FOCUS) },
-    { title: '习惯打卡', desc: '成长系统 · 每日打卡', icon: <Icons.CheckCircleOutlined />, color: '#3b82f6', onClick: routeGo(ROUTES.HABIT) },
-    { title: '目标', desc: '目标管理与里程碑', icon: <Icons.TrophyOutlined />, color: '#4f8cff', onClick: routeGo(ROUTES.GOAL) },
-    { title: '成长仪表盘', desc: '徽章 / 复盘 / 趋势', icon: <Icons.DashboardOutlined />, color: '#22d3ee', onClick: routeGo(ROUTES.GROWTH) },
-    { title: '备忘录', desc: `已有 ${dashboard?.memos?.length || 0} 篇备忘`, icon: <Icons.FileTextOutlined />, color: '#22c55e', onClick: routeGo(ROUTES.MEMO) },
-    { title: '日记', desc: `已有 ${dashboard?.diaries?.length || 0} 篇日记`, icon: <Icons.ReadOutlined />, color: '#ff6b45', onClick: routeGo(ROUTES.DIARY_CAL) },
-    { title: '课程表', desc: `${countType('syllabus')} 条课程记录`, icon: <Icons.TableOutlined />, color: '#06b6d4', onClick: routeGo('/home/syllabus') },
-    { title: '上班表', desc: `${countType('work')} 条打卡记录`, icon: <Icons.SolutionOutlined />, color: '#38bdf8', onClick: createType('work') },
-    { title: '记账', desc: `${countType('bill')} 笔账单提醒`, icon: <Icons.WalletOutlined />, color: '#14b8a6', onClick: createType('bill') },
-    { title: '还款提醒', desc: '信用卡 / 贷款提醒', icon: <Icons.CreditCardOutlined />, color: '#7c3aed', onClick: createType('bill') },
-    { title: '贷款', desc: `${countType('loan')} 条贷款事项`, icon: <Icons.BankOutlined />, color: '#0ea5e9', onClick: routeGo('/home/loan') },
-    { title: '读书笔记', desc: `${countType('book')} 本书在书架`, icon: <Icons.BookOutlined />, color: '#22c55e', onClick: createType('book') },
-    { title: '喝水吃药', desc: `${countType('medicine')} 条健康提醒`, icon: <Icons.MedicineBoxOutlined />, color: '#38bdf8', onClick: createType('medicine') },
-    { title: '跑步健康', desc: `${countType('run')} 条跑步记录`, icon: <Icons.ThunderboltOutlined />, color: '#10b981', onClick: createType('run') },
-    { title: '生理期', desc: `${countType('aunt')} 条周期记录`, icon: <Icons.PlusCircleOutlined />, color: '#f472b6', onClick: routeGo('/home/aunt') },
-    { title: '睡眠', desc: `${countType('clock_sleep')} 条睡眠闹钟`, icon: <Icons.MoonOutlined />, color: '#6478f8', onClick: createType('clock_sleep') },
-    { title: '起床闹钟', desc: `${countType('clock_wakeup')} 条起床闹钟`, icon: <Icons.SunOutlined />, color: '#facc15', onClick: createType('clock_wakeup') },
-    { title: '倒数纪念日', desc: `${countType('countdown') + countType('anniversary')} 个重要日期`, icon: <Icons.CalendarOutlined />, color: '#3b82f6', onClick: createType('countdown') },
-    { title: '生日', desc: `${countType('birthday')} 个生日提醒`, icon: <Icons.GiftOutlined />, color: '#f59e0b', onClick: createType('birthday') },
-    { title: '清单', desc: `${countType('checklist')} 个清单事项`, icon: <Icons.CheckSquareOutlined />, color: '#10b981', onClick: routeGo(ROUTES.MATTER_CHECKLIST) },
-    { title: '四象限', desc: '重要紧急矩阵', icon: <Icons.AppstoreOutlined />, color: '#ef4444', onClick: routeGo(ROUTES.MATTER_IMPORTANCE) },
-    { title: '重复事项', desc: `${dashboard?.activeItems.filter(item => !!item.repeatRule).length || 0} 个重复规则`, icon: <Icons.ReloadOutlined />, color: '#8b5cf6', onClick: routeGo(ROUTES.MATTER_REPEAT) },
-    { title: '全局搜索', desc: '跨事项 / 日记 / 备忘录', icon: <Icons.SearchOutlined />, color: '#64748b', onClick: routeGo(ROUTES.SEARCH) },
-    { title: '导入导出', desc: '本地 JSON 备份恢复', icon: <Icons.CloudDownloadOutlined />, color: '#0ea5e9', onClick: routeGo(ROUTES.DATAIO) },
-    { title: '桌面小组件', desc: '浮动提醒小窗', icon: <Icons.DesktopOutlined />, color: '#22d3ee', onClick: routeGo(ROUTES.DESKTOP_WIDGET) },
-    { title: '主题换肤', desc: '27 款主题与字体', icon: <Icons.SkinOutlined />, color: '#ec4899', onClick: routeGo(ROUTES.THEMESKIN) },
-    { title: '系统设置', desc: '启动页 / 诊断 / 字体', icon: <Icons.SettingOutlined />, color: '#94a3b8', onClick: routeGo(ROUTES.SYSTEM) },
-    { title: '分类管理', desc: '分类与文件夹', icon: <Icons.TagsOutlined />, color: '#14b8a6', onClick: routeGo('/home/classify') },
-    { title: '回收站', desc: '恢复误删内容', icon: <Icons.DeleteOutlined />, color: '#ef4444', onClick: routeGo('/home/trash') },
-    { title: '应用锁', desc: '本地密码保护', icon: <Icons.LockOutlined />, color: '#6366f1', onClick: routeGo(ROUTES.APP_LOCK) },
-    { title: '个人资料', desc: '昵称 / 签名 / 头像', icon: <Icons.UserOutlined />, color: '#38bdf8', onClick: routeGo(ROUTES.USER) },
-    { title: '帮助中心', desc: '新手引导与特性', icon: <Icons.QuestionCircleOutlined />, color: '#22c55e', onClick: routeGo(ROUTES.HELP) },
-    { title: '意见反馈', desc: '写入本地日志', icon: <Icons.MessageOutlined />, color: '#f97316', onClick: routeGo(ROUTES.FEEDBACK) }
+  const compactApps: CompactApp[] = [
+    { key: 'today', title: '每日先知', desc: `${dashboard?.todayItems.length || 0} 个今日事项`, icon: <Icons.BulbOutlined />, color: '#ff4d6d', group: 'agenda', onClick: routeGo(ROUTES.TODAY_DAY) },
+    { key: 'focus', title: '番茄专注', desc: `累计 ${Math.round(dashboard?.focusMinutes || 0)} 分钟`, icon: <Icons.HourglassOutlined />, color: '#6366f1', group: 'tools', onClick: routeGo(ROUTES.FOCUS) },
+    { key: 'habit', title: '习惯打卡', desc: '成长系统 · 每日打卡', icon: <Icons.CheckCircleOutlined />, color: '#3b82f6', group: 'growth', onClick: routeGo(ROUTES.HABIT) },
+    { key: 'goal', title: '目标', desc: '目标管理与里程碑', icon: <Icons.TrophyOutlined />, color: '#4f8cff', group: 'growth', onClick: routeGo(ROUTES.GOAL) },
+    { key: 'growth', title: '成长仪表盘', desc: '徽章 / 复盘 / 趋势', icon: <Icons.DashboardOutlined />, color: '#22d3ee', group: 'growth', onClick: routeGo(ROUTES.GROWTH) },
+    { key: 'memo', title: '备忘录', desc: `已有 ${dashboard?.memos?.length || 0} 篇备忘`, icon: <Icons.FileTextOutlined />, color: '#22c55e', group: 'records', onClick: routeGo(ROUTES.MEMO) },
+    { key: 'diary', title: '日记', desc: `已有 ${dashboard?.diaries?.length || 0} 篇日记`, icon: <Icons.ReadOutlined />, color: '#ff6b45', group: 'records', onClick: routeGo(ROUTES.DIARY_CAL) },
+    { key: 'syllabus', title: '课程表', desc: `${countType('syllabus')} 条课程记录`, icon: <Icons.TableOutlined />, color: '#06b6d4', group: 'agenda', onClick: routeGo('/home/syllabus') },
+    { key: 'work', title: '上班表', desc: `${countType('work')} 条打卡记录`, icon: <Icons.SolutionOutlined />, color: '#38bdf8', group: 'agenda', onClick: createType('work') },
+    { key: 'bill', title: '记账', desc: `${countType('bill')} 笔账单提醒`, icon: <Icons.WalletOutlined />, color: '#14b8a6', group: 'agenda', onClick: createType('bill') },
+    { key: 'repay', title: '还款提醒', desc: '信用卡 / 贷款提醒', icon: <Icons.CreditCardOutlined />, color: '#7c3aed', group: 'agenda', onClick: createType('bill') },
+    { key: 'loan', title: '贷款', desc: `${countType('loan')} 条贷款事项`, icon: <Icons.BankOutlined />, color: '#0ea5e9', group: 'agenda', onClick: routeGo('/home/loan') },
+    { key: 'book', title: '读书笔记', desc: `${countType('book')} 本书在书架`, icon: <Icons.BookOutlined />, color: '#22c55e', group: 'records', onClick: createType('book') },
+    { key: 'medicine', title: '喝水吃药', desc: `${countType('medicine')} 条健康提醒`, icon: <Icons.MedicineBoxOutlined />, color: '#38bdf8', group: 'tools', onClick: createType('medicine') },
+    { key: 'run', title: '跑步健康', desc: `${countType('run')} 条跑步记录`, icon: <Icons.ThunderboltOutlined />, color: '#10b981', group: 'tools', onClick: createType('run') },
+    { key: 'aunt', title: '生理期', desc: `${countType('aunt')} 条周期记录`, icon: <Icons.PlusCircleOutlined />, color: '#f472b6', group: 'tools', onClick: routeGo('/home/aunt') },
+    { key: 'sleep', title: '睡眠', desc: `${countType('clock_sleep')} 条睡眠闹钟`, icon: <Icons.MoonOutlined />, color: '#6478f8', group: 'agenda', onClick: createType('clock_sleep') },
+    { key: 'wakeup', title: '起床闹钟', desc: `${countType('clock_wakeup')} 条起床闹钟`, icon: <Icons.SunOutlined />, color: '#facc15', group: 'agenda', onClick: createType('clock_wakeup') },
+    { key: 'countdown', title: '倒数纪念日', desc: `${countType('countdown') + countType('anniversary')} 个重要日期`, icon: <Icons.CalendarOutlined />, color: '#3b82f6', group: 'agenda', onClick: createType('countdown') },
+    { key: 'birthday', title: '生日', desc: `${countType('birthday')} 个生日提醒`, icon: <Icons.GiftOutlined />, color: '#f59e0b', group: 'agenda', onClick: createType('birthday') },
+    { key: 'checklist', title: '清单', desc: `${countType('checklist')} 个清单事项`, icon: <Icons.CheckSquareOutlined />, color: '#10b981', group: 'agenda', onClick: routeGo(ROUTES.MATTER_CHECKLIST) },
+    { key: 'importance', title: '四象限', desc: '重要紧急矩阵', icon: <Icons.AppstoreOutlined />, color: '#ef4444', group: 'agenda', onClick: routeGo(ROUTES.MATTER_IMPORTANCE) },
+    { key: 'repeat', title: '重复事项', desc: `${dashboard?.activeItems.filter(item => !!item.repeatRule).length || 0} 个重复规则`, icon: <Icons.ReloadOutlined />, color: '#8b5cf6', group: 'agenda', onClick: routeGo(ROUTES.MATTER_REPEAT) },
+    { key: 'search', title: '全局搜索', desc: '跨事项 / 日记 / 备忘录', icon: <Icons.SearchOutlined />, color: '#64748b', group: 'tools', onClick: routeGo(ROUTES.SEARCH) },
+    { key: 'dataio', title: '导入导出', desc: '本地 JSON 备份恢复', icon: <Icons.CloudDownloadOutlined />, color: '#0ea5e9', group: 'tools', onClick: routeGo(ROUTES.DATAIO) },
+    { key: 'widget', title: '桌面小组件', desc: '浮动提醒小窗', icon: <Icons.DesktopOutlined />, color: '#22d3ee', group: 'tools', onClick: routeGo(ROUTES.DESKTOP_WIDGET) },
+    { key: 'theme', title: '主题换肤', desc: '27 款主题与字体', icon: <Icons.SkinOutlined />, color: '#ec4899', group: 'settings', onClick: routeGo(ROUTES.THEMESKIN) },
+    { key: 'system', title: '系统设置', desc: '启动页 / 诊断 / 字体', icon: <Icons.SettingOutlined />, color: '#94a3b8', group: 'settings', onClick: routeGo(ROUTES.SYSTEM) },
+    { key: 'classify', title: '分类管理', desc: '分类与文件夹', icon: <Icons.TagsOutlined />, color: '#14b8a6', group: 'settings', onClick: routeGo('/home/classify') },
+    { key: 'trash', title: '回收站', desc: '恢复误删内容', icon: <Icons.DeleteOutlined />, color: '#ef4444', group: 'settings', onClick: routeGo('/home/trash') },
+    { key: 'lock', title: '应用锁', desc: '本地密码保护', icon: <Icons.LockOutlined />, color: '#6366f1', group: 'settings', onClick: routeGo(ROUTES.APP_LOCK) },
+    { key: 'user', title: '个人资料', desc: '昵称 / 签名 / 头像', icon: <Icons.UserOutlined />, color: '#38bdf8', group: 'settings', onClick: routeGo(ROUTES.USER) },
+    { key: 'help', title: '帮助中心', desc: '新手引导与特性', icon: <Icons.QuestionCircleOutlined />, color: '#22c55e', group: 'settings', onClick: routeGo(ROUTES.HELP) },
+    { key: 'feedback', title: '意见反馈', desc: '写入本地日志', icon: <Icons.MessageOutlined />, color: '#f97316', group: 'settings', onClick: routeGo(ROUTES.FEEDBACK) }
   ];
+  const filteredCompactApps = compactApps
+    .filter(app => compactFilter === 'all' || (compactFilter === 'favorites' ? favoriteKeys.includes(app.key) : app.group === compactFilter))
+    .filter(app => !compactQuery.trim() || `${app.title} ${app.desc}`.toLowerCase().includes(compactQuery.toLowerCase()))
+    .sort((a, b) => {
+      const af = favoriteKeys.includes(a.key) ? 1 : 0;
+      const bf = favoriteKeys.includes(b.key) ? 1 : 0;
+      if (af !== bf) return bf - af;
+      return a.title.localeCompare(b.title, 'zh-CN');
+    });
 
   const modeSwitcher = (
     <Segmented
@@ -260,6 +294,8 @@ export default function HomePage() {
           <Input
             prefix={<SearchOutlined />}
             placeholder="搜索事项、日记、备忘录"
+            value={compactQuery}
+            onChange={event => setCompactQuery(event.target.value)}
             onPressEnter={event => nav(`${ROUTES.SEARCH}?q=${encodeURIComponent((event.target as HTMLInputElement).value)}`)}
             style={{
               marginTop: 14,
@@ -270,10 +306,31 @@ export default function HomePage() {
               color: titleColor
             }}
           />
+          <Segmented
+            value={compactFilter}
+            onChange={value => switchCompactFilter(value as CompactFilter)}
+            options={[
+              { label: '全部', value: 'all' },
+              { label: '收藏', value: 'favorites' },
+              { label: '事项', value: 'agenda' },
+              { label: '成长', value: 'growth' },
+              { label: '记录', value: 'records' },
+              { label: '工具', value: 'tools' },
+              { label: '设置', value: 'settings' }
+            ]}
+            style={{
+              marginTop: 12,
+              width: '100%',
+              padding: 4,
+              borderRadius: 12,
+              background: innerStrongBg,
+              border: `1px solid ${borderColor}`
+            }}
+          />
         </Card>
 
         <Row gutter={[10, 10]}>
-          {compactApps.map((app, index) => (
+          {filteredCompactApps.map((app, index) => (
             <Col key={`${app.title}-${index}`} xs={12} md={8} xl={6}>
               <button
                 type="button"
@@ -297,6 +354,26 @@ export default function HomePage() {
                   animationDelay: `${Math.min(index * 0.018, 0.36)}s`
                 }}
               >
+                <div
+                  onClick={event => {
+                    event.stopPropagation();
+                    toggleFavorite(app.key);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    display: 'grid',
+                    placeItems: 'center',
+                    color: favoriteKeys.includes(app.key) ? '#fbbf24' : subColor,
+                    background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.7)'
+                  }}
+                >
+                  <Icons.StarFilled style={{ fontSize: 12 }} />
+                </div>
                 <div style={{
                   width: 42,
                   height: 42,
@@ -319,6 +396,13 @@ export default function HomePage() {
             </Col>
           ))}
         </Row>
+        {filteredCompactApps.length === 0 && (
+          <Card bordered={false} style={{ ...cardStyle, borderRadius: 18 }} bodyStyle={{ padding: 18 }}>
+            <Typography.Text style={{ color: subColor }}>
+              当前筛选下没有匹配功能，试试切换分组或修改搜索词。
+            </Typography.Text>
+          </Card>
+        )}
       </Space>
     );
   }
