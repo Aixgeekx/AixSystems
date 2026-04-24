@@ -1,21 +1,23 @@
 // 我的一天 - 当日事项聚合 + 日期跳转 + 总览卡片 (v0.20.0 增强动画)
 import React, { useState } from 'react';
-import { Button, Card, Col, DatePicker, Divider, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
-import { CalendarOutlined, LeftOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
+import { Button, Card, Col, DatePicker, Divider, List, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { BookOutlined, CalendarOutlined, FireOutlined, FlagOutlined, LeftOutlined, PlusOutlined, ReadOutlined, RightOutlined, RiseOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useItems } from '@/hooks/useItems';
 import { useLunar } from '@/hooks/useLunar';
 import { useAppStore } from '@/stores/appStore';
+import { useNavigate } from 'react-router-dom';
 import ItemCard from '@/components/ItemCard';
 import Empty from '@/components/Empty';
 import { fmtDate, fmtTime } from '@/utils/time';
 import { useThemeVariants } from '@/hooks/useVariants';
 import { db } from '@/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { FireOutlined, FlagOutlined, RiseOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { ROUTES } from '@/config/routes';
 
 export default function MyDayPage() {
   const [date, setDate] = useState(dayjs().startOf('day'));
+  const nav = useNavigate();
   const openItemForm = useAppStore(s => s.openItemForm);
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
@@ -35,12 +37,13 @@ export default function MyDayPage() {
   const todayStart = dayjs().startOf('day').valueOf();
   const todayEnd = dayjs().endOf('day').valueOf();
   const growth = useLiveQuery(async () => {
-    const [habits, habitLogs, sessions, goals, diaries] = await Promise.all([
+    const [habits, habitLogs, sessions, goals, diaries, queue] = await Promise.all([
       db.habits.filter(h => !h.deletedAt).toArray(),
       db.habitLogs.toArray(),
       db.focusSessions.filter(s => s.startTime >= todayStart && s.startTime <= todayEnd).toArray(),
       db.goals.filter(g => !g.deletedAt && g.status === 'active').toArray(),
-      db.diaries.filter(d => !d.deletedAt && d.date >= todayStart && d.date <= todayEnd).toArray()
+      db.diaries.filter(d => !d.deletedAt && d.date >= todayStart && d.date <= todayEnd).toArray(),
+      db.reminderQueue.toArray()
     ]);
     const todayHabitLogs = habitLogs.filter(l => l.date >= todayStart && l.date <= todayEnd);
     const activeHabits = habits.filter(h => {
@@ -48,14 +51,22 @@ export default function MyDayPage() {
       return count >= h.targetCount;
     }).length;
     const focusMin = sessions.reduce((sum, s) => sum + s.actualMs / 60_000, 0);
+    const reviewDue = queue.filter(q => q.curveDay && !q.completedAt && q.fireAt <= todayEnd).length;
     return {
       habitDone: activeHabits,
       habitTotal: habits.length,
       focusMin: Math.round(focusMin),
       activeGoals: goals.length,
-      hasDiary: diaries.length > 0
+      hasDiary: diaries.length > 0,
+      reviewDue,
+      plan: [
+        { label: '先清空最早待办', text: nextItem?.title || '新建一条关键日程', color: '#38bdf8' },
+        { label: '补齐习惯控制', text: activeHabits >= habits.length ? '习惯已完成' : `还有 ${Math.max(0, habits.length - activeHabits)} 个习惯待打卡`, color: '#22c55e' },
+        { label: '安排深度专注', text: focusMin >= 50 ? '今日专注已达标' : `还需 ${Math.max(0, 50 - Math.round(focusMin))} 分钟专注`, color: '#f59e0b' },
+        { label: '收口成长记录', text: diaries.length ? '今日日记已记录' : '写一篇今日复盘日记', color: '#a78bfa' }
+      ]
     };
-  }, []) || { habitDone: 0, habitTotal: 0, focusMin: 0, activeGoals: 0, hasDiary: false };
+  }, [nextItem?.id]) || { habitDone: 0, habitTotal: 0, focusMin: 0, activeGoals: 0, hasDiary: false, reviewDue: 0, plan: [] };
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -232,6 +243,7 @@ export default function MyDayPage() {
                   { icon: <CheckCircleOutlined />, label: '习惯打卡', value: `${growth.habitDone} / ${growth.habitTotal}`, color: '#22c55e', bg: isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.08)' },
                   { icon: <FireOutlined />, label: '专注时长', value: `${growth.focusMin} 分钟`, color: '#f59e0b', bg: isDark ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.08)' },
                   { icon: <FlagOutlined />, label: '进行中目标', value: `${growth.activeGoals} 个`, color: '#3b82f6', bg: isDark ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.08)' },
+                  { icon: <BookOutlined />, label: '待复习', value: `${growth.reviewDue} 条`, color: '#8b5cf6', bg: isDark ? 'rgba(139,92,246,0.1)' : 'rgba(139,92,246,0.08)' },
                   { icon: <RiseOutlined />, label: '今日日记', value: growth.hasDiary ? '已记录' : '未记录', color: growth.hasDiary ? '#a78bfa' : '#64748b', bg: isDark ? 'rgba(167,139,250,0.1)' : 'rgba(167,139,250,0.08)' }
                 ].map((row, i) => (
                   <div
@@ -269,18 +281,42 @@ export default function MyDayPage() {
                   cursor: 'default'
                 }}
               >
-                <Typography.Text strong style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>全天事项</Typography.Text>
-                <Typography.Paragraph style={{ margin: '6px 0 12px', color: isDark ? '#94a3b8' : '#475569' }}>
+                <Typography.Text strong style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>AI 日计划编排</Typography.Text>
+                <List
+                  size="small"
+                  dataSource={growth.plan}
+                  renderItem={(row: any, index) => (
+                    <List.Item style={{ paddingInline: 0, borderBlockEnd: index === growth.plan.length - 1 ? 'none' : undefined }}>
+                      <div style={{ width: '100%' }}>
+                        <Tag color="blue" style={{ borderRadius: 6 }}>#{index + 1}</Tag>
+                        <Typography.Text strong style={{ color: row.color }}>{row.label}</Typography.Text>
+                        <div style={{ marginTop: 4, color: isDark ? '#94a3b8' : '#475569', fontSize: 12 }}>{row.text}</div>
+                      </div>
+                    </List.Item>
+                  )}
+                />
+              </div>
+
+              <div
+                className="hover-scale"
+                style={{
+                  padding: 14,
+                  borderRadius: 18,
+                  background: isDark ? 'rgba(15,23,42,0.72)' : 'rgba(248,250,252,0.86)',
+                  border: isDark ? `1px solid ${accent}18` : '1px solid transparent',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <Typography.Text strong style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>自动化执行面板</Typography.Text>
+                <Space wrap size={8} style={{ marginTop: 12 }}>
+                  <Button size="small" type="primary" icon={<PlusOutlined />} onClick={() => openItemForm(undefined, 'schedule')} style={{ borderRadius: 10 }}>新建日程</Button>
+                  <Button size="small" icon={<FireOutlined />} onClick={() => nav(ROUTES.FOCUS)} style={{ borderRadius: 10 }}>开始专注</Button>
+                  <Button size="small" icon={<BookOutlined />} onClick={() => nav(ROUTES.REVIEW)} style={{ borderRadius: 10 }}>处理复习</Button>
+                  <Button size="small" icon={<ReadOutlined />} onClick={() => nav(ROUTES.DIARY_CAL)} style={{ borderRadius: 10 }}>写日记</Button>
+                </Space>
+                <Typography.Paragraph style={{ margin: '10px 0 0', color: isDark ? '#94a3b8' : '#475569', fontSize: 12 }}>
                   今天有 {allDayCount} 项全天任务，适合拆成上午和下午两段完成。
                 </Typography.Paragraph>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => openItemForm(undefined, 'schedule')}
-                  style={{ borderRadius: 10, boxShadow: '0 8px 20px -4px rgba(59,130,246,0.3)' }}
-                >
-                  新建日程
-                </Button>
               </div>
             </Space>
           </Card>

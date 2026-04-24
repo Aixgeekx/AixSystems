@@ -100,14 +100,15 @@ export default function GrowthPage() {
   const accent = theme.accent;
 
   const dashboard = useLiveQuery(async () => {
-    const [items, diaries, memos, sessions, habits, habitLogs, goals] = await Promise.all([
+    const [items, diaries, memos, sessions, habits, habitLogs, goals, queue] = await Promise.all([
       db.items.toArray(),
       db.diaries.toArray(),
       db.memos.toArray(),
       db.focusSessions.toArray(),
       db.habits.filter(h => !h.deletedAt).toArray(),
       db.habitLogs.toArray(),
-      db.goals.filter(g => !g.deletedAt).toArray()
+      db.goals.filter(g => !g.deletedAt).toArray(),
+      db.reminderQueue.toArray()
     ]);
 
     const todayStart = dayjs().startOf('day').valueOf();
@@ -120,6 +121,14 @@ export default function GrowthPage() {
 
     const activeGoals = goals.filter(g => g.status === 'active');
     const completedGoals = goals.filter(g => g.status === 'completed');
+    const completedReviews = queue.filter(q => q.completedAt).length;
+    const radar = [
+      { name: '专注', value: Math.min(100, Math.round(monthFocus / 600 * 100)) },
+      { name: '习惯', value: habits.length ? Math.min(100, Math.round(habitLogs.filter(l => l.date >= monthStart).length / (habits.length * 21) * 100)) : 0 },
+      { name: '目标', value: goals.length ? Math.min(100, Math.round((completedGoals.length + activeGoals.length * 0.45) / goals.length * 100)) : 0 },
+      { name: '日记', value: Math.min(100, diaries.filter(d => !d.deletedAt && d.createdAt >= monthStart).length * 12) },
+      { name: '复习', value: Math.min(100, completedReviews * 8) }
+    ];
     const activeGoalsList = activeGoals.slice(0, 4).map(g => ({
       id: g.id,
       title: g.title,
@@ -174,6 +183,7 @@ export default function GrowthPage() {
       completedGoals: completedGoals.length,
       activeGoalsList,
       weekDays,
+      radar,
       summary: {
         week: mkPeriod(weekStartTs, weekEndTs),
         lastWeek: mkPeriod(lastWeekStartTs, lastWeekEndTs),
@@ -212,6 +222,25 @@ export default function GrowthPage() {
       type: 'bar',
       data: dashboard?.weekDays.map(d => d.count) || [],
       itemStyle: { color: accent, borderRadius: [6, 6, 0, 0] }
+    }]
+  };
+
+  const radarOpt = {
+    radar: {
+      indicator: (dashboard?.radar || []).map((r: any) => ({ name: r.name, max: 100 })),
+      radius: '68%',
+      axisName: { color: subColor },
+      splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(148,163,184,0.24)' } },
+      splitArea: { areaStyle: { color: isDark ? ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.05)'] : ['rgba(59,130,246,0.04)', 'rgba(59,130,246,0.08)'] } },
+      axisLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(148,163,184,0.28)' } }
+    },
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'radar',
+      data: [{ value: (dashboard?.radar || []).map((r: any) => r.value), name: '成长控制力' }],
+      areaStyle: { color: `${accent}33` },
+      lineStyle: { color: accent, width: 3 },
+      itemStyle: { color: accent }
     }]
   };
 
@@ -385,10 +414,10 @@ export default function GrowthPage() {
             className="anim-fade-in-up stagger-4"
             style={{ borderRadius: 24, background: cardBg, border: cardBorder, boxShadow: isDark ? `0 12px 30px -10px rgba(0,0,0,0.3)` : '0 12px 30px -10px rgba(0,0,0,0.05)' }}
           >
-            <Typography.Text style={{ color: subColor }}>习惯打卡</Typography.Text>
-            <Typography.Title level={4} style={{ margin: '4px 0 16px', color: titleColor }}>近 7 天打卡分布</Typography.Title>
-            <Suspense fallback={<div style={{ height: 240, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)', borderRadius: 12 }} />}>
-              <ReactECharts option={barOpt} style={{ height: 240 }} theme={isDark ? 'dark' : undefined} />
+            <Typography.Text style={{ color: subColor }}>成长雷达</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '4px 0 16px', color: titleColor }}>个人成长控制力</Typography.Title>
+            <Suspense fallback={<div style={{ height: 260, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)', borderRadius: 12 }} />}>
+              <ReactECharts option={radarOpt} style={{ height: 260 }} theme={isDark ? 'dark' : undefined} />
             </Suspense>
           </Card>
         </Col>
@@ -431,6 +460,18 @@ export default function GrowthPage() {
           </Card>
         </Col>
       </Row>
+
+      <Card
+        bordered={false}
+        className="anim-fade-in-up stagger-6"
+        style={{ borderRadius: 24, background: cardBg, border: cardBorder, boxShadow: isDark ? `0 12px 30px -10px rgba(0,0,0,0.3)` : '0 12px 30px -10px rgba(0,0,0,0.05)' }}
+      >
+        <Typography.Text style={{ color: subColor }}>习惯打卡</Typography.Text>
+        <Typography.Title level={4} style={{ margin: '4px 0 16px', color: titleColor }}>近 7 天打卡分布</Typography.Title>
+        <Suspense fallback={<div style={{ height: 240, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)', borderRadius: 12 }} />}>
+          <ReactECharts option={barOpt} style={{ height: 240 }} theme={isDark ? 'dark' : undefined} />
+        </Suspense>
+      </Card>
 
       {/* 周期复盘 */}
       <Card
