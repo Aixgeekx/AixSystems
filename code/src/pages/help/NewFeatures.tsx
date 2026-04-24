@@ -6,6 +6,10 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.22.3', date: '2026-04-25', items: [
+    '新增复习中心页面，聚合今日待复习、未来 7 天分布、已过期复习和最近已触发提醒',
+    '首页紧凑应用模式同步加入复习中心入口'
+  ]},
   { ver: '0.22.2', date: '2026-04-25', items: [
     '紧凑应用模式新增搜索、分组筛选和收藏置顶',
     '收藏功能会本地持久化，让首页更像真正可用的应用抽屉'

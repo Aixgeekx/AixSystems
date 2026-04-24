@@ -31,6 +31,7 @@ export const ROUTES = {
   HABIT: '/home/habit',                                // 习惯追踪
   GOAL: '/home/goal',                                  // 目标管理
   GROWTH: '/home/growth',                              // 成长仪表盘
+  REVIEW: '/home/review',                              // 复习中心
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
 
@@ -65,7 +66,8 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
     children: [
       { key: 'growth', label: '成长仪表盘', path: ROUTES.GROWTH, icon: 'dashboard' },
       { key: 'habit', label: '习惯追踪', path: ROUTES.HABIT, icon: 'check-circle' },
-      { key: 'goal', label: '目标管理', path: ROUTES.GOAL, icon: 'trophy' }
+      { key: 'goal', label: '目标管理', path: ROUTES.GOAL, icon: 'trophy' },
+      { key: 'review', label: '复习中心', path: ROUTES.REVIEW, icon: 'book' }
     ]
   },
   {

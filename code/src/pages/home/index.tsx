@@ -58,7 +58,7 @@ export default function HomePage() {
   const { theme, style, getPanelStyle } = useThemeVariants();
   const isDark = style === 'cyberpunk' || style === 'dark' || theme.key === 'minimal_dark';
   const accent = theme.accent;
-  const [mode, setMode] = useState<'dashboard' | 'compact'>(() => (localStorage.getItem('home.viewMode') as 'dashboard' | 'compact') || 'dashboard');
+  const [mode, setMode] = useState<'dashboard' | 'compact'>(() => (localStorage.getItem('home.viewMode') as 'dashboard' | 'compact') || 'compact');
   const [compactQuery, setCompactQuery] = useState('');
   const [compactFilter, setCompactFilter] = useState<CompactFilter>(() => (localStorage.getItem('home.compactFilter') as CompactFilter) || 'all');
   const [favoriteKeys, setFavoriteKeys] = useState<string[]>(() => {
@@ -217,10 +217,16 @@ export default function HomePage() {
   const createType = (type: ItemType) => () => openItemForm(undefined, type);
   const compactApps: CompactApp[] = [
     { key: 'today', title: '每日先知', desc: `${dashboard?.todayItems.length || 0} 个今日事项`, icon: <Icons.BulbOutlined />, color: '#ff4d6d', group: 'agenda', onClick: routeGo(ROUTES.TODAY_DAY) },
+    { key: 'week', title: '本周规划', desc: '一周事项节奏总览', icon: <Icons.CalendarOutlined />, color: '#0ea5e9', group: 'agenda', onClick: routeGo(ROUTES.TODAY_WEEK) },
+    { key: 'month', title: '本月规划', desc: '月度事项与安排', icon: <Icons.ScheduleOutlined />, color: '#6366f1', group: 'agenda', onClick: routeGo(ROUTES.TODAY_MONTH) },
+    { key: 'year', title: '年度规划', desc: '全年计划视图', icon: <Icons.BarChartOutlined />, color: '#14b8a6', group: 'agenda', onClick: routeGo(ROUTES.TODAY_YEAR) },
+    { key: 'all', title: '全部事项', desc: `${dashboard?.activeItems.length || 0} 个活跃事项`, icon: <Icons.OrderedListOutlined />, color: '#38bdf8', group: 'agenda', onClick: routeGo(ROUTES.MATTER_ALL) },
+    { key: 'schedule', title: '日程', desc: `${countType('schedule')} 条日程`, icon: <Icons.CalendarOutlined />, color: '#3b82f6', group: 'agenda', onClick: routeGo(ROUTES.MATTER_SCHEDULE) },
     { key: 'focus', title: '番茄专注', desc: `累计 ${Math.round(dashboard?.focusMinutes || 0)} 分钟`, icon: <Icons.HourglassOutlined />, color: '#6366f1', group: 'tools', onClick: routeGo(ROUTES.FOCUS) },
     { key: 'habit', title: '习惯打卡', desc: '成长系统 · 每日打卡', icon: <Icons.CheckCircleOutlined />, color: '#3b82f6', group: 'growth', onClick: routeGo(ROUTES.HABIT) },
     { key: 'goal', title: '目标', desc: '目标管理与里程碑', icon: <Icons.TrophyOutlined />, color: '#4f8cff', group: 'growth', onClick: routeGo(ROUTES.GOAL) },
     { key: 'growth', title: '成长仪表盘', desc: '徽章 / 复盘 / 趋势', icon: <Icons.DashboardOutlined />, color: '#22d3ee', group: 'growth', onClick: routeGo(ROUTES.GROWTH) },
+    { key: 'review', title: '复习中心', desc: '今日待复习 / 未来节点', icon: <Icons.BookOutlined />, color: '#8b5cf6', group: 'growth', onClick: routeGo(ROUTES.REVIEW) },
     { key: 'memo', title: '备忘录', desc: `已有 ${dashboard?.memos?.length || 0} 篇备忘`, icon: <Icons.FileTextOutlined />, color: '#22c55e', group: 'records', onClick: routeGo(ROUTES.MEMO) },
     { key: 'diary', title: '日记', desc: `已有 ${dashboard?.diaries?.length || 0} 篇日记`, icon: <Icons.ReadOutlined />, color: '#ff6b45', group: 'records', onClick: routeGo(ROUTES.DIARY_CAL) },
     { key: 'syllabus', title: '课程表', desc: `${countType('syllabus')} 条课程记录`, icon: <Icons.TableOutlined />, color: '#06b6d4', group: 'agenda', onClick: routeGo('/home/syllabus') },
@@ -236,6 +242,10 @@ export default function HomePage() {
     { key: 'wakeup', title: '起床闹钟', desc: `${countType('clock_wakeup')} 条起床闹钟`, icon: <Icons.SunOutlined />, color: '#facc15', group: 'agenda', onClick: createType('clock_wakeup') },
     { key: 'countdown', title: '倒数纪念日', desc: `${countType('countdown') + countType('anniversary')} 个重要日期`, icon: <Icons.CalendarOutlined />, color: '#3b82f6', group: 'agenda', onClick: createType('countdown') },
     { key: 'birthday', title: '生日', desc: `${countType('birthday')} 个生日提醒`, icon: <Icons.GiftOutlined />, color: '#f59e0b', group: 'agenda', onClick: createType('birthday') },
+    { key: 'anniversary', title: '纪念日', desc: `${countType('anniversary')} 个纪念日`, icon: <Icons.HeartOutlined />, color: '#ec4899', group: 'agenda', onClick: createType('anniversary') },
+    { key: 'festival', title: '节日', desc: `${countType('festival')} 个节日提醒`, icon: <Icons.FlagOutlined />, color: '#f97316', group: 'agenda', onClick: createType('festival') },
+    { key: 'dress', title: '穿衣搭配', desc: `${countType('dress')} 条搭配记录`, icon: <Icons.SkinOutlined />, color: '#f472b6', group: 'tools', onClick: createType('dress') },
+    { key: 'workrest', title: '作息表', desc: `${countType('clock_workrest')} 条作息规则`, icon: <Icons.ClockCircleOutlined />, color: '#14b8a6', group: 'agenda', onClick: createType('clock_workrest') },
     { key: 'checklist', title: '清单', desc: `${countType('checklist')} 个清单事项`, icon: <Icons.CheckSquareOutlined />, color: '#10b981', group: 'agenda', onClick: routeGo(ROUTES.MATTER_CHECKLIST) },
     { key: 'importance', title: '四象限', desc: '重要紧急矩阵', icon: <Icons.AppstoreOutlined />, color: '#ef4444', group: 'agenda', onClick: routeGo(ROUTES.MATTER_IMPORTANCE) },
     { key: 'repeat', title: '重复事项', desc: `${dashboard?.activeItems.filter(item => !!item.repeatRule).length || 0} 个重复规则`, icon: <Icons.ReloadOutlined />, color: '#8b5cf6', group: 'agenda', onClick: routeGo(ROUTES.MATTER_REPEAT) },
@@ -243,6 +253,8 @@ export default function HomePage() {
     { key: 'dataio', title: '导入导出', desc: '本地 JSON 备份恢复', icon: <Icons.CloudDownloadOutlined />, color: '#0ea5e9', group: 'tools', onClick: routeGo(ROUTES.DATAIO) },
     { key: 'widget', title: '桌面小组件', desc: '浮动提醒小窗', icon: <Icons.DesktopOutlined />, color: '#22d3ee', group: 'tools', onClick: routeGo(ROUTES.DESKTOP_WIDGET) },
     { key: 'theme', title: '主题换肤', desc: '27 款主题与字体', icon: <Icons.SkinOutlined />, color: '#ec4899', group: 'settings', onClick: routeGo(ROUTES.THEMESKIN) },
+    { key: 'functions', title: '实用功能', desc: '工具合集与扩展入口', icon: <Icons.AppstoreOutlined />, color: '#06b6d4', group: 'tools', onClick: routeGo('/home/functions') },
+    { key: 'menuSort', title: '菜单排序', desc: '自定义侧栏顺序', icon: <Icons.MenuOutlined />, color: '#64748b', group: 'settings', onClick: routeGo('/home/menusort') },
     { key: 'system', title: '系统设置', desc: '启动页 / 诊断 / 字体', icon: <Icons.SettingOutlined />, color: '#94a3b8', group: 'settings', onClick: routeGo(ROUTES.SYSTEM) },
     { key: 'classify', title: '分类管理', desc: '分类与文件夹', icon: <Icons.TagsOutlined />, color: '#14b8a6', group: 'settings', onClick: routeGo('/home/classify') },
     { key: 'trash', title: '回收站', desc: '恢复误删内容', icon: <Icons.DeleteOutlined />, color: '#ef4444', group: 'settings', onClick: routeGo('/home/trash') },
@@ -286,8 +298,11 @@ export default function HomePage() {
             <div>
               <Typography.Text style={{ color: subColor }}>{dayjs().format('HH:mm · YYYY 年 M 月 D 日')}</Typography.Text>
               <Typography.Title level={3} style={{ margin: '4px 0 0', color: titleColor, fontFamily: theme.fontFamily }}>
-                时光序 · 紧凑应用
+                AixSystems · 全功能紧凑模式
               </Typography.Title>
+              <Typography.Text style={{ color: subColor, fontSize: 13 }}>
+                像手机桌面一样，把事项、成长、记录、工具和设置全部压缩到一个入口面板。
+              </Typography.Text>
             </div>
             {modeSwitcher}
           </div>
@@ -306,27 +321,29 @@ export default function HomePage() {
               color: titleColor
             }}
           />
-          <Segmented
-            value={compactFilter}
-            onChange={value => switchCompactFilter(value as CompactFilter)}
-            options={[
-              { label: '全部', value: 'all' },
-              { label: '收藏', value: 'favorites' },
-              { label: '事项', value: 'agenda' },
-              { label: '成长', value: 'growth' },
-              { label: '记录', value: 'records' },
-              { label: '工具', value: 'tools' },
-              { label: '设置', value: 'settings' }
-            ]}
-            style={{
-              marginTop: 12,
-              width: '100%',
-              padding: 4,
-              borderRadius: 12,
-              background: innerStrongBg,
-              border: `1px solid ${borderColor}`
-            }}
-          />
+          <div style={{ overflowX: 'auto', paddingBottom: 2 }}>
+            <Segmented
+              value={compactFilter}
+              onChange={value => switchCompactFilter(value as CompactFilter)}
+              options={[
+                { label: '全部', value: 'all' },
+                { label: '收藏', value: 'favorites' },
+                { label: '事项', value: 'agenda' },
+                { label: '成长', value: 'growth' },
+                { label: '记录', value: 'records' },
+                { label: '工具', value: 'tools' },
+                { label: '设置', value: 'settings' }
+              ]}
+              style={{
+                marginTop: 12,
+                minWidth: 560,
+                padding: 4,
+                borderRadius: 12,
+                background: innerStrongBg,
+                border: `1px solid ${borderColor}`
+              }}
+            />
+          </div>
         </Card>
 
         <Row gutter={[10, 10]}>
@@ -338,10 +355,10 @@ export default function HomePage() {
                 onClick={app.onClick}
                 style={{
                   width: '100%',
-                  minHeight: 82,
-                  border: `1px solid ${isDark ? `${app.color}33` : 'rgba(255,255,255,0.48)'}`,
-                  borderRadius: 16,
-                  padding: 12,
+                  minHeight: 92,
+                  border: `1px solid ${isDark ? `${app.color}33` : 'rgba(255,255,255,0.52)'}`,
+                  borderRadius: 18,
+                  padding: 14,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 11,
@@ -375,22 +392,22 @@ export default function HomePage() {
                   <Icons.StarFilled style={{ fontSize: 12 }} />
                 </div>
                 <div style={{
-                  width: 42,
-                  height: 42,
+                  width: 52,
+                  height: 52,
                   borderRadius: '50%',
                   display: 'grid',
                   placeItems: 'center',
                   flexShrink: 0,
                   background: app.color,
                   color: '#fff',
-                  fontSize: 20,
+                  fontSize: 23,
                   boxShadow: `0 10px 24px ${app.color}44`
                 }}>
                   {app.icon}
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ color: titleColor, fontWeight: 800, fontSize: 15, lineHeight: 1.25 }}>{app.title}</div>
-                  <div style={{ color: subColor, fontSize: 12, marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{app.desc}</div>
+                  <div style={{ color: titleColor, fontWeight: 900, fontSize: 16, lineHeight: 1.2 }}>{app.title}</div>
+                  <div style={{ color: subColor, fontSize: 13, marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{app.desc}</div>
                 </div>
               </button>
             </Col>
