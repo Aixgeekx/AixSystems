@@ -40,7 +40,11 @@ export default function GoalPage() {
     const daysLeft = goal.targetDate ? dayjs(goal.targetDate).diff(dayjs().startOf('day'), 'day') : 999;
     const expected = goal.targetDate ? Math.min(100, Math.max(0, Math.round((Date.now() - goal.createdAt) / Math.max(1, goal.targetDate - goal.createdAt) * 100))) : 0;
     const level = daysLeft < 0 ? '已逾期' : goal.targetDate && progress + 20 < expected ? '高风险' : goal.targetDate && daysLeft <= 7 && progress < 80 ? '临期' : '稳定';
-    return { goal, progress, daysLeft, expected, level };
+    const gap = Math.max(0, expected - progress);
+    const action = ms.find(m => !m.done)?.title || '补充下一个可执行里程碑';
+    const reason = daysLeft < 0 ? '截止日已过但目标未完成' : gap > 0 ? `进度落后期望 ${gap}%` : `距离截止只剩 ${daysLeft} 天`;
+    const cadence = daysLeft > 0 && ms.length ? `建议每 ${Math.max(1, Math.floor(daysLeft / Math.max(1, ms.filter(m => !m.done).length)))} 天完成 1 个里程碑` : '建议今天立即收口一个里程碑';
+    return { goal, progress, daysLeft, expected, level, reason, cadence, action };
   }).filter(item => item.level !== '稳定').slice(0, 3);
 
   async function save() {
@@ -294,8 +298,13 @@ export default function GoalPage() {
                   <Tag color={item.level === '高风险' || item.level === '已逾期' ? 'red' : 'gold'}>{item.level}</Tag>
                 </Space>
                 <Typography.Paragraph style={{ margin: '6px 0 0', color: subColor, fontSize: 12 }}>
-                  当前 {item.progress}% / 期望 {item.expected}%，{item.daysLeft >= 0 ? `剩余 ${item.daysLeft} 天` : `已超期 ${Math.abs(item.daysLeft)} 天`}，建议今天至少推进 1 个里程碑。
+                  当前 {item.progress}% / 期望 {item.expected}%，{item.daysLeft >= 0 ? `剩余 ${item.daysLeft} 天` : `已超期 ${Math.abs(item.daysLeft)} 天`}。
                 </Typography.Paragraph>
+                <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                  <Tag style={{ width: 'fit-content', borderRadius: 6 }}>原因：{item.reason}</Tag>
+                  <Tag color="blue" style={{ width: 'fit-content', borderRadius: 6 }}>{item.cadence}</Tag>
+                  <Typography.Text style={{ color: subColor, fontSize: 12 }}>今日动作：{item.action}</Typography.Text>
+                </Space>
               </div>
             ))}
           </Space>

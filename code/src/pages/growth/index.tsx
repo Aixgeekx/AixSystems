@@ -47,6 +47,12 @@ function buildGrowthHtmlReport(dashboard: any, achievements: any) {
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>AixSystems 成长报告</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f172a;color:#e2e8f0}.wrap{max-width:980px;margin:0 auto;padding:42px 24px}.hero{padding:34px;border-radius:28px;background:linear-gradient(135deg,#7c3aed,#06b6d4);box-shadow:0 30px 80px #0006}h1{margin:0 0 10px;font-size:36px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:18px 0}.card{padding:20px;border-radius:22px;background:#ffffff12;border:1px solid #ffffff1f}.num{font-size:30px;font-weight:800;color:#fff}table{width:100%;border-collapse:collapse;overflow:hidden;border-radius:18px;background:#ffffff0d}th,td{padding:14px;text-align:left;border-bottom:1px solid #ffffff14}li{position:relative;list-style:none;margin:12px 0;padding:14px 16px;border-radius:16px;background:#ffffff0d;overflow:hidden}li em{position:absolute;left:0;bottom:0;height:4px;background:#22d3ee}li span,li b{position:relative;z-index:1}li b{float:right;color:#86efac}.section{margin-top:24px}</style></head><body><main class="wrap"><section class="hero"><p>${dayjs().format('YYYY-MM-DD HH:mm')}</p><h1>AixSystems 成长复盘报告</h1><p>用本地数据生成的个人成长控制台快照。</p></section><section class="grid"><div class="card"><p>总事项</p><div class="num">${dashboard.totalItems}</div></div><div class="card"><p>总专注</p><div class="num">${Math.round(dashboard.totalFocusMin)} 分</div></div><div class="card"><p>习惯数</p><div class="num">${dashboard.totalHabits}</div></div><div class="card"><p>成就</p><div class="num">${achievements?.unlockedCount || 0}/${achievements?.total || 0}</div></div></section><section class="section"><h2>周期复盘</h2><table><thead><tr><th>事项完成</th><th>专注时长</th><th>习惯打卡</th><th>日记</th><th>专注环比</th></tr></thead><tbody>${cell(dashboard.summary.week, dashboard.summary.lastWeek)}${cell(dashboard.summary.month, dashboard.summary.lastMonth)}</tbody></table></section><section class="section"><h2>进行中目标</h2><ul>${goals}</ul></section></main></body></html>`;
 }
 
+function buildGrowthShareCard(dashboard: any, achievements: any) {
+  const score = Math.round((dashboard?.radar || []).reduce((sum: number, r: any) => sum + r.value, 0) / Math.max(1, dashboard?.radar?.length || 1));
+  const radar = (dashboard?.radar || []).map((r: any) => `<span><b>${r.value}</b>${r.name}</span>`).join('');
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>AixSystems 成长分享卡</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#020617;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.card{width:720px;max-width:calc(100vw - 40px);padding:42px;border-radius:36px;color:#fff;background:radial-gradient(circle at 20% 0%,#22d3ee55,transparent 34%),linear-gradient(135deg,#111827,#4c1d95 55%,#0f172a);box-shadow:0 40px 120px #0008}.tag{color:#bae6fd;font-weight:700;letter-spacing:.14em}.score{font-size:112px;line-height:1;font-weight:900;margin:18px 0;background:linear-gradient(135deg,#fff,#67e8f9);-webkit-background-clip:text;color:transparent}.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:28px}.grid span{padding:14px;border-radius:18px;background:#ffffff14;text-align:center}.grid b{display:block;font-size:24px;color:#86efac}.meta{display:flex;justify-content:space-between;margin-top:30px;color:#cbd5e1}</style></head><body><section class="card"><div class="tag">AIXSYSTEMS · GROWTH CONTROL</div><div class="score">${score}</div><h1>我的成长控制力快照</h1><p>本月专注 ${Math.round(dashboard.monthFocusMin || 0)} 分钟，成就 ${achievements?.unlockedCount || 0}/${achievements?.total || 0}，用离线本地数据持续掌控自己。</p><div class="grid">${radar}</div><div class="meta"><span>${dayjs().format('YYYY-MM-DD HH:mm')}</span><span>Local-first Growth System</span></div></section></body></html>`;
+}
+
 function downloadText(filename: string, text: string, type: string) {
   const blob = new Blob([text], { type });
   const url = URL.createObjectURL(blob);
@@ -253,11 +259,12 @@ export default function GrowthPage() {
 
   const todayCompletion = dashboard?.todayTotal ? Math.round((dashboard.todayDone / dashboard.todayTotal) * 100) : 0;
   const achievements = useAchievements();
-  const exportReport = (format: 'md' | 'html') => {
+  const exportReport = (format: 'md' | 'html' | 'card') => {
     if (!dashboard) return message.warning('成长数据仍在加载中');
-    if (format === 'html') downloadText(`aixsystems-growth-${dayjs().format('YYYY-MM-DD')}.html`, buildGrowthHtmlReport(dashboard, achievements), 'text/html;charset=utf-8');
+    if (format === 'card') downloadText(`aixsystems-growth-card-${dayjs().format('YYYY-MM-DD')}.html`, buildGrowthShareCard(dashboard, achievements), 'text/html;charset=utf-8');
+    else if (format === 'html') downloadText(`aixsystems-growth-${dayjs().format('YYYY-MM-DD')}.html`, buildGrowthHtmlReport(dashboard, achievements), 'text/html;charset=utf-8');
     else downloadText(`aixsystems-growth-${dayjs().format('YYYY-MM-DD')}.md`, buildGrowthReport(dashboard, achievements), 'text/markdown;charset=utf-8');
-    message.success(format === 'html' ? '可视化成长报告已导出' : '成长报告已导出');
+    message.success(format === 'card' ? '成长分享卡已导出' : format === 'html' ? '可视化成长报告已导出' : '成长报告已导出');
   };
 
   return (
@@ -295,6 +302,9 @@ export default function GrowthPage() {
               </Button>
               <Button type="primary" icon={<DownloadOutlined />} onClick={() => exportReport('html')} style={{ borderRadius: 12, fontWeight: 700 }}>
                 导出 HTML 报告
+              </Button>
+              <Button icon={<DownloadOutlined />} onClick={() => exportReport('card')} style={{ borderRadius: 12, fontWeight: 700 }}>
+                导出分享卡
               </Button>
             </Space>
           </Col>

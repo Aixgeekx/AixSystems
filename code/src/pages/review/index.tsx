@@ -64,8 +64,15 @@ export default function ReviewCenterPage() {
       const level = count >= 6 ? '爆发' : count >= 3 ? '高压' : count >= 1 ? '轻压' : '空闲';
       return { day: d.format('M/D'), date: d.format('YYYY-MM-DD'), count, level };
     });
+    const peak = heatmap.reduce((max, day) => day.count > max.count ? day : max, heatmap[0]);
+    const pressure = {
+      total: heatmap.reduce((sum, day) => sum + day.count, 0),
+      highDays: heatmap.filter(day => day.count >= 3).length,
+      peak,
+      advice: peak?.count >= 6 ? '峰值日压力过高，建议提前 1-2 天拆分复习。' : heatmap.some(day => day.count >= 3) ? '存在高压日，建议把易混内容提前巩固。' : '未来 30 天复习负载平稳。'
+    };
 
-    return { todayPending, overdue, upcoming, recentFired, completed, mastered, fuzzy, recommendedDays, byDay, heatmap, total: reviewQueue.length };
+    return { todayPending, overdue, upcoming, recentFired, completed, mastered, fuzzy, recommendedDays, byDay, heatmap, pressure, total: reviewQueue.length };
   }, []);
 
   const statCards = [
@@ -225,7 +232,15 @@ export default function ReviewCenterPage() {
       </Row>
 
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
-        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>未来 30 天复习压力热力图</Typography.Title>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>未来 30 天复习压力热力图</Typography.Title>
+          <Space wrap size={8}>
+            <Tag color="blue">总量 {dashboard?.pressure.total || 0}</Tag>
+            <Tag color="orange">高压日 {dashboard?.pressure.highDays || 0}</Tag>
+            <Tag color="red">峰值 {dashboard?.pressure.peak?.day || '-'} · {dashboard?.pressure.peak?.count || 0}</Tag>
+          </Space>
+        </div>
+        <Typography.Paragraph style={{ marginTop: 0, color: subColor }}>{dashboard?.pressure.advice}</Typography.Paragraph>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(54px, 1fr))', gap: 8 }}>
           {dashboard?.heatmap.map(day => {
             const color = day.count >= 6 ? '#ef4444' : day.count >= 3 ? '#f59e0b' : day.count >= 1 ? '#22c55e' : '#94a3b8';
