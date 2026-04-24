@@ -6,6 +6,10 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.22.9', date: '2026-04-25', items: [
+    '首页紧凑应用模式新增拖拽排序，可把高频入口拖到自己的控制台顺序',
+    '拖拽排序会本地持久化，并继续保留搜索、分组筛选和收藏置顶能力'
+  ]},
   { ver: '0.22.8', date: '2026-04-25', items: [
     '复习中心新增复习强度配置，可选择“需巩固”后的 1/2/3/7 天回流间隔',
     '复习完成状态改用独立完成时间记录，避免计划复习时间和实际完成时间混用'

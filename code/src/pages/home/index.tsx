@@ -64,6 +64,10 @@ export default function HomePage() {
   const [favoriteKeys, setFavoriteKeys] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('home.compactFavorites') || '[]'); } catch { return []; }
   });
+  const [compactOrder, setCompactOrder] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('home.compactOrder') || '[]'); } catch { return []; }
+  });
+  const [draggingKey, setDraggingKey] = useState<string>();
   const [originStorage, setOriginStorage] = useState<{ usage?: number; quota?: number }>({});
   const [diskStats, setDiskStats] = useState<{ root: string; total: number; free: number; used: number } | null>(null);
 
@@ -117,6 +121,18 @@ export default function HomePage() {
     const next = favoriteKeys.includes(key) ? favoriteKeys.filter(item => item !== key) : [key, ...favoriteKeys];
     setFavoriteKeys(next);
     localStorage.setItem('home.compactFavorites', JSON.stringify(next));
+  };
+  const moveCompactApp = (fromKey: string, toKey: string) => {
+    if (fromKey === toKey) return;
+    const keys = compactApps.map(app => app.key);
+    const current = [...compactOrder.filter(key => keys.includes(key)), ...keys.filter(key => !compactOrder.includes(key))];
+    const fromIndex = current.indexOf(fromKey);
+    const toIndex = current.indexOf(toKey);
+    if (fromIndex < 0 || toIndex < 0) return;
+    const [moved] = current.splice(fromIndex, 1);
+    current.splice(toIndex, 0, moved);
+    setCompactOrder(current);
+    localStorage.setItem('home.compactOrder', JSON.stringify(current));
   };
 
   const total = dashboard?.todayItems.length || 0;
@@ -263,6 +279,7 @@ export default function HomePage() {
     { key: 'help', title: '帮助中心', desc: '新手引导与特性', icon: <Icons.QuestionCircleOutlined />, color: '#22c55e', group: 'settings', onClick: routeGo(ROUTES.HELP) },
     { key: 'feedback', title: '意见反馈', desc: '写入本地日志', icon: <Icons.MessageOutlined />, color: '#f97316', group: 'settings', onClick: routeGo(ROUTES.FEEDBACK) }
   ];
+  const compactOrderIndex = new Map(compactOrder.map((key, index) => [key, index]));
   const filteredCompactApps = compactApps
     .filter(app => compactFilter === 'all' || (compactFilter === 'favorites' ? favoriteKeys.includes(app.key) : app.group === compactFilter))
     .filter(app => !compactQuery.trim() || `${app.title} ${app.desc}`.toLowerCase().includes(compactQuery.toLowerCase()))
@@ -270,7 +287,7 @@ export default function HomePage() {
       const af = favoriteKeys.includes(a.key) ? 1 : 0;
       const bf = favoriteKeys.includes(b.key) ? 1 : 0;
       if (af !== bf) return bf - af;
-      return a.title.localeCompare(b.title, 'zh-CN');
+      return (compactOrderIndex.get(a.key) ?? 999) - (compactOrderIndex.get(b.key) ?? 999) || a.title.localeCompare(b.title, 'zh-CN');
     });
 
   const modeSwitcher = (
@@ -301,7 +318,7 @@ export default function HomePage() {
                 AixSystems · 全功能紧凑模式
               </Typography.Title>
               <Typography.Text style={{ color: subColor, fontSize: 13 }}>
-                像手机桌面一样，把事项、成长、记录、工具和设置全部压缩到一个入口面板。
+                像手机桌面一样，把事项、成长、记录、工具和设置全部压缩到一个入口面板；拖动卡片即可固定自己的控制台顺序。
               </Typography.Text>
             </div>
             {modeSwitcher}
@@ -348,10 +365,26 @@ export default function HomePage() {
 
         <Row gutter={[10, 10]}>
           {filteredCompactApps.map((app, index) => (
-            <Col key={`${app.title}-${index}`} xs={12} md={8} xl={6}>
+            <Col key={app.key} xs={12} md={8} xl={6}>
               <button
                 type="button"
+                draggable
                 className="hover-lift anim-fade-in-up"
+                onDragStart={event => {
+                  setDraggingKey(app.key);
+                  event.dataTransfer.effectAllowed = 'move';
+                  event.dataTransfer.setData('text/plain', app.key);
+                }}
+                onDragOver={event => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = 'move';
+                }}
+                onDrop={event => {
+                  event.preventDefault();
+                  moveCompactApp(event.dataTransfer.getData('text/plain') || draggingKey || '', app.key);
+                  setDraggingKey(undefined);
+                }}
+                onDragEnd={() => setDraggingKey(undefined)}
                 onClick={app.onClick}
                 style={{
                   width: '100%',
@@ -362,7 +395,9 @@ export default function HomePage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 11,
-                  cursor: 'pointer',
+                  cursor: draggingKey ? 'grabbing' : 'grab',
+                  opacity: draggingKey === app.key ? 0.58 : 1,
+                  transform: draggingKey === app.key ? 'scale(0.98)' : undefined,
                   textAlign: 'left',
                   background: isDark ? `linear-gradient(135deg, ${app.color}1c, rgba(8,12,24,0.78))` : 'rgba(255,255,255,0.72)',
                   boxShadow: isDark ? `0 14px 34px ${app.color}12` : '0 12px 28px rgba(15,23,42,0.08)',
