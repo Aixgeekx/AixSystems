@@ -178,6 +178,23 @@ export default function FocusPage() {
     }]
   };
 
+  const energyHours = Array.from({ length: 24 }).map((_, hour) => {
+    const total = sessions.filter(s => dayjs(s.startTime).hour() === hour).reduce((sum, s) => sum + s.actualMs / 60_000, 0);
+    const today = todaySessions.filter(s => dayjs(s.startTime).hour() === hour).reduce((sum, s) => sum + s.actualMs / 60_000, 0);
+    return { hour: `${hour.toString().padStart(2, '0')}:00`, total: Math.round(total), today: Math.round(today) };
+  });
+  const energyOpt = {
+    grid: { top: 34, right: 16, bottom: 34, left: 42 },
+    xAxis: { type: 'category', data: energyHours.map(h => h.hour), axisLabel: { color: isDark ? 'rgba(255,255,255,0.6)' : '#64748b', interval: 2 } },
+    yAxis: { type: 'value', name: '分钟', nameTextStyle: { color: isDark ? 'rgba(255,255,255,0.5)' : '#94a3b8' }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(148,163,184,0.18)' } }, axisLabel: { color: isDark ? 'rgba(255,255,255,0.5)' : '#94a3b8' } },
+    tooltip: { trigger: 'axis', backgroundColor: isDark ? 'rgba(10,14,28,0.9)' : 'rgba(255,255,255,0.95)', borderColor: isDark ? accent + '44' : '#e2e8f0', textStyle: { color: isDark ? '#f8fafc' : '#0f172a' } },
+    legend: { data: ['历史能量', '今日能量'], textStyle: { color: isDark ? '#e2e8f0' : '#334155' } },
+    series: [
+      { name: '历史能量', type: 'line', smooth: true, data: energyHours.map(h => h.total), areaStyle: { color: `${accent}22` }, lineStyle: { color: accent, width: 3 }, itemStyle: { color: accent } },
+      { name: '今日能量', type: 'bar', data: energyHours.map(h => h.today), itemStyle: { color: '#22c55e', borderRadius: [6, 6, 0, 0] } }
+    ]
+  };
+
   const monthOpt = {
     grid: { top: 34, right: 16, bottom: 30, left: 42 },
     xAxis: {
@@ -581,6 +598,13 @@ export default function FocusPage() {
               defaultActiveKey="timeline"
               destroyInactiveTabPane
               items={[
+                {
+                  key: 'energy',
+                  label: '能量曲线',
+                  children: sessions.length > 0
+                    ? <LazyChart option={energyOpt} />
+                    : <Empty text="暂无数据" subtext="完成专注后会按小时生成能量曲线" />
+                },
                 {
                   key: 'trend',
                   label: '近 14 天',

@@ -76,6 +76,15 @@ export default function DiaryPage() {
   });
   const pinnedCount = useMemo(() => list.filter(diary => diary.pinned).length, [list]);
   const latestDiary = list[0];
+  const moodDays = Array.from({ length: 14 }).map((_, index) => {
+    const day = new Date();
+    day.setDate(day.getDate() - (13 - index));
+    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+    const dayEnd = dayStart + 86_399_999;
+    const entries = list.filter(diary => diary.date >= dayStart && diary.date <= dayEnd && diary.mood);
+    return { day: `${day.getMonth() + 1}/${day.getDate()}`, mood: entries[0]?.mood || '', count: entries.length };
+  });
+  const moodSummary = moodDays.filter(day => day.mood).slice(-7);
 
   function clearDraft() {
     localStorage.removeItem(DRAFT_KEY);
@@ -289,6 +298,22 @@ export default function DiaryPage() {
             </Row>
           </Col>
         </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Text style={{ color: subColor }}>情绪趋势</Typography.Text>
+        <Typography.Title level={4} style={{ margin: '4px 0 14px', color: titleColor }}>近 14 天情绪记录</Typography.Title>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(14, minmax(0, 1fr))', gap: 8 }}>
+          {moodDays.map(day => (
+            <div key={day.day} style={{ minHeight: 64, borderRadius: 14, padding: '8px 4px', textAlign: 'center', background: day.mood ? tintedBg('#a78bfa') : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.04)'), border: day.mood ? '1px solid rgba(167,139,250,0.35)' : '1px solid transparent' }}>
+              <div style={{ color: subColor, fontSize: 11 }}>{day.day}</div>
+              <div style={{ fontSize: 20, marginTop: 6 }}>{day.mood || '·'}</div>
+            </div>
+          ))}
+        </div>
+        <Typography.Paragraph style={{ margin: '12px 0 0', color: subColor }}>
+          最近 7 条情绪：{moodSummary.length ? moodSummary.map(day => day.mood).join(' ') : '暂无记录'}。持续记录能帮助你看见情绪和行动之间的关系。
+        </Typography.Paragraph>
       </Card>
 
       <Row gutter={[16, 16]}>

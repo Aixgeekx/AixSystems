@@ -72,12 +72,16 @@ export default function HomePage() {
   const [diskStats, setDiskStats] = useState<{ root: string; total: number; free: number; used: number } | null>(null);
 
   const dashboard = useLiveQuery(async () => {
-    const [items, diaries, memos, sessions, lastBackup] = await Promise.all([
+    const [items, diaries, memos, sessions, lastBackup, goals, habits, habitLogs, queue] = await Promise.all([
       db.items.toArray(),
       db.diaries.toArray(),
       db.memos.toArray(),
       db.focusSessions.orderBy('startTime').reverse().limit(6).toArray(),
-      db.cacheKv.get('lastBackupMeta')
+      db.cacheKv.get('lastBackupMeta'),
+      db.goals.filter(g => !g.deletedAt && g.status === 'active').toArray(),
+      db.habits.filter(h => !h.deletedAt).toArray(),
+      db.habitLogs.toArray(),
+      db.reminderQueue.toArray()
     ]);
 
     const activeItems = items.filter(item => !item.deletedAt);
@@ -89,6 +93,22 @@ export default function HomePage() {
     const pinnedNotes = memos.filter(memo => !memo.deletedAt && memo.pinned).slice(0, 4);
     const recentDiaries = diaries.filter(diary => !diary.deletedAt).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
     const focusMinutes = sessions.reduce((sum, session) => sum + session.actualMs / 60_000, 0);
+    const riskGoalCount = goals.filter(goal => {
+      const ms = goal.milestones || [];
+      const progress = ms.length ? Math.round(ms.filter(m => m.done).length / ms.length * 100) : 0;
+      const expected = goal.targetDate ? Math.min(100, Math.max(0, Math.round((Date.now() - goal.createdAt) / Math.max(1, goal.targetDate - goal.createdAt) * 100))) : 0;
+      return goal.targetDate && (goal.targetDate < Date.now() || progress + 20 < expected);
+    }).length;
+    const habitBreakCount = habits.filter(habit => {
+      const last = habitLogs.filter(log => log.habitId === habit.id).sort((a, b) => b.date - a.date)[0];
+      return !last || dayjs().startOf('day').diff(dayjs(last.date).startOf('day'), 'day') >= 3;
+    }).length;
+    const reviewPressureCount = queue.filter(entry => entry.curveDay && !entry.completedAt && entry.fireAt >= todayStart && entry.fireAt <= dayjs().add(7, 'day').endOf('day').valueOf()).length;
+    const alerts = [
+      { label: '目标风险', value: riskGoalCount, color: '#ef4444', path: ROUTES.GOAL },
+      { label: '习惯中断', value: habitBreakCount, color: '#f59e0b', path: ROUTES.HABIT },
+      { label: '7天复习', value: reviewPressureCount, color: '#8b5cf6', path: ROUTES.REVIEW }
+    ].filter(alert => alert.value > 0);
 
     return {
       activeItems,
@@ -101,7 +121,8 @@ export default function HomePage() {
       recentDiaries,
       sessions,
       focusMinutes,
-      lastBackup
+      lastBackup,
+      alerts
     };
   }, []);
 
@@ -688,6 +709,24 @@ export default function HomePage() {
           </Col>
         </Row>
       </Card>
+
+      {dashboard?.alerts?.length ? (
+        <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <Typography.Text style={{ color: subColor }}>成长警报</Typography.Text>
+              <Typography.Title level={4} style={{ margin: '4px 0 0', color: titleColor }}>需要今天处理的控制信号</Typography.Title>
+            </div>
+            <Space wrap size={8}>
+              {dashboard.alerts.map((alert: any) => (
+                <Button key={alert.label} onClick={() => nav(alert.path)} style={{ borderRadius: 999, color: alert.color, borderColor: `${alert.color}66`, background: tintedBg(alert.color) }}>
+                  {alert.label} · {alert.value}
+                </Button>
+              ))}
+            </Space>
+          </div>
+        </Card>
+      ) : null}
 
       <Row gutter={[16, 16]}>
         {/* 快捷入口 */}

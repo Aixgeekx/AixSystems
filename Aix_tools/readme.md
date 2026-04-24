@@ -31,6 +31,7 @@ AixSystems 时间管理系统(离线本地版)。基于调研原版 [时光序](
 | **今日行动控制** | MyDay AI 日计划编排 + 自动化执行面板，聚合待办、习惯、复习、专注和日记入口 |
 | **成长风险控制** | 目标风险预警详情 + 习惯恢复计划 + 未来 30 天复习压力热力图 + 压力摘要 |
 | **成长报告分享** | Markdown 报告 + HTML 可视化报告 + 成长控制力分享卡 |
+| **成长警报系统** | 首页聚合目标风险、习惯中断、复习压力信号，专注能量曲线和日记情绪趋势补齐反馈闭环 |
 | **27 款主题风格** | 赛博系列 7 款 / 极简系列 7 款 / 渐变系列 7 款 / 经典保留 6 款 |
 | **40+ 路由** | 对齐原版 `/home/*` 路径结构 |
 
@@ -108,8 +109,8 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.23.4-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.23.5-Setup.exe` (NSIS 安装包,约 80MB)
 
 目录便携版: `npm run dist:portable` → `desktop/dist-installer/win-unpacked/`
 
-单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.23.4-portable.exe`
+单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.23.5-portable.exe`
