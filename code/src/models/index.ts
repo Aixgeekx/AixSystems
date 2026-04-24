@@ -157,6 +157,7 @@ export interface ReminderQueueItem {                        // 提醒队列(加�
   label?: string;
   reviewAt?: number;
   reviewFeedback?: 'mastered' | 'fuzzy';
+  reinforcementFromId?: string;
   curveDay?: number;
 }
 

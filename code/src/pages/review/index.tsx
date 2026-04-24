@@ -64,7 +64,20 @@ export default function ReviewCenterPage() {
   ];
 
   const completeReview = async (entry: any, reviewFeedback: 'mastered' | 'fuzzy') => {
-    await db.reminderQueue.update(entry.id, { fired: true, reviewAt: Date.now(), reviewFeedback });
+    const reviewAt = Date.now();
+    await db.reminderQueue.update(entry.id, { fired: true, reviewAt, reviewFeedback });
+    if (reviewFeedback === 'fuzzy') {
+      const fireAt = dayjs(reviewAt).add(1, 'day').startOf('hour').valueOf();
+      await db.reminderQueue.put({
+        id: `${entry.id}_reinforce_${fireAt}`,
+        itemId: entry.itemId,
+        fireAt,
+        fired: false,
+        label: `巩固复习 · ${entry.label || `D${entry.curveDay}`}`,
+        reinforcementFromId: entry.id,
+        curveDay: entry.curveDay
+      });
+    }
   };
 
   const renderQueueItem = (entry: any, muted = false, actionable = true) => (
@@ -86,6 +99,7 @@ export default function ReviewCenterPage() {
             </div>
           </div>
           <Space size={8} wrap>
+            {entry.reinforcementFromId ? <Tag color="purple" style={{ marginInlineEnd: 0, borderRadius: 6 }}>巩固回流</Tag> : null}
             {entry.reviewFeedback ? <Tag color={entry.reviewFeedback === 'mastered' ? 'green' : 'orange'} style={{ marginInlineEnd: 0, borderRadius: 6 }}>{entry.reviewFeedback === 'mastered' ? '已掌握' : '需巩固'}</Tag> : null}
             <Tag color={muted ? 'default' : 'cyan'} style={{ marginInlineEnd: 0, borderRadius: 6 }}>D{entry.curveDay}</Tag>
             {actionable ? (
@@ -127,6 +141,7 @@ export default function ReviewCenterPage() {
           <Tag color="green">今日待复习</Tag>
           <Tag color="purple">未来节点</Tag>
           <Tag color="gold">掌握反馈</Tag>
+          <Tag color="purple">巩固回流</Tag>
         </Space>
       </Card>
 
@@ -202,7 +217,7 @@ export default function ReviewCenterPage() {
         {dashboard?.completed.length ? (
           <List dataSource={dashboard.completed.slice(0, 12)} split={false} renderItem={item => renderQueueItem(item, true, false)} />
         ) : (
-          <Empty text="还没有完成记录" subtext="在今日、过期或已触发复习中标记掌握状态后，这里会形成复习闭环。" />
+          <Empty text="还没有完成记录" subtext="在今日、过期或已触发复习中标记掌握状态后，这里会形成复习闭环；需巩固会自动回流到下一次复习。" />
         )}
       </Card>
     </Space>

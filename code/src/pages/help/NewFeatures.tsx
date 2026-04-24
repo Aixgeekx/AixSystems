@@ -6,6 +6,10 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.22.7', date: '2026-04-25', items: [
+    '复习中心新增“需巩固”自动回流，标记后会生成次日巩固复习节点',
+    '巩固节点会以“巩固回流”标签显示，让记忆曲线从反馈继续进入下一次行动'
+  ]},
   { ver: '0.22.6', date: '2026-04-25', items: [
     '复习中心新增复习完成态追踪，可直接标记“已掌握”或“需巩固”',
     '新增已完成复习记录、待反馈提醒和掌握率统计，让记忆曲线形成真正闭环'
