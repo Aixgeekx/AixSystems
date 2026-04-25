@@ -56,6 +56,18 @@ export default function AgentPage() {
     };
   }).sort((a, b) => b.urgency - a.urgency).slice(0, 5);
   const autonomyScore = autonomyQueue.length ? Math.max(0, Math.round(100 - autonomyQueue.reduce((sum, item) => sum + item.urgency, 0) / autonomyQueue.length * 0.58)) : 100;
+  const cliResumeRadar = agentTasks.map(task => {
+    const workflow = task.extra?.claudeWorkflow || {};
+    const subtasks = task.subtasks || [];
+    const done = subtasks.filter(item => item.done).length;
+    const percent = subtasks.length ? Math.round(done / subtasks.length * 100) : 0;
+    const risk = String(task.extra?.risk || (task.extra?.aixCampaign ? '中风险' : '低风险'));
+    const workflowScore = ['plan', 'tools', 'checkpoint', 'resume'].filter(key => workflow[key]).length * 25;
+    const missing = CLI_WORKFLOW_STEPS.filter(step => step.title === 'Plan' ? !workflow.plan : step.title === 'Permission' ? !workflow.tools && !workflow.forbidden : step.title === 'Checkpoint' ? !workflow.checkpoint : !workflow.resume).map(step => step.title);
+    const breakpoint = missing[0] || (percent === 100 ? 'Archive' : 'Resume');
+    const priority = Math.min(100, Math.round((RISK_WEIGHT[risk] || 30) * 0.34 + (100 - percent) * 0.38 + (100 - workflowScore) * 0.28));
+    return { task, percent, risk, workflowScore, breakpoint, priority, resume: workflow.resume || `claude code cli 续跑：读取 ${task.title} 的 Item.extra 和未完成子任务，从 ${breakpoint} 断点继续。`, next: subtasks.find(item => !item.done)?.title || '归档执行证据' };
+  }).sort((a, b) => b.priority - a.priority).slice(0, 5);
 
   async function createAgentTask(template: typeof AGENT_TEMPLATES[number]) {
     const now = Date.now();
@@ -135,6 +147,25 @@ export default function AgentPage() {
           })}
           {!recoveryQueue.length ? <Alert type="info" showIcon message="创建 Agent 分支后会自动生成 CLI 工作流交接信息。" style={{ borderRadius: 12 }} /> : null}
         </Space>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <HistoryOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Claude Code CLI 续跑雷达</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>自动读取 Plan / Permission / Checkpoint / Resume 断点、子任务进度和风险权重，排序最该恢复的 Agent 分支。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {cliResumeRadar.length ? cliResumeRadar.map((item, index) => <Col xs={24} md={12} xl={8} key={item.task.id}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? 'rgba(139,92,246,0.12)' : 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.24)' }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}><Space wrap><Tag color={index === 0 ? 'red' : 'blue'}>#{index + 1}</Tag><Typography.Text strong style={{ color: titleColor }}>{item.task.title}</Typography.Text></Space><Tag color={item.priority >= 72 ? 'red' : item.priority >= 48 ? 'gold' : 'green'}>恢复 {item.priority}</Tag></Space>
+              <Progress percent={item.percent} size="small" strokeColor="#8b5cf6" trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} style={{ marginTop: 8 }} />
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>断点：{item.breakpoint} · 工作流 {item.workflowScore}</div>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>下一步：{item.next}</div>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>Resume：{item.resume}</div>
+            </div>
+          </Col>) : <Col span={24}><Alert type="info" showIcon message="创建 Agent 分支后会生成 CLI 续跑雷达。" style={{ borderRadius: 12 }} /></Col>}
+        </Row>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>

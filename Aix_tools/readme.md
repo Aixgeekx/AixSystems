@@ -2,6 +2,11 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.42.0
+- Aix 中枢新增控制令牌到 openclow 技能调度器，基于总控令牌、技能健康和 eventLog 生成 dry-run 调度建议。
+- Agent 中枢新增 Claude Code CLI 续跑雷达，按 Plan / Permission / Checkpoint / Resume 断点、子任务进度和风险权重排序恢复优先级。
+- 桌面超级管理器新增 PowerShell 7 控制回放黑匣子，把白名单执行哈希、耗时、摘要和恢复建议映射为 Agent 证据线索。
+
 ## 最新版本 v0.41.0
 - 首页、成长仪表盘和 Aix 中枢新增黑科技总控令牌，把个人控制力、压力信号和下一步动作压成本地恢复令牌。
 - Aix 中枢新增 openclow 本地技能沙盒校验器，为插件 manifest 生成权限合约、dry-run 状态和 Claude Code 续跑提示，默认禁用不执行未知代码。

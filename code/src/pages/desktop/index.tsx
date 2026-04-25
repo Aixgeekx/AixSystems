@@ -71,6 +71,13 @@ export default function DesktopWidgetPage() {
       { label: '回滚说明', value: confirmingPreset ? 100 : 40, ok: !!confirmingPreset?.rollback, hint: confirmingPreset?.rollback || '选择预设后显示回滚说明' }
     ]
   };
+  const replayBlackBox = powershellResult ? {
+    id: `PS7-${powershellResult.hash || powershellResult.preset || 'LOCAL'}`,
+    health: powershellResult.error ? 58 : 92,
+    summary: powershellResult.outputSummary || `shell=${powershellResult.shell || 'unknown'}; chars=${String(powershellResult.output || '').length}`,
+    recovery: powershellResult.error ? '保留错误输出，切换只读预设或回到系统健康演练复查。' : '可把摘要映射为电脑管理 Agent 的证据线索，继续走确认/备份/回滚链路。',
+    evidence: [`Preset ${powershellResult.preset || 'unknown'}`, `Shell ${powershellResult.shell || 'unknown'}`, `Hash ${powershellResult.hash || 'none'}`, `Duration ${powershellResult.durationMs || 0}ms`]
+  } : null;
   const electron = isElectron();
 
   async function refreshSnapshot() {
@@ -291,6 +298,24 @@ export default function DesktopWidgetPage() {
             { label: '执行时间', value: powershellResult.executedAt ? new Date(powershellResult.executedAt).toLocaleString() : '未执行' }
           ].map(item => <Col xs={24} md={12} xl={6} key={item.label}><div style={{ padding: 12, borderRadius: 14, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)', border: cardBorder }}><Typography.Text style={{ color: subColor, fontSize: 12 }}>{item.label}</Typography.Text><div style={{ color: titleColor, fontWeight: 700, marginTop: 4 }}>{item.value}</div></div></Col>)}
         </Row> : null}
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <SafetyCertificateOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>PowerShell 7 控制回放黑匣子</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>把 pwsh 7 白名单执行结果压成可回放审计卡：哈希、耗时、摘要、恢复建议和 Agent 证据线索全部本地展示。</Typography.Paragraph>
+        {replayBlackBox ? <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} md={6}>
+            <Progress type="dashboard" percent={replayBlackBox.health} strokeColor={replayBlackBox.health >= 80 ? '#10b981' : '#f59e0b'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+            <Typography.Text style={{ color: subColor }}>{replayBlackBox.id}</Typography.Text>
+          </Col>
+          <Col xs={24} md={18}>
+            <Alert type={powershellResult.error ? 'warning' : 'success'} showIcon message={replayBlackBox.summary} description={replayBlackBox.recovery} style={{ borderRadius: 12, marginBottom: 12 }} />
+            <Space wrap>{replayBlackBox.evidence.map(item => <Tag key={item} color="blue">{item}</Tag>)}<Tag color="purple">Agent 证据线索</Tag><Tag color="green">可回放</Tag></Space>
+          </Col>
+        </Row> : <Alert type="info" showIcon message="执行一次白名单 PowerShell 预设后生成可回放黑匣子审计卡。" style={{ borderRadius: 12 }} />}
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

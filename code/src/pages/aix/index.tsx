@@ -195,6 +195,13 @@ export default function AixPage() {
     const score = Math.round((dataReady * 0.36 + providerReady * 0.24 + permissionReady * 0.22 + logReady * 0.18) * (enabled ? 1 : 0.72));
     return { ...skill, enabled, score, fix: !enabled ? '先启用技能' : score >= 82 ? '保持当前链路' : providerNeed && !aixApiUrl && !failoverTarget ? '配置 Provider 或官方回退' : desktopNeed ? '在桌面版执行白名单预检' : '执行一次技能并写入日志' };
   }), [aixApiUrl, capsule, failoverTarget, skillLogs, skillState]);
+  const skillDispatchPlan = useMemo(() => skillAuditMatrix.map(skill => {
+    const pressure = skill.key === 'growth-control' ? (capsule?.goalRisk || 0) * 24 + (capsule?.brokenHabits || 0) * 18 : skill.key === 'review-peak' ? (capsule?.reviewPressure || 0) * 9 : skill.key === 'focus-operator' ? Math.max(0, 45 - (capsule?.focusMinutes || 0)) : skill.key === 'desktop-readonly' ? 54 : skill.key === 'portable-capsule' ? Math.max(0, 88 - (capsule?.dataScore || 0)) : aixApiUrl || failoverTarget ? 38 : 72;
+    const priority = Math.max(0, Math.min(100, Math.round((capsule?.controlToken.score || 0) * 0.28 + pressure * 0.46 + skill.score * 0.26)));
+    const approval = skill.risk === '低风险' ? 'readonly-dry-run' : 'manual-approval';
+    const action = skill.key === 'desktop-readonly' ? '生成 PowerShell 7 白名单预检卡，不执行任意命令' : skill.key === 'provider-dispatch' ? '检查 Provider 健康和故障转移，不暴露 API Key' : skill.key === 'portable-capsule' ? '生成备份与迁移清单草案' : `用 ${capsule?.controlToken.id || 'AIX-CORE'} 生成 ${skill.output}`;
+    return { ...skill, priority, pressure: Math.round(Math.min(100, pressure)), approval, action, dispatch: `openclow://${skill.key}?token=${capsule?.controlToken.id || 'AIX-CORE'}&mode=dry-run`, evidence: skillLogs.find(log => log.detail?.skill === skill.key)?.message || '等待 eventLog 证据' };
+  }).sort((a, b) => b.priority - a.priority), [aixApiUrl, capsule, failoverTarget, skillAuditMatrix, skillLogs]);
 
   async function setSkill(key: string, enabled: boolean) {
     const next = { ...(skillState || {}), [key]: enabled };
@@ -341,6 +348,24 @@ export default function AixPage() {
           </div>
           <Progress type="dashboard" percent={capsule?.controlToken.score || 0} strokeColor={(capsule?.controlToken.score || 0) >= 78 ? '#10b981' : (capsule?.controlToken.score || 0) >= 52 ? '#f59e0b' : '#ef4444'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
         </Space>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}><ControlOutlined style={{ color: accent }} /><Typography.Title level={4} style={{ margin: 0, color: titleColor }}>控制令牌 → openclow 技能调度器</Typography.Title></Space>
+        <Typography.Paragraph style={{ color: subColor }}>基于 Aix 总控令牌、技能健康和 eventLog 生成 dry-run 调度建议；未知代码保持禁用，只输出可审计的 openclow 调度草案。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {skillDispatchPlan.slice(0, 6).map(skill => <Col xs={24} md={12} xl={8} key={skill.key}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${skill.color}12` : `${skill.color}08`, border: `1px solid ${skill.color}24` }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}><Typography.Text strong style={{ color: titleColor }}>{skill.name}</Typography.Text><Tag color={skill.priority >= 72 ? 'red' : skill.priority >= 48 ? 'gold' : 'green'}>调度 {skill.priority}</Tag></Space>
+              <Progress percent={skill.priority} showInfo={false} strokeColor={skill.color} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} style={{ margin: '10px 0 6px' }} />
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>模式：{skill.approval}</div>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>动作：{skill.action}</div>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>调度：{skill.dispatch}</div>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>证据：{skill.evidence}</div>
+            </div>
+          </Col>)}
+        </Row>
+        <Alert type="info" showIcon message="所有 openclow 调度均为 dry-run，不执行未知插件代码，不读取日记正文，不开放任意 PowerShell。" style={{ borderRadius: 12, marginTop: 14 }} />
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
