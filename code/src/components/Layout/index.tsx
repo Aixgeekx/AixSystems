@@ -202,6 +202,7 @@ export default function Layout() {
         .workspace-shell .workspace-content::-webkit-scrollbar-thumb:hover {
           background: ${isDark ? themeMeta.accent + '55' : 'rgba(148,163,184,0.4)'};
         }
+        .mobile-bottom-nav { display: none; }
         .mobile-menu-button { display: none; }
         @media (max-width: 820px) {
           .workspace-shell { display: block !important; padding: 10px; }
@@ -210,8 +211,10 @@ export default function Layout() {
           .workspace-header { padding: 18px !important; border-radius: 24px !important; align-items: flex-start !important; }
           .workspace-header-actions { width: 100%; }
           .workspace-header-actions .ant-btn { flex: 1 1 46%; }
-          .workspace-content { padding: 0 2px 18px !important; }
+          .workspace-content { padding: 0 2px 82px !important; border-radius: 24px !important; }
+          .workspace-content > div:first-child { display: block !important; }
           .mobile-menu-button { display: inline-flex; }
+          .mobile-bottom-nav { display: grid; }
         }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); filter: blur(4px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
@@ -573,6 +576,18 @@ export default function Layout() {
       </AntLayout>
 
       <CommandPalette />
+      <div className="mobile-bottom-nav" style={{ position: 'fixed', left: 12, right: 12, bottom: 12, zIndex: 20, gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, padding: 8, borderRadius: 22, background: isDark ? 'rgba(8,16,30,0.92)' : 'rgba(255,255,255,0.92)', border: `1px solid ${themeMeta.accent}22`, boxShadow: isDark ? `0 0 28px ${themeMeta.accent}22` : '0 14px 34px rgba(15,23,42,0.16)', backdropFilter: 'blur(18px)' }}>
+        {[
+          { label: '首页', icon: <Icons.HomeOutlined />, path: ROUTES.HOME_DASH },
+          { label: '今天', icon: <Icons.CalendarOutlined />, path: ROUTES.TODAY_DAY },
+          { label: '成长', icon: <Icons.DashboardOutlined />, path: ROUTES.GROWTH },
+          { label: '工具', icon: <Icons.AppstoreOutlined />, path: ROUTES.DESKTOP_WIDGET }
+        ].map(item => (
+          <Button key={item.path} type={activeKey.startsWith(item.path) ? 'primary' : 'text'} icon={item.icon} onClick={() => nav(item.path)} style={{ height: 46, borderRadius: 16, color: activeKey.startsWith(item.path) ? undefined : shellTitle, display: 'inline-flex', flexDirection: 'column', gap: 1, fontSize: 11 }}>
+            {item.label}
+          </Button>
+        ))}
+      </div>
       <Drawer title="AixSystems 手机版导航" placement="left" open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} bodyStyle={{ padding: 0, background: isDark ? '#0b1020' : '#111827' }}>
         {menuNode}
       </Drawer>

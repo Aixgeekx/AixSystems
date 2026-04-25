@@ -2,6 +2,11 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.30.0
+- 桌面端超级管理器二期新增安全控制矩阵，覆盖自启管理、隐私清理、磁盘保护、文件扫描和工具大全。
+- Aix 模型管理升级为 cc-switch 风格 Provider 抽象，加入预设、原子切换、配置备份和官方登录回退提示。
+- 手机版适配新增底部四入口导航，移动端可快速进入首页、今天、成长和工具。
+
 ## 最新版本 v0.29.0
 - 全局外壳新增手机版导航抽屉和窄屏布局，为后续手机版做准备。
 - 系统设置新增 Aix 模型 Key 槽，可保存并切换多套模型供应商配置。
@@ -54,7 +59,7 @@ AixSystems 时间管理系统(离线本地版)。基于调研原版 [时光序](
 | **今日行动控制** | MyDay AI 日计划编排 + 自动化执行面板，聚合待办、习惯、复习、专注和日记入口 |
 | **成长风险控制** | 目标风险预警详情 + 目标推进建议器 + 习惯恢复计划 + 未来 30 天复习压力热力图 + 压力摘要 + 削峰建议 |
 | **成长报告分享** | Markdown 报告 + HTML 可视化报告 + 成长控制力分享卡 |
-| **Aix 模型控制** | 系统设置配置 API 地址/API Key/模型名，并支持本地 Key 槽切换多套模型配置，首页智能控制助手和成长轨迹模拟器输出个人行动建议 |
+| **Aix 模型控制** | 系统设置配置 API 地址/API Key/模型名，并支持 cc-switch 风格 Provider 预设、原子切换、配置备份和官方登录回退，首页智能控制助手和成长轨迹模拟器输出个人行动建议 |
 | **27 款主题风格** | 赛博系列 7 款 / 极简系列 7 款 / 渐变系列 7 款 / 经典保留 6 款 |
 | **40+ 路由** | 对齐原版 `/home/*` 路径结构 |
 
@@ -132,8 +137,8 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.29.0-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.30.0-Setup.exe` (NSIS 安装包,约 80MB)
 
 目录便携版: `npm run dist:portable` → `desktop/dist-installer/win-unpacked/`
 
-单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.29.0-portable.exe`
+单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.30.0-portable.exe`

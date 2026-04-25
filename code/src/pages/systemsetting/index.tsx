@@ -1,7 +1,7 @@
 // 系统设置 - 通知 / 启动页 / 快捷键 / 本地环境状态 / 系统诊断 (v0.21.5 诊断面板)
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Descriptions, Divider, Input, Row, Select, Space, Statistic, Tag, Typography, message } from 'antd';
-import { CloudDownloadOutlined, DatabaseOutlined, NotificationOutlined, ThunderboltOutlined, DashboardOutlined, HistoryOutlined, WarningOutlined, CheckCircleOutlined, RiseOutlined, FallOutlined, FontSizeOutlined } from '@ant-design/icons';
+import { CloudDownloadOutlined, DatabaseOutlined, NotificationOutlined, ThunderboltOutlined, DashboardOutlined, HistoryOutlined, WarningOutlined, CheckCircleOutlined, RiseOutlined, FallOutlined, FontSizeOutlined, ApiOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { APP_NAME, APP_VERSION } from '@/config/constants';
 import { MENU_GROUPS } from '@/config/routes';
@@ -111,25 +111,41 @@ export default function SystemPage() {
   }
 
   const allPages = MENU_GROUPS.flatMap(group => group.children).map(child => ({ value: child.path, label: child.label }));
-  const providerProfiles = JSON.parse(aixProviderProfiles || '[]') as Array<{ name: string; apiUrl: string; model: string; keyHint?: string }>;
+  const providerProfiles = JSON.parse(aixProviderProfiles || '[]') as Array<{ name: string; apiUrl: string; model: string; keyHint?: string; provider?: string; health?: string; official?: boolean }>;
   const activeProfile = providerProfiles.find(profile => profile.name === aixActiveProfile);
+  const providerPresets = [
+    { name: 'Claude Code 官方', apiUrl: '', model: 'claude-opus-4-7', provider: 'official', official: true },
+    { name: 'OpenAI 兼容网关', apiUrl: 'http://127.0.0.1:8000/v1/chat/completions', model: 'aix-growth-control', provider: 'openai-compatible' },
+    { name: '本地代理模型', apiUrl: 'http://127.0.0.1:11434/v1/chat/completions', model: 'local-aix', provider: 'local-proxy' }
+  ];
 
   async function saveAixProfile() {
     const name = profileName.trim() || aixModel || 'Aix 默认模型';
-    const next = [{ name, apiUrl: aixApiUrl, model: aixModel, keyHint: aixApiKey ? `已保存 ${aixApiKey.slice(0, 4)}***` : '无 Key' }, ...providerProfiles.filter(profile => profile.name !== name)].slice(0, 8);
+    const previous = providerProfiles.find(profile => profile.name === aixActiveProfile);
+    const nextProfile = { name, apiUrl: aixApiUrl, model: aixModel, provider: aixApiUrl ? 'openai-compatible' : 'official', keyHint: aixApiKey ? `已保存 ${aixApiKey.slice(0, 4)}***` : '无 Key', health: aixApiUrl && aixModel ? '待检测' : '官方登录回退' };
+    const next = [nextProfile, ...providerProfiles.filter(profile => profile.name !== name)].slice(0, 8);
     await setKV('aixProviderProfiles', JSON.stringify(next));
     await setKV('aixActiveProfile', name);
+    await setKV('aixLastProfileBackup', JSON.stringify({ at: Date.now(), profile: previous }));
     setProfileName('');
-    message.success('模型配置已保存到本地 Key 槽');
+    message.success('模型配置已原子保存到本地 Provider 槽');
   }
 
   async function switchAixProfile(name: string) {
     const profile = providerProfiles.find(item => item.name === name);
     if (!profile) return;
+    const previous = providerProfiles.find(item => item.name === aixActiveProfile);
+    await setKV('aixLastProfileBackup', JSON.stringify({ at: Date.now(), profile: previous }));
     await setKV('aixApiUrl', profile.apiUrl);
     await setKV('aixModel', profile.model);
     await setKV('aixActiveProfile', profile.name);
-    message.success(`已切换到 ${profile.name}`);
+    message.success(`已原子切换到 ${profile.name}`);
+  }
+
+  async function applyPreset(preset: typeof providerPresets[number]) {
+    setProfileName(preset.name);
+    await setKV('aixApiUrl', preset.apiUrl);
+    await setKV('aixModel', preset.model);
   }
 
   return (
@@ -260,8 +276,15 @@ export default function SystemPage() {
               <Input value={aixModel} onChange={event => setKV('aixModel', event.target.value)} placeholder="模型名，例如 aix-growth-control" />
               <Input value={profileName} onChange={event => setProfileName(event.target.value)} placeholder="配置槽名称，例如 Claude Code / cc-switch / 本地模型" />
               <Space wrap>
-                <Button type="primary" onClick={saveAixProfile} style={{ borderRadius: 10 }}>保存为 Key 槽</Button>
+                <Button type="primary" onClick={saveAixProfile} style={{ borderRadius: 10 }}>保存为 Provider 槽</Button>
                 {activeProfile ? <Tag color="blue">当前槽：{activeProfile.name}</Tag> : <Tag>未选择配置槽</Tag>}
+              </Space>
+              <Space wrap size={[8, 8]}>
+                {providerPresets.map(preset => (
+                  <Button key={preset.name} size="small" icon={preset.official ? <SafetyCertificateOutlined /> : <ApiOutlined />} onClick={() => applyPreset(preset)} style={{ borderRadius: 10 }}>
+                    {preset.name}
+                  </Button>
+                ))}
               </Space>
               <Space wrap size={[8, 8]}>
                 {providerProfiles.map(profile => (
@@ -270,6 +293,9 @@ export default function SystemPage() {
                   </Button>
                 ))}
               </Space>
+              <div style={{ padding: 12, borderRadius: 12, background: isDark ? `${accent}0d` : `${accent}08`, border: `1px solid ${accent}22`, color: subColor, fontSize: 12, lineHeight: 1.8 }}>
+                Provider 抽象：API 地址、模型、Key 提示和健康状态统一管理；切换前会备份旧槽；官方登录可作为无 Key 回退；后续可同步到 Claude Code / 本地代理配置。
+              </div>
             </Space>
           </Card>
         </Col>

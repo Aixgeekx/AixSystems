@@ -129,6 +129,13 @@ ipcMain.handle('sgx:get-system-snapshot', () => {
     diskUsed: disk.used
   };
 });
+ipcMain.handle('sgx:get-system-manager-plan', () => ({
+  startup: ['扫描用户 Startup 文件夹', '扫描 HKCU Run 自启项', '标记高频启动项，默认只读不修改'],
+  privacy: ['定位浏览器缓存与临时目录', '生成可清理清单', '清理前强制确认并备份路径'],
+  disk: ['监控数据目录与安装盘容量', '识别大文件和旧安装包', '提醒导出备份后再清理'],
+  scan: ['按扩展名扫描可疑脚本', '识别重复文件和超大附件', '所有删除动作进入人工确认'],
+  tools: ['断网急救', '时间校准', '二维码生成', 'HOST 修改', '批量重命名', '端口扫描']
+}));
 
 Menu.setApplicationMenu(null);
 

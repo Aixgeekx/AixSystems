@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('sgx', {
   openDataDir: () => ipcRenderer.invoke('sgx:open-data-dir'),             // 在资源管理器中打开 data/
   getVersion: () => ipcRenderer.invoke('sgx:get-version'),
   getStorageStats: () => ipcRenderer.invoke('sgx:get-storage-stats'),
-  getSystemSnapshot: () => ipcRenderer.invoke('sgx:get-system-snapshot')
+  getSystemSnapshot: () => ipcRenderer.invoke('sgx:get-system-snapshot'),
+  getSystemManagerPlan: () => ipcRenderer.invoke('sgx:get-system-manager-plan')
 });

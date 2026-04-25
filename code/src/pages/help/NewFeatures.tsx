@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.30.0', date: '2026-04-25', items: [
+    '桌面端超级管理器二期新增安全控制矩阵，规划自启管理、隐私清理、磁盘保护、文件扫描和工具大全',
+    'Aix 模型管理升级为 cc-switch 风格 Provider 抽象，加入预设、原子切换、备份和官方登录回退提示',
+    '手机版适配新增底部四入口导航，移动端可快速进入首页、今天、成长和工具'
+  ]},
   { ver: '0.29.0', date: '2026-04-25', items: [
     '全局外壳新增手机版导航抽屉和窄屏布局，为后续手机版适配打底',
     '系统设置新增 Aix 模型 Key 槽，可像 CLI/cc-switch 一样保存并切换多套模型配置',

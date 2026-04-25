@@ -1,7 +1,7 @@
 // 桌面小部件页 - 工作台风格 (v0.24.0 完善升级)
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Progress, Row, Space, Switch, Tag, Typography } from 'antd';
-import { DesktopOutlined, BgColorsOutlined, ControlOutlined, EyeOutlined, SafetyCertificateOutlined, SyncOutlined } from '@ant-design/icons';
+import { DesktopOutlined, BgColorsOutlined, ControlOutlined, EyeOutlined, SafetyCertificateOutlined, SyncOutlined, RocketOutlined, ClearOutlined, HddOutlined, FileSearchOutlined, ToolOutlined } from '@ant-design/icons';
 import FloatingReminder from '@/components/FloatingReminder';
 import { useThemeVariants } from '@/hooks/useVariants';
 import { getElectron, isElectron } from '@/utils/electron';
@@ -16,6 +16,14 @@ const WIDGET_THEMES = [
   { label: '复古', color: 'gold', key: 'retro' }
 ];
 
+const MANAGER_MODULES = [
+  { key: 'startup', title: '自启管理', icon: <RocketOutlined />, color: '#2563eb' },
+  { key: 'privacy', title: '隐私清理', icon: <ClearOutlined />, color: '#8b5cf6' },
+  { key: 'disk', title: '磁盘保护', icon: <HddOutlined />, color: '#10b981' },
+  { key: 'scan', title: '文件扫描', icon: <FileSearchOutlined />, color: '#f59e0b' },
+  { key: 'tools', title: '工具大全', icon: <ToolOutlined />, color: '#06b6d4' }
+];
+
 function formatGB(bytes = 0) {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
@@ -23,6 +31,7 @@ function formatGB(bytes = 0) {
 export default function DesktopWidgetPage() {
   const [show, setShow] = useState(false);
   const [snapshot, setSnapshot] = useState<any>(null);
+  const [managerPlan, setManagerPlan] = useState<Record<string, string[]>>({});
   const { theme, getPanelStyle } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
@@ -36,7 +45,9 @@ export default function DesktopWidgetPage() {
 
   async function refreshSnapshot() {
     const next = await getElectron()?.getSystemSnapshot?.();
+    const plan = await getElectron()?.getSystemManagerPlan?.();
     if (next) setSnapshot(next);
+    if (plan) setManagerPlan(plan);
   }
 
   useEffect(() => {
@@ -103,6 +114,31 @@ export default function DesktopWidgetPage() {
           <Button icon={<SyncOutlined />} onClick={refreshSnapshot} disabled={!electron} style={{ borderRadius: 10 }}>刷新电脑状态</Button>
           {['配置概览', '自启管理', '隐私清理', '磁盘保护', '文件扫描', '工具大全'].map(item => <Tag key={item} color={item === '配置概览' ? 'blue' : 'default'}>{item}</Tag>)}
         </Space>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <ToolOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>超级管理器二期 · 安全控制矩阵</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>
+          先做只读扫描和建议，所有会改系统的动作后续都走确认、备份、回滚三段式，避免误删和误改。
+        </Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {MANAGER_MODULES.map(module => (
+            <Col xs={24} md={12} xl={8} key={module.key}>
+              <div style={{ height: '100%', padding: 16, borderRadius: 18, background: isDark ? `${module.color}12` : `${module.color}08`, border: `1px solid ${module.color}22` }}>
+                <Space size={8} style={{ marginBottom: 8 }}>
+                  <span style={{ color: module.color, fontSize: 18 }}>{module.icon}</span>
+                  <Typography.Text strong style={{ color: titleColor }}>{module.title}</Typography.Text>
+                </Space>
+                {(managerPlan[module.key] || ['桌面版启动后生成控制计划']).slice(0, 3).map(item => (
+                  <div key={item} style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>· {item}</div>
+                ))}
+              </div>
+            </Col>
+          ))}
+        </Row>
       </Card>
 
       <Row gutter={[16, 16]}>

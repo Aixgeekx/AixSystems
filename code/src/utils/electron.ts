@@ -26,6 +26,13 @@ interface SgxBridge {
     diskFree: number;
     diskUsed: number;
   }>;
+  getSystemManagerPlan: () => Promise<{
+    startup: string[];
+    privacy: string[];
+    disk: string[];
+    scan: string[];
+    tools: string[];
+  }>;
 }
 
 export function getElectron(): SgxBridge | null {
