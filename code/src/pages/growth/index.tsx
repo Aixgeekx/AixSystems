@@ -22,6 +22,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
+import { useSettingsStore } from '@/stores/settingsStore';
+import { callAixModel } from '@/utils/aixModel';
 import { useAchievements } from '@/hooks/useAchievements';
 import { useGameLevel } from '@/hooks/useGameLevel';
 import { useCorrelationInsights } from '@/hooks/useCorrelationInsights';
@@ -109,6 +111,9 @@ export default function GrowthPage() {
   const { message } = AntApp.useApp();
   const nav = useNavigate();
   const { theme } = useThemeVariants();
+  const { aixApiUrl, aixApiKey, aixModel } = useSettingsStore();
+  const [aixPlan, setAixPlan] = React.useState('');
+  const [aixLoading, setAixLoading] = React.useState(false);
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
 
@@ -268,6 +273,21 @@ export default function GrowthPage() {
   const achievements = useAchievements();
   const gameLevel = useGameLevel();
   const insights = useCorrelationInsights();
+  const simulateGrowth = async () => {
+    if (!dashboard) return message.warning('成长数据仍在加载中');
+    setAixLoading(true);
+    try {
+      const fallback = `30 天模拟：保持每周 ${Math.max(1, Math.round((dashboard.summary.week.focusMin || 0) / 25))} 次专注，优先推进 ${dashboard.activeGoalsList[0]?.title || '一个核心目标'}，每 7 天复盘一次情绪和习惯波动。`;
+      const text = await callAixModel({ apiUrl: aixApiUrl, apiKey: aixApiKey, model: aixModel }, [
+        { role: 'system', content: '你是 AixSystems 的个人成长控制模型，只输出简短、可执行的 30 天成长干预建议。' },
+        { role: 'user', content: JSON.stringify({ focusMin: Math.round(dashboard.totalFocusMin), week: dashboard.summary.week, month: dashboard.summary.month, goals: dashboard.activeGoalsList, radar: dashboard.radar }) }
+      ]).catch(() => fallback);
+      setAixPlan(text);
+      message.success('Aix 成长轨迹模拟已生成');
+    } finally {
+      setAixLoading(false);
+    }
+  };
   const exportReport = (format: 'md' | 'html' | 'card') => {
     if (!dashboard) return message.warning('成长数据仍在加载中');
     if (format === 'card') downloadText(`aixsystems-growth-card-${dayjs().format('YYYY-MM-DD')}.html`, buildGrowthShareCard(dashboard, achievements), 'text/html;charset=utf-8');
@@ -341,6 +361,9 @@ export default function GrowthPage() {
               <Button type="primary" icon={<RiseOutlined />} onClick={() => nav('/home/growth/report')} style={{ borderRadius: 12, fontWeight: 700, background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', border: 'none' }}>
                 智能周期报告
               </Button>
+              <Button icon={<BulbOutlined />} loading={aixLoading} onClick={simulateGrowth} style={{ borderRadius: 12, fontWeight: 700 }}>
+                Aix 模拟 30 天轨迹
+              </Button>
               <Button icon={<DownloadOutlined />} onClick={() => exportReport('md')} style={{ borderRadius: 12, fontWeight: 700 }}>
                 导出 Markdown
               </Button>
@@ -374,6 +397,14 @@ export default function GrowthPage() {
           </Col>
         </Row>
       </Card>
+
+      {aixPlan ? (
+        <Card bordered={false} className="anim-fade-in-up hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+          <Typography.Text style={{ color: subColor }}>Aix 成长轨迹模拟器</Typography.Text>
+          <Typography.Title level={4} style={{ margin: '4px 0 12px', color: titleColor }}>未来 30 天干预建议</Typography.Title>
+          <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', color: titleColor, marginBottom: 0 }}>{aixPlan}</Typography.Paragraph>
+        </Card>
+      ) : null}
 
       <Row gutter={[16, 16]}>
         {statCards.map((stat, i) => (

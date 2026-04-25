@@ -1,6 +1,6 @@
 // 系统设置 - 通知 / 启动页 / 快捷键 / 本地环境状态 / 系统诊断 (v0.21.5 诊断面板)
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Card, Col, Descriptions, Divider, Row, Select, Space, Statistic, Tag, Typography, message } from 'antd';
+import { Alert, Button, Card, Col, Descriptions, Divider, Input, Row, Select, Space, Statistic, Tag, Typography, message } from 'antd';
 import { CloudDownloadOutlined, DatabaseOutlined, NotificationOutlined, ThunderboltOutlined, DashboardOutlined, HistoryOutlined, WarningOutlined, CheckCircleOutlined, RiseOutlined, FallOutlined, FontSizeOutlined } from '@ant-design/icons';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { APP_NAME, APP_VERSION } from '@/config/constants';
@@ -27,7 +27,7 @@ export default function SystemPage() {
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
 
-  const { startPage, setKV, customFont } = useSettingsStore();
+  const { startPage, setKV, customFont, aixApiUrl, aixApiKey, aixModel } = useSettingsStore();
   const [storageEstimate, setStorageEstimate] = useState<{ usage?: number; quota?: number }>({});
   const [permissionState, setPermissionState] = useState(Notification.permission);
   const electron = isElectron();
@@ -228,18 +228,21 @@ export default function SystemPage() {
 
         <Col xs={24} lg={12}>
           <Card bordered={false} className="anim-fade-in-up hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
-            <Typography.Text style={{ color: subColor }}>快捷键</Typography.Text>
-            <Typography.Title level={4} style={{ margin: '4px 0 12px', color: titleColor }}>高频操作</Typography.Title>
-            <Space wrap size={[8, 8]}>
-              <Tag style={{ background: isDark ? 'rgba(255,255,255,0.08)' : undefined }}>Ctrl + N 新建事项</Tag>
-              <Tag style={{ background: isDark ? 'rgba(255,255,255,0.08)' : undefined }}>Ctrl + K 命令面板</Tag>
-              <Tag style={{ background: isDark ? 'rgba(255,255,255,0.08)' : undefined }}>Ctrl + B 折叠侧栏</Tag>
-              <Tag style={{ background: isDark ? 'rgba(255,255,255,0.08)' : undefined }}>Ctrl + , 系统设置</Tag>
-              <Tag style={{ background: isDark ? 'rgba(255,255,255,0.08)' : undefined }}>Ctrl + / 帮助中心</Tag>
+            <Typography.Text style={{ color: subColor }}>Aix 模型接口</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '4px 0 12px', color: titleColor }}>黑科技系统模型</Typography.Title>
+            <Typography.Paragraph style={{ color: subColor }}>
+              临时使用 API 接口接入 Aix 模型，用于生成成长控制建议、日计划和复盘内容。API Key 仅保存在本地 IndexedDB。
+            </Typography.Paragraph>
+            <Space direction="vertical" size={10} style={{ width: '100%' }}>
+              <Input value={aixApiUrl} onChange={event => setKV('aixApiUrl', event.target.value)} placeholder="Aix API 地址，例如 http://127.0.0.1:8000/v1/chat/completions" />
+              <Input.Password value={aixApiKey} onChange={event => setKV('aixApiKey', event.target.value)} placeholder="API Key（可选）" />
+              <Input value={aixModel} onChange={event => setKV('aixModel', event.target.value)} placeholder="模型名，例如 aix-growth-control" />
             </Space>
           </Card>
         </Col>
+      </Row>
 
+      <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card bordered={false} className="anim-fade-in-up hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
             <Typography.Text style={{ color: subColor }}>字体偏好</Typography.Text>

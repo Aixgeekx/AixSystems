@@ -25,7 +25,9 @@ import { downloadBackup } from '@/utils/export';
 import { fmtDateTime, fmtFromNow } from '@/utils/time';
 import { previewOf } from '@/utils/html';
 import { getElectron, isElectron } from '@/utils/electron';
+import { callAixModel } from '@/utils/aixModel';
 import { useThemeVariants } from '@/hooks/useVariants';
+import { useSettingsStore } from '@/stores/settingsStore';
 import type { ItemType } from '@/config/itemTypes';
 
 type CompactFilter = 'all' | 'favorites' | 'agenda' | 'growth' | 'records' | 'tools' | 'settings';
@@ -56,6 +58,9 @@ export default function HomePage() {
   const openItemForm = useAppStore(s => s.openItemForm);
   const electron = isElectron();
   const { theme, style, getPanelStyle } = useThemeVariants();
+  const { aixApiUrl, aixApiKey, aixModel } = useSettingsStore();
+  const [aixAnswer, setAixAnswer] = useState('');
+  const [aixLoading, setAixLoading] = useState(false);
   const isDark = style === 'cyberpunk' || style === 'dark' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const [mode, setMode] = useState<'dashboard' | 'compact'>(() => (localStorage.getItem('home.viewMode') as 'dashboard' | 'compact') || 'compact');
@@ -165,6 +170,21 @@ export default function HomePage() {
   async function quickBackup() {
     await downloadBackup();
   }
+
+  const askAix = async (intent: string) => {
+    if (!dashboard) return;
+    setAixLoading(true);
+    try {
+      const fallback = intent === 'plan' ? '今日建议：先清理逾期/高压事项，再启动一次 25 分钟专注，最后写 3 句复盘。' : intent === 'review' ? '复盘建议：记录今天完成了什么、情绪波动来自哪里、明天最小推进动作是什么。' : '专注建议：选择当前最短闭环任务，开启 25 分钟番茄钟，结束后只保留一个后续动作。';
+      const text = await callAixModel({ apiUrl: aixApiUrl, apiKey: aixApiKey, model: aixModel }, [
+        { role: 'system', content: '你是 AixSystems 首页智能控制助手，只输出中文、短句、可执行建议。' },
+        { role: 'user', content: JSON.stringify({ intent, todayItems: dashboard.todayItems.length, pending: dashboard.pending, done: dashboard.done, focus: dashboard.focusAlert, overload: dashboard.overloadLevel, alerts: dashboard.alerts }) }
+      ]).catch(() => fallback);
+      setAixAnswer(text);
+    } finally {
+      setAixLoading(false);
+    }
+  };
 
   const switchMode = (next: 'dashboard' | 'compact') => {
     setMode(next);
@@ -734,6 +754,22 @@ export default function HomePage() {
           </div>
         </Card>
       ) : null}
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+          <div>
+            <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.02em' }}>Aix 智能控制助手</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '6px 0 6px', color: titleColor, fontWeight: 700 }}>一键生成今日控制策略</Typography.Title>
+            <Typography.Text style={{ color: subColor, fontSize: 13 }}>接入 Aix 模型后可基于今日事项、专注、成长警报生成个性化建议。</Typography.Text>
+          </div>
+          <Space wrap>
+            <Button loading={aixLoading} onClick={() => askAix('plan')} style={{ borderRadius: 999 }}>今日计划</Button>
+            <Button loading={aixLoading} onClick={() => askAix('focus')} style={{ borderRadius: 999 }}>专注建议</Button>
+            <Button loading={aixLoading} onClick={() => askAix('review')} style={{ borderRadius: 999 }}>晚间复盘</Button>
+          </Space>
+        </div>
+        {aixAnswer ? <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', color: titleColor, margin: 0 }}>{aixAnswer}</Typography.Paragraph> : null}
+      </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>

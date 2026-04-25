@@ -17,6 +17,9 @@ interface SettingsState {
   appLockPasswordHash?: string;
   startPage: string;                                      // 启动页路由
   customFont: string;                                     // 自定义字体（空则使用主题默认）
+  aixApiUrl: string;
+  aixApiKey: string;
+  aixModel: string;
   setTheme: (k: string) => Promise<void>;
   setBrightness: (n: number) => Promise<void>;
   setBlur: (n: number) => Promise<void>;
@@ -40,6 +43,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   appLocked: false,
   startPage: '/home/index',
   customFont: '',
+  aixApiUrl: '',
+  aixApiKey: '',
+  aixModel: 'aix-growth-control',
   async load() {
     const rows = await db.settings.toArray();
     const kv: Record<string, any> = {};
@@ -56,7 +62,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       appLocked: !!kv.appLockPasswordHash,
       appLockPasswordHash: kv.appLockPasswordHash,
       startPage: kv.startPage ?? '/home/index',
-      customFont: kv.customFont ?? ''
+      customFont: kv.customFont ?? '',
+      aixApiUrl: kv.aixApiUrl ?? '',
+      aixApiKey: kv.aixApiKey ?? '',
+      aixModel: kv.aixModel ?? 'aix-growth-control'
     });
   },
   async setTheme(k) { await save('theme', k); set({ theme: k }); },
