@@ -15,8 +15,13 @@
 - [x] 运行 Vitest 与前端构建
 - [x] 桌面安装包构建
 - [x] 提交并推送 `origin main`
-- [ ] 创建并推送 tag：`v0.32.0`
-- [ ] 创建 GitHub Release 并上传 `AixSystems-0.32.0-Setup.exe` 与 blockmap
+- [x] 创建并推送 tag：`v0.32.0`
+- [x] 创建 GitHub Release 并上传 `AixSystems-0.32.0-Setup.exe` 与 blockmap
+
+## 发布结果
+- Commit：`a0ed27a feat: AixSystems v0.32.0 - add Aix core portal`
+- Release：https://github.com/Aixgeekx/AixSystems/releases/tag/v0.32.0
+- 资产：`AixSystems-0.32.0-Setup.exe`、`AixSystems-0.32.0-Setup.exe.blockmap`
 
 ## 新增/修改重点
 - `code/src/pages/aix/index.tsx` — Aix 主入口、技能库/插件广场雏形、私人便携胶囊
