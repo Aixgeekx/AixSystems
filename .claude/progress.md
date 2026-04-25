@@ -12,11 +12,18 @@
 - [x] README、code/README、results/使用说明、Aix_tools/readme 同步 v0.38.0
 
 ## 待完成
-- [ ] 运行 Vitest 与前端构建
-- [ ] 桌面安装包构建
-- [ ] 提交并推送 `origin main`
-- [ ] 创建并推送 tag：`v0.38.0`
-- [ ] 创建 GitHub Release 并上传安装包
+- [x] 运行 Vitest 与前端构建
+- [x] 桌面安装包构建
+- [x] 提交并推送 `origin main`
+- [x] 创建并推送 tag：`v0.38.0`
+- [x] 创建 GitHub Release 并上传安装包
+
+## 验证与发布结果
+- Vitest：6 个测试文件通过，39/39 用例通过。
+- 前端构建：`npm --prefix code run build` 通过；仅保留既有字体运行时解析和大 chunk 警告。
+- 桌面构建：`npm --prefix desktop run dist` 通过，生成 `AixSystems-0.38.0-Setup.exe` 与 blockmap。
+- Git：`main` 已推送到 `origin`，tag `v0.38.0` 已推送。
+- Release：`v0.38.0` 已创建/补齐，并上传安装包与 blockmap。
 
 ## 新增/修改重点
 - `code/src/pages/agent/index.tsx` — Agent 自治队列
