@@ -40,7 +40,17 @@ export default function DataIOPage() {
   const totalRows = Object.values(stats).reduce((sum, count) => sum + count, 0);
   const selectedTables = dataModules.filter(item => selectedModules.includes(item.label)).flatMap(item => item.tables);
   const selectedRows = selectedTables.reduce((sum, table) => sum + (stats[table] || 0), 0);
+  const hoursSinceBackup = lastBackup?.value?.exportedAt ? Math.round((Date.now() - lastBackup.value.exportedAt) / 3_600_000) : 999;
+  const coverage = Math.round(selectedModules.length / dataModules.length * 100);
+  const disasterRisks = [
+    { label: '备份新鲜度', value: hoursSinceBackup <= 24 ? 100 : hoursSinceBackup <= 72 ? 70 : 35, desc: hoursSinceBackup === 999 ? '尚未生成备份' : `${hoursSinceBackup} 小时前备份` },
+    { label: '模块覆盖', value: coverage, desc: `当前选择 ${selectedModules.length}/${dataModules.length} 个模块` },
+    { label: '数据规模', value: totalRows < 2000 ? 92 : totalRows < 10000 ? 76 : 58, desc: `${totalRows} 条记录，规模越大越需要演练` },
+    { label: '桌面直写', value: electron ? 96 : 72, desc: electron ? '桌面版可直写 data 目录' : '浏览器需手动保管下载文件' }
+  ];
+  const disasterScore = Math.round(disasterRisks.reduce((sum, risk) => sum + risk.value, 0) / disasterRisks.length);
   const sovereigntyScore = Math.min(100, 60 + (lastBackup?.value ? 20 : 0) + (selectedModules.length === dataModules.length ? 10 : 20));
+  const disasterLevel = disasterScore >= 85 ? '可迁移' : disasterScore >= 65 ? '需演练' : '高风险';
 
   async function onBackup() {
     const result = await downloadBackup();
@@ -122,6 +132,28 @@ export default function DataIOPage() {
           style={{ borderRadius: 12 }}
         />
       )}
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div>
+            <Typography.Text style={{ color: subColor }}>数据灾备演练舱</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '4px 0 0', color: titleColor }}>灾备等级 · {disasterLevel}</Typography.Title>
+          </div>
+          <Tag color={disasterScore >= 85 ? 'green' : disasterScore >= 65 ? 'gold' : 'red'} style={{ height: 28, display: 'flex', alignItems: 'center' }}>演练分 {disasterScore}</Tag>
+        </div>
+        <Row gutter={[12, 12]}>
+          {disasterRisks.map(risk => (
+            <Col xs={24} md={12} xl={6} key={risk.label}>
+              <div style={{ height: '100%', padding: 14, borderRadius: 16, background: tintedBg(risk.value >= 85 ? '#22c55e' : risk.value >= 65 ? '#f59e0b' : '#ef4444'), border: `1px solid ${(risk.value >= 85 ? '#22c55e' : risk.value >= 65 ? '#f59e0b' : '#ef4444')}33` }}>
+                <Typography.Text strong style={{ color: titleColor }}>{risk.label}</Typography.Text>
+                <div style={{ margin: '8px 0' }}><Statistic value={risk.value} suffix="/100" valueStyle={{ color: titleColor, fontSize: 24 }} /></div>
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>{risk.desc}</Typography.Text>
+              </div>
+            </Col>
+          ))}
+        </Row>
+        <Alert type={disasterScore >= 85 ? 'success' : disasterScore >= 65 ? 'warning' : 'error'} showIcon message="演练步骤" description={`1. 生成完整备份；2. 导出关键模块；3. ${electron ? '打开 data 目录确认文件存在' : '把下载 JSON 复制到独立目录'}；4. 在测试环境执行导入恢复。`} style={{ marginTop: 14, borderRadius: 12 }} />
+      </Card>
 
       <Row gutter={[16, 16]}>
         {Object.keys(stats).length === 0 ? (

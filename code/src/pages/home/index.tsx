@@ -148,6 +148,22 @@ export default function HomePage() {
     const overloadScore = Math.round(overloadSignals.reduce((sum, signal) => sum + signal.percent, 0) / overloadSignals.length);
     const overloadLevel = overloadScore >= 72 ? '高压' : overloadScore >= 42 ? '紧绷' : '可控';
     const overloadAdvice = overloadScore >= 72 ? '先清逾期与今日待处理，再拆分目标和复习压力。' : overloadScore >= 42 ? '建议今天压缩新增事项，优先完成最短闭环。' : '当前控制负载可控，可以保持正常推进。';
+    const commandSignals = [
+      { key: 'overdue', label: '清理逾期债务', score: Math.min(100, overdueItems * 26), path: ROUTES.MATTER_ALL, action: `先处理 ${Math.max(1, overdueItems)} 个逾期事项` },
+      { key: 'focus', label: '补齐专注缺口', score: Math.min(100, focusGap * 2 + (focusQuality && focusQuality < 55 ? 30 : 0)), path: ROUTES.FOCUS, action: focusQuality && focusQuality < 55 ? '用 15 分钟低门槛专注恢复质量' : `补 ${Math.max(15, focusGap)} 分钟深度专注` },
+      { key: 'goal', label: '修复目标风险', score: Math.min(100, riskGoalCount * 34), path: ROUTES.GOAL, action: `推进 ${Math.max(1, riskGoalCount)} 个目标里程碑` },
+      { key: 'habit', label: '恢复习惯链', score: Math.min(100, habitBreakCount * 38), path: ROUTES.HABIT, action: `恢复 ${Math.max(1, habitBreakCount)} 个中断习惯` },
+      { key: 'review', label: '削平复习高峰', score: Math.min(100, reviewPressureCount * 10), path: ROUTES.REVIEW, action: `拆分 ${Math.max(1, reviewPressureCount)} 个复习节点` }
+    ].sort((a, b) => b.score - a.score);
+    const topCommand = commandSignals[0];
+    const recoveryScore = Math.max(0, 100 - overloadScore * 0.42 - focusGap * 0.35 - riskGoalCount * 8 - habitBreakCount * 7);
+    const commandCenter = {
+      level: recoveryScore >= 78 ? '自主推进' : recoveryScore >= 52 ? '需要干预' : '进入控场',
+      recoveryScore: Math.round(recoveryScore),
+      topCommand,
+      sequence: commandSignals.filter(signal => signal.score > 0).slice(0, 4),
+      advice: recoveryScore >= 78 ? '今日系统稳定，按高价值事项自然推进。' : topCommand ? `最高优先级：${topCommand.action}。` : '暂无高压信号，建议保留一次复盘。'
+    };
     const alerts = [
       { label: '目标风险', value: riskGoalCount, color: '#ef4444', path: ROUTES.GOAL },
       { label: '习惯中断', value: habitBreakCount, color: '#f59e0b', path: ROUTES.HABIT },
@@ -171,7 +187,8 @@ export default function HomePage() {
       overloadSignals,
       overloadScore,
       overloadLevel,
-      overloadAdvice
+      overloadAdvice,
+      commandCenter
     };
   }, []);
 
@@ -762,6 +779,28 @@ export default function HomePage() {
           </div>
         </Card>
       ) : null}
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 18 }}>
+          <div>
+            <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.02em' }}>自主控制指挥台</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '6px 0 6px', color: titleColor, fontWeight: 700 }}>{dashboard?.commandCenter.level || '自主推进'} · 恢复力 {dashboard?.commandCenter.recoveryScore || 0}</Typography.Title>
+            <Typography.Text style={{ color: subColor, fontSize: 13 }}>{dashboard?.commandCenter.advice || '暂无高压信号，建议保留一次复盘。'}</Typography.Text>
+          </div>
+          {dashboard?.commandCenter.topCommand ? <Button type="primary" icon={<ArrowRightOutlined />} onClick={() => nav(dashboard.commandCenter.topCommand.path)} style={{ borderRadius: 16, height: 44, padding: '0 24px', fontWeight: 600, boxShadow: `0 12px 28px -6px ${accent}66`, border: 'none' }}>执行最高指令</Button> : null}
+        </div>
+        <Row gutter={[12, 12]}>
+          {dashboard?.commandCenter.sequence.length ? dashboard.commandCenter.sequence.map((signal: any, index: number) => (
+            <Col xs={24} md={12} xl={6} key={signal.key}>
+              <div onClick={() => nav(signal.path)} style={{ height: '100%', cursor: 'pointer', borderRadius: 18, padding: 14, background: tintedBg(index === 0 ? '#ef4444' : '#0ea5e9'), border: `1px solid ${index === 0 ? '#ef4444' : '#0ea5e9'}44` }}>
+                <Space wrap><Tag color={index === 0 ? 'red' : 'blue'}>#{index + 1}</Tag><Typography.Text strong style={{ color: titleColor }}>{signal.label}</Typography.Text></Space>
+                <Progress percent={signal.score} showInfo={false} strokeColor={index === 0 ? '#ef4444' : '#0ea5e9'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} style={{ margin: '10px 0 6px' }} />
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>{signal.action}</Typography.Text>
+              </div>
+            </Col>
+          )) : <Col span={24}><Typography.Text style={{ color: subColor }}>当前没有需要强干预的控制信号。</Typography.Text></Col>}
+        </Row>
+      </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>

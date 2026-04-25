@@ -41,6 +41,13 @@ const EVOLUTION_WINDOWS = [
   { key: '90d', title: '90 天全能化', color: '#06b6d4', focus: '扩展插件、桌面工具箱和移动端路线，形成私人便携系统。' }
 ];
 
+const SKILL_TASK_GRAPH = [
+  { key: 'sense', title: '感知数据', color: '#38bdf8', depends: 'IndexedDB / 日志 / Provider', output: '控制信号和风险输入' },
+  { key: 'plan', title: '生成策略', color: '#8b5cf6', depends: 'Aix 技能库 / 本地规则 / 可选模型', output: '今日战役和技能动作' },
+  { key: 'approve', title: '权限确认', color: '#f59e0b', depends: '权限合约 / 白名单 / 用户确认', output: '安全边界和可执行范围' },
+  { key: 'execute', title: '执行归档', color: '#10b981', depends: '事项 / eventLog / 备份', output: '可恢复记录和下一步' }
+];
+
 export default function AixPage() {
   const nav = useNavigate();
   const { theme } = useThemeVariants();
@@ -134,6 +141,14 @@ export default function AixPage() {
           : `技能启用 ${enabledSkillCount}/${SKILLS.length}：把插件、桌面工具箱和移动端发布纳入长期路线。`
     }));
   }, [aixApiUrl, capsule, enabledSkillCount, failoverTarget]);
+  const skillTaskGraph = useMemo(() => {
+    const readiness = capsule ? Math.round((capsule.controlScore + capsule.dataScore + enabledSkillCount / SKILLS.length * 100 + (aixApiUrl ? 100 : 42)) / 4) : 0;
+    return SKILL_TASK_GRAPH.map((node, index) => ({
+      ...node,
+      readiness: Math.min(100, readiness + index * 4),
+      next: index === 0 ? `读取 ${capsule?.todayItems.length || 0} 个今日事项和 ${capsule?.reviewPressure || 0} 个复习压力` : index === 1 ? `调度 ${enabledSkillCount} 个已启用技能生成任务链` : index === 2 ? '高风险电脑/模型动作必须经过权限合约确认' : '写入 eventLog，必要时生成事项或备份'
+    }));
+  }, [aixApiUrl, capsule, enabledSkillCount]);
 
   async function setSkill(key: string, enabled: boolean) {
     const next = { ...(skillState || {}), [key]: enabled };
@@ -202,6 +217,11 @@ export default function AixPage() {
   async function archiveEvolution() {
     await db.eventLog.add({ id: nanoid(), level: 'info', message: 'Aix 自进化路线图已归档', detail: { scope: 'aix-evolution', plan: evolutionPlan, provider: aixActiveProfile || '离线模式' }, createdAt: Date.now() });
     message.success('自进化路线图已写入本地日志');
+  }
+
+  async function archiveSkillGraph() {
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: 'Aix 技能任务图谱已归档', detail: { scope: 'aix-skill-graph', graph: skillTaskGraph, enabledSkillCount, provider: aixActiveProfile || '离线模式' }, createdAt: Date.now() });
+    message.success('技能任务图谱已写入本地日志');
   }
 
   async function portableBackup() {
@@ -283,6 +303,28 @@ export default function AixPage() {
           <Tag color="gold">可在 Agent 中枢恢复</Tag>
         </Space>
         {campaignLogs.length ? <div style={{ marginTop: 12 }}>{campaignLogs.map(log => <div key={log.id} style={{ color: subColor, lineHeight: 1.8 }}>· {log.message}</div>)}</div> : null}
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}><BranchesOutlined style={{ color: accent }} /><Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Aix 技能任务图谱</Typography.Title></Space>
+        <Typography.Paragraph style={{ color: subColor }}>把数据感知、策略生成、权限确认和执行归档组织成可恢复任务链；无 API 时使用本地规则，有 API 后由 Aix 注入策略。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {skillTaskGraph.map((node, index) => <Col xs={24} md={12} xl={6} key={node.key}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${node.color}12` : `${node.color}08`, border: `1px solid ${node.color}22` }}>
+              <Space wrap><Tag color="blue">阶段 {index + 1}</Tag><Typography.Text strong style={{ color: titleColor }}>{node.title}</Typography.Text></Space>
+              <Progress percent={node.readiness} showInfo={false} strokeColor={node.color} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>依赖：{node.depends}</div>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>输出：{node.output}</div>
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0 0', fontSize: 12 }}>{node.next}</Typography.Paragraph>
+            </div>
+          </Col>)}
+        </Row>
+        <Space wrap style={{ marginTop: 14 }}>
+          <Button type="primary" onClick={archiveSkillGraph} style={{ borderRadius: 12 }}>归档任务图谱</Button>
+          <Tag color="green">本地可恢复</Tag>
+          <Tag color="gold">权限先行</Tag>
+          <Tag color={aixApiUrl ? 'purple' : 'default'}>{aixApiUrl ? '模型增强' : '离线规则'}</Tag>
+        </Space>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
