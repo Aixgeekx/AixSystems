@@ -282,7 +282,15 @@ export default function DesktopWidgetPage() {
             </div>
           </Col>)}
         </Row>
-        {powershellResult ? <Alert type={powershellResult.error ? 'warning' : 'success'} showIcon message="终端审计摘要" description={`输出 ${String(powershellResult.output || '').length} 字符 / 错误 ${String(powershellResult.error || '').length} 字符 / 本地展示不上传`} style={{ borderRadius: 12, marginTop: 14 }} /> : <Alert type="info" showIcon message="执行白名单预设后会在本地生成终端账本摘要。" style={{ borderRadius: 12, marginTop: 14 }} />}
+        {powershellResult ? <Alert type={powershellResult.error ? 'warning' : 'success'} showIcon message="终端审计摘要" description={`${powershellResult.outputSummary || `输出 ${String(powershellResult.output || '').length} 字符`} / 错误 ${String(powershellResult.error || '').length} 字符 / 本地展示不上传`} style={{ borderRadius: 12, marginTop: 14 }} /> : <Alert type="info" showIcon message="执行白名单预设后会在本地生成终端账本摘要。" style={{ borderRadius: 12, marginTop: 14 }} />}
+        {powershellResult ? <Row gutter={[10, 10]} style={{ marginTop: 12 }}>
+          {[
+            { label: 'Shell', value: `${powershellResult.shell || 'unknown'}${powershellResult.fallback ? ' · fallback' : ''}` },
+            { label: '白名单哈希', value: powershellResult.hash || '等待生成' },
+            { label: '耗时', value: `${powershellResult.durationMs || 0} ms` },
+            { label: '执行时间', value: powershellResult.executedAt ? new Date(powershellResult.executedAt).toLocaleString() : '未执行' }
+          ].map(item => <Col xs={24} md={12} xl={6} key={item.label}><div style={{ padding: 12, borderRadius: 14, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)', border: cardBorder }}><Typography.Text style={{ color: subColor, fontSize: 12 }}>{item.label}</Typography.Text><div style={{ color: titleColor, fontWeight: 700, marginTop: 4 }}>{item.value}</div></div></Col>)}
+        </Row> : null}
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
@@ -325,9 +333,16 @@ export default function DesktopWidgetPage() {
           </Space>
         </Modal>
         {powershellResult ? (
-          <pre style={{ maxHeight: 220, overflow: 'auto', margin: 0, padding: 12, borderRadius: 14, color: titleColor, background: isDark ? 'rgba(0,0,0,0.28)' : 'rgba(15,23,42,0.04)', whiteSpace: 'pre-wrap' }}>
-            {powershellResult.error || powershellResult.output}
-          </pre>
+          <>
+            <Space wrap style={{ marginBottom: 10 }}>
+              <Tag color="blue">{powershellResult.shell || 'unknown'}</Tag>
+              <Tag color="purple">Hash {powershellResult.hash || 'none'}</Tag>
+              <Tag color="gold">{powershellResult.durationMs || 0} ms</Tag>
+            </Space>
+            <pre style={{ maxHeight: 220, overflow: 'auto', margin: 0, padding: 12, borderRadius: 14, color: titleColor, background: isDark ? 'rgba(0,0,0,0.28)' : 'rgba(15,23,42,0.04)', whiteSpace: 'pre-wrap' }}>
+              {powershellResult.error || powershellResult.output}
+            </pre>
+          </>
         ) : <Alert type="info" showIcon message="桌面版可调用系统 PowerShell 只读预设；浏览器模式不可用。" style={{ borderRadius: 12 }} />}
       </Card>
 

@@ -41,7 +41,7 @@ interface SgxBridge {
   }>;
   getEmergencyToolkit: () => Promise<{ key: string; title: string; desc: string; preset: 'network' | 'clock' | 'hosts' | 'services'; risk: number }[]>;
   getPowerShellPresets: () => Promise<{ key: 'computer' | 'processes' | 'services' | 'network' | 'clock' | 'hosts'; title: string; risk: number; level: string; backup: string; rollback: string }[]>;
-  runPowerShellPreset: (preset: 'computer' | 'processes' | 'services' | 'network' | 'clock' | 'hosts') => Promise<{ preset: string; title?: string; risk?: number; level?: string; backup?: string; rollback?: string; output: string; error?: string }>;
+  runPowerShellPreset: (preset: 'computer' | 'processes' | 'services' | 'network' | 'clock' | 'hosts') => Promise<{ preset: string; title?: string; risk?: number; level?: string; backup?: string; rollback?: string; output: string; error?: string; shell?: string; fallback?: boolean; hash?: string; executedAt?: number; durationMs?: number; outputSummary?: string }>;
 }
 
 export function getElectron(): SgxBridge | null {

@@ -55,7 +55,24 @@ function parseOpenclowManifest(name: string) {
   const skill = SKILLS.find(item => item.key === key) || SKILLS[0];
   const risk = clean.toLowerCase().includes('ps') || clean.toLowerCase().includes('shell') ? '需确认' : skill.risk;
   const compatibility = clean.includes('openclow') || clean.includes('openclaw') || clean.endsWith('.json') || clean.endsWith('.zip') ? 96 : 72;
-  return { name: clean, version, key, skill: skill.name, risk, compatibility, schema: `${skill.input} → ${skill.output}`, status: 'disabled-archived' };
+  return {
+    name: clean,
+    version,
+    key,
+    skill: skill.name,
+    risk,
+    compatibility,
+    schema: `${skill.input} → ${skill.output}`,
+    status: 'disabled-dry-run',
+    sandbox: {
+      permission: risk === '需确认' ? 'manual-approval' : 'readonly-dry-run',
+      dryRun: true,
+      enabled: false,
+      allow: ['读取本地统计', '写入 eventLog 审计', '生成 Item 子任务草案'],
+      deny: ['执行未知代码', '读取日记正文', '直通 PowerShell 任意命令'],
+      resume: `Claude Code 续跑：校验 ${clean} manifest，保持禁用 dry-run，确认权限合约后再映射内置技能 ${skill.name}。`
+    }
+  };
 }
 
 export default function AixPage() {
@@ -111,7 +128,14 @@ export default function AixPage() {
     }).length;
     const dataScore = Math.min(100, 54 + (lastBackup?.value ? 18 : 0) + Math.min(18, Math.round((items.length + diaries.length + memos.length) / 20)) + (aixApiUrl ? 10 : 0));
     const controlScore = Math.max(0, 100 - overdue * 8 - pending * 4 - brokenHabits * 8 - goalRisk * 10 - Math.max(0, reviewPressure - 8));
-    return { todayItems, pending, done, overdue, focusMinutes, reviewPressure, brokenHabits, goalRisk, goals: goals.length, habits: habits.length, diaries: diaries.length, memos: memos.length, dataScore, controlScore, lastBackup: lastBackup?.value, logs };
+    const controlToken = {
+      id: `AIX-CORE-${dayjs().format('YYYYMMDD')}-${controlScore}`,
+      score: controlScore,
+      level: controlScore >= 78 ? '自主推进' : controlScore >= 52 ? '需要干预' : '进入控场',
+      command: overdue || pending ? '先清事项债务' : goalRisk || brokenHabits ? '修复成长链路' : reviewPressure > 8 ? '提前削峰复习' : '封存今日复盘',
+      resume: `Aix 控制令牌：控制力 ${controlScore}，逾期 ${overdue}，待办 ${pending}，目标风险 ${goalRisk}，习惯中断 ${brokenHabits}，复习压力 ${reviewPressure}。`
+    };
+    return { todayItems, pending, done, overdue, focusMinutes, reviewPressure, brokenHabits, goalRisk, goals: goals.length, habits: habits.length, diaries: diaries.length, memos: memos.length, dataScore, controlScore, controlToken, lastBackup: lastBackup?.value, logs };
   }, [aixApiUrl]);
   const providers = useMemo(() => {
     try { return JSON.parse(aixProviderProfiles || '[]') as Array<{ name: string; health?: string; official?: boolean; model?: string }>; } catch { return []; }
@@ -221,7 +245,7 @@ export default function AixPage() {
       id,
       type: 'work',
       title: `Aix 控制战役 · ${dayjs().format('MM-DD')}`,
-      description: `控制力 ${capsule.controlScore}，逾期 ${capsule.overdue}，待办 ${capsule.pending}，目标风险 ${capsule.goalRisk}，复习压力 ${capsule.reviewPressure}`,
+      description: `控制力 ${capsule.controlScore}，令牌 ${capsule.controlToken.id}，逾期 ${capsule.overdue}，待办 ${capsule.pending}，目标风险 ${capsule.goalRisk}，复习压力 ${capsule.reviewPressure}`,
       startTime: now,
       allDay: false,
       isLunar: false,
@@ -229,11 +253,11 @@ export default function AixPage() {
       completeStatus: 'pending',
       importance: capsule.controlScore < 70 ? 0 : 1,
       subtasks: campaignPlan.map(step => ({ id: nanoid(), title: `${step.title}：${step.action}`, done: false })),
-      extra: { aixCampaign: true, controlScore: capsule.controlScore, dataScore: capsule.dataScore, stages: campaignPlan },
+      extra: { aixCampaign: true, controlScore: capsule.controlScore, dataScore: capsule.dataScore, controlToken: capsule.controlToken, stages: campaignPlan },
       createdAt: now,
       updatedAt: now
     });
-    await db.eventLog.add({ id: nanoid(), level: 'info', message: 'Aix 控制战役已编排', detail: { scope: 'aix-campaign', itemId: id, controlScore: capsule.controlScore, stages: campaignPlan.map(step => step.title) }, createdAt: now });
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: 'Aix 控制战役已编排', detail: { scope: 'aix-campaign', itemId: id, controlScore: capsule.controlScore, controlToken: capsule.controlToken, stages: campaignPlan.map(step => step.title) }, createdAt: now });
     message.success('Aix 控制战役已写入今日事项');
   }
 
@@ -304,6 +328,19 @@ export default function AixPage() {
           <Button icon={<BranchesOutlined />} onClick={() => nav(ROUTES.AGENT)} style={{ borderRadius: 12 }}>进入 Agent 中枢</Button>
         </Space>
         {answer ? <Alert type="success" showIcon message="Aix 输出" description={<Typography.Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}>{answer}</Typography.Paragraph>} style={{ marginTop: 16, borderRadius: 12 }} /> : null}
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}><ControlOutlined style={{ color: accent }} /><Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Aix 黑科技总控令牌</Typography.Title></Space>
+        <Typography.Paragraph style={{ color: subColor }}>把今日控制信号压成可被战役、技能和 Agent 恢复链复用的本地令牌；只包含统计信号，不读取日记正文。</Typography.Paragraph>
+        <Space align="center" wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+          <div>
+            <Typography.Title level={4} style={{ margin: '0 0 8px', color: titleColor }}>{capsule?.controlToken.id || 'AIX-CORE'} · {capsule?.controlToken.level || '加载中'}</Typography.Title>
+            <Typography.Text style={{ color: subColor }}>{capsule?.controlToken.command || '等待控制信号'}</Typography.Text>
+            <div style={{ color: subColor, fontSize: 12, marginTop: 8 }}>{capsule?.controlToken.resume || '本地令牌生成后可写入战役和 eventLog。'}</div>
+          </div>
+          <Progress type="dashboard" percent={capsule?.controlToken.score || 0} strokeColor={(capsule?.controlToken.score || 0) >= 78 ? '#10b981' : (capsule?.controlToken.score || 0) >= 52 ? '#f59e0b' : '#ef4444'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+        </Space>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
@@ -413,8 +450,8 @@ export default function AixPage() {
         <Row gutter={[12, 12]} style={{ marginTop: 14 }}>
           <Col xs={24} lg={12}>
             <div style={{ padding: 14, borderRadius: 16, background: isDark ? `${accent}10` : `${accent}08`, border: `1px solid ${accent}22` }}>
-              <Typography.Text strong style={{ color: titleColor }}>openclow 本地技能清单注册器</Typography.Text>
-              <Typography.Paragraph style={{ color: subColor, margin: '8px 0' }}>导入 openclow/openclaw 插件包名后只解析 manifest、兼容性、风险和 Schema，默认禁用归档，不执行未知代码。</Typography.Paragraph>
+              <Typography.Text strong style={{ color: titleColor }}>openclow 本地技能沙盒校验器</Typography.Text>
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0' }}>导入 openclow/openclaw 插件包名后生成 manifest、兼容性、权限合约、dry-run 沙盒和 Claude Code 续跑提示，默认禁用不执行未知代码。</Typography.Paragraph>
               <Space.Compact style={{ width: '100%' }}><Input value={pluginPackage} onChange={event => setPluginPackage(event.target.value)} placeholder="例如 openclow-review-peak-1.2.0.zip" /><Button type="primary" onClick={importPluginPackage}>校验归档</Button></Space.Compact>
             </div>
           </Col>
@@ -424,7 +461,7 @@ export default function AixPage() {
               <Typography.Paragraph style={{ color: subColor, margin: '8px 0' }}>本地插件包只进入清单审计，不自动启用；能力必须映射到内置技能、权限合约和 eventLog 后才能被调度。</Typography.Paragraph>
               {pluginManifests.length ? pluginManifests.map(log => {
                 const manifest = log.detail?.manifest;
-                return <div key={log.id} style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>· {manifest?.name} / {manifest?.skill} / 兼容 {manifest?.compatibility} / {manifest?.status}</div>;
+                return <div key={log.id} style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>· {manifest?.name} / {manifest?.skill} / {manifest?.sandbox?.permission} / {manifest?.status}<br />Resume：{manifest?.sandbox?.resume}</div>;
               }) : <Typography.Text style={{ color: subColor }}>暂无 openclow 技能清单。</Typography.Text>}
             </div>
           </Col>

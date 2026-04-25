@@ -164,6 +164,16 @@ export default function HomePage() {
       sequence: commandSignals.filter(signal => signal.score > 0).slice(0, 4),
       advice: recoveryScore >= 78 ? '今日系统稳定，按高价值事项自然推进。' : topCommand ? `最高优先级：${topCommand.action}。` : '暂无高压信号，建议保留一次复盘。'
     };
+    const controlToken = {
+      id: `AIX-${dayjs().format('YYYYMMDD')}-${Math.round(recoveryScore)}-${overloadScore}`,
+      level: recoveryScore >= 78 ? 'green' : recoveryScore >= 52 ? 'amber' : 'red',
+      score: Math.round(recoveryScore),
+      pressure: overloadScore,
+      command: topCommand?.label || '保留复盘',
+      action: topCommand?.action || '保持正常推进并记录 3 句复盘',
+      route: topCommand?.path || ROUTES.GROWTH,
+      signals: commandSignals.filter(signal => signal.score > 0).slice(0, 5).map(signal => ({ key: signal.key, label: signal.label, score: signal.score }))
+    };
     const alerts = [
       { label: '目标风险', value: riskGoalCount, color: '#ef4444', path: ROUTES.GOAL },
       { label: '习惯中断', value: habitBreakCount, color: '#f59e0b', path: ROUTES.HABIT },
@@ -188,7 +198,8 @@ export default function HomePage() {
       overloadScore,
       overloadLevel,
       overloadAdvice,
-      commandCenter
+      commandCenter,
+      controlToken
     };
   }, []);
 
@@ -203,7 +214,7 @@ export default function HomePage() {
       const fallback = intent === 'plan' ? '今日建议：先清理逾期/高压事项，再启动一次 25 分钟专注，最后写 3 句复盘。' : intent === 'review' ? '复盘建议：记录今天完成了什么、情绪波动来自哪里、明天最小推进动作是什么。' : '专注建议：选择当前最短闭环任务，开启 25 分钟番茄钟，结束后只保留一个后续动作。';
       const text = await callAixModel({ apiUrl: aixApiUrl, apiKey: aixApiKey, model: aixModel }, [
         { role: 'system', content: '你是 AixSystems 首页智能控制助手，只输出中文、短句、可执行建议。' },
-        { role: 'user', content: JSON.stringify({ intent, todayItems: dashboard.todayItems.length, pending: dashboard.pending, done: dashboard.done, focus: dashboard.focusAlert, overload: dashboard.overloadLevel, alerts: dashboard.alerts }) }
+        { role: 'user', content: JSON.stringify({ intent, todayItems: dashboard.todayItems.length, pending: dashboard.pending, done: dashboard.done, focus: dashboard.focusAlert, overload: dashboard.overloadLevel, alerts: dashboard.alerts, controlToken: dashboard.controlToken }) }
       ]).catch(() => fallback);
       setAixAnswer(text);
     } finally {
@@ -779,6 +790,31 @@ export default function HomePage() {
           </div>
         </Card>
       ) : null}
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 18 }}>
+          <div>
+            <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.02em' }}>黑科技总控令牌</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '6px 0 6px', color: titleColor, fontWeight: 700 }}>{dashboard?.controlToken.id || 'AIX-LOCAL'} · {dashboard?.controlToken.command || '保留复盘'}</Typography.Title>
+            <Typography.Text style={{ color: subColor, fontSize: 13 }}>{dashboard?.controlToken.action || '保持正常推进并记录 3 句复盘'}</Typography.Text>
+          </div>
+          <Space wrap>
+            <Tag color={dashboard?.controlToken.level === 'green' ? 'green' : dashboard?.controlToken.level === 'amber' ? 'gold' : 'red'} style={{ borderRadius: 999, padding: '4px 12px' }}>控制 {dashboard?.controlToken.score || 0}</Tag>
+            <Tag color="blue" style={{ borderRadius: 999, padding: '4px 12px' }}>压力 {dashboard?.controlToken.pressure || 0}</Tag>
+            <Button type="primary" icon={<ArrowRightOutlined />} onClick={() => nav(dashboard?.controlToken.route || ROUTES.GROWTH)} style={{ borderRadius: 16, height: 40, fontWeight: 600 }}>执行令牌动作</Button>
+          </Space>
+        </div>
+        <Row gutter={[12, 12]}>
+          {(dashboard?.controlToken.signals || []).map((signal: any) => (
+            <Col xs={24} md={12} xl={6} key={signal.key}>
+              <div style={{ padding: 14, borderRadius: 16, background: tintedBg(signal.score >= 70 ? '#ef4444' : '#0ea5e9'), border: `1px solid ${signal.score >= 70 ? '#ef4444' : '#0ea5e9'}33` }}>
+                <Typography.Text strong style={{ color: titleColor }}>{signal.label}</Typography.Text>
+                <Progress percent={signal.score} showInfo={false} strokeColor={signal.score >= 70 ? '#ef4444' : '#0ea5e9'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} style={{ margin: '10px 0 0' }} />
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 18 }}>

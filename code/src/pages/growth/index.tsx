@@ -186,6 +186,15 @@ export default function GrowthPage() {
       };
     };
 
+    const growthAverage = Math.round(radar.reduce((sum, item) => sum + item.value, 0) / radar.length);
+    const growthToken = {
+      id: `AIX-GROW-${dayjs().format('YYYYMMDD')}-${growthAverage}`,
+      score: growthAverage,
+      level: growthAverage >= 78 ? '稳定掌控' : growthAverage >= 52 ? '加速恢复' : '先止损',
+      action: growthAverage >= 78 ? '把当前高分行为固化为周模板。' : growthAverage >= 52 ? '补一段专注并推进一个目标里程碑。' : '只保留一个目标、一个习惯和一次短复盘。',
+      signals: radar
+    };
+
     return {
       totalItems: items.filter(i => !i.deletedAt).length,
       todayDone: todayItems.filter(i => i.completeStatus === 'done').length,
@@ -221,7 +230,8 @@ export default function GrowthPage() {
         lastWeek: mkPeriod(lastWeekStartTs, lastWeekEndTs),
         month: mkPeriod(monthStartTs, monthEndTs),
         lastMonth: mkPeriod(lastMonthStartTs, lastMonthEndTs)
-      }
+      },
+      growthToken
     };
   }, []);
 
@@ -307,7 +317,7 @@ export default function GrowthPage() {
       const fallback = `30 天模拟：保持每周 ${Math.max(1, Math.round((dashboard.summary.week.focusMin || 0) / 25))} 次专注，优先推进 ${dashboard.activeGoalsList[0]?.title || '一个核心目标'}，每 7 天复盘一次情绪和习惯波动。`;
       const text = await callAixModel({ apiUrl: aixApiUrl, apiKey: aixApiKey, model: aixModel }, [
         { role: 'system', content: '你是 AixSystems 的个人成长控制模型，只输出简短、可执行的 30 天成长干预建议。' },
-        { role: 'user', content: JSON.stringify({ focusMin: Math.round(dashboard.totalFocusMin), week: dashboard.summary.week, month: dashboard.summary.month, goals: dashboard.activeGoalsList, radar: dashboard.radar }) }
+        { role: 'user', content: JSON.stringify({ focusMin: Math.round(dashboard.totalFocusMin), week: dashboard.summary.week, month: dashboard.summary.month, goals: dashboard.activeGoalsList, radar: dashboard.radar, growthToken: dashboard.growthToken }) }
       ]).catch(() => fallback);
       setAixPlan(text);
       message.success('Aix 成长轨迹模拟已生成');
@@ -432,6 +442,27 @@ export default function GrowthPage() {
           <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', color: titleColor, marginBottom: 0 }}>{aixPlan}</Typography.Paragraph>
         </Card>
       ) : null}
+
+      <Card bordered={false} className="anim-fade-in-up hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space align="center" wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+          <div>
+            <Typography.Text style={{ color: subColor }}>成长总控令牌</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '4px 0 8px', color: titleColor }}>{dashboard?.growthToken.id || 'AIX-GROW'} · {dashboard?.growthToken.level || '加载中'}</Typography.Title>
+            <Typography.Text style={{ color: subColor }}>{dashboard?.growthToken.action || '等待成长数据生成控制动作。'}</Typography.Text>
+          </div>
+          <Progress type="dashboard" percent={dashboard?.growthToken.score || 0} strokeColor={(dashboard?.growthToken.score || 0) >= 78 ? '#22c55e' : (dashboard?.growthToken.score || 0) >= 52 ? '#f59e0b' : '#ef4444'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+        </Space>
+        <Row gutter={[12, 12]} style={{ marginTop: 14 }}>
+          {(dashboard?.growthToken.signals || []).map((signal: any) => (
+            <Col xs={24} md={12} xl={5} key={signal.name}>
+              <div style={{ padding: 12, borderRadius: 16, background: tintedBg(signal.value >= 70 ? '#22c55e' : '#8b5cf6'), border: `1px solid ${(signal.value >= 70 ? '#22c55e' : '#8b5cf6')}33` }}>
+                <Typography.Text strong style={{ color: titleColor }}>{signal.name}</Typography.Text>
+                <Progress percent={signal.value} showInfo={false} strokeColor={signal.value >= 70 ? '#22c55e' : '#8b5cf6'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} style={{ margin: '8px 0 0' }} />
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </Card>
 
       <Card bordered={false} className="anim-fade-in-up hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
         <Typography.Text style={{ color: subColor }}>90 天成长控制推演</Typography.Text>

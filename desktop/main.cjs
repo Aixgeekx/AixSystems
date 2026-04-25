@@ -4,6 +4,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 const { execFile } = require('node:child_process');
+const crypto = require('node:crypto');
 
 const DEV = !!process.env.SGX_DEV;                                      // SGX_DEV=1 启用开发模式
 const PORTABLE_MARKERS = ['AixSystems.portable', 'portable.flag'];
@@ -52,6 +53,26 @@ function runCommand(file, args) {
       resolve(error ? '' : stdout.toString());
     });
   });
+}
+
+function runCommandDetailed(file, args) {
+  const started = Date.now();
+  return new Promise(resolve => {
+    execFile(file, args, { windowsHide: true, timeout: 7000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+      resolve({ ok: !error, stdout: stdout?.toString() || '', stderr: stderr?.toString() || error?.message || '', durationMs: Date.now() - started });
+    });
+  });
+}
+
+async function runPowerShell7(script) {
+  const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script];
+  const shells = ['pwsh.exe', 'powershell.exe'];
+  for (const shellName of shells) {
+    const result = await runCommandDetailed(shellName, args);
+    if (result.ok && result.stdout) return { ...result, shell: shellName, fallback: shellName !== 'pwsh.exe' };
+    if (shellName === shells[shells.length - 1]) return { ...result, shell: shellName, fallback: true };
+  }
+  return { ok: false, stdout: '', stderr: 'PowerShell 不可用', durationMs: 0, shell: 'none', fallback: true };
 }
 
 async function scanStartupItems() {
@@ -118,8 +139,22 @@ const POWERSHELL_PRESETS = {
 async function runPowerShellPreset(preset) {
   const item = POWERSHELL_PRESETS[preset];
   if (!item) return { preset, output: '', error: '未知 PowerShell 预设' };
-  const output = await runCommand('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', item.script]);
-  return { preset, ...item, output: output.slice(0, 12000), error: output ? '' : 'PowerShell 无输出或执行失败' };
+  const executedAt = Date.now();
+  const hash = crypto.createHash('sha256').update(`${preset}:${item.risk}:${item.script}`).digest('hex').slice(0, 16);
+  const result = await runPowerShell7(item.script);
+  const output = result.stdout.slice(0, 12000);
+  return {
+    preset,
+    ...item,
+    shell: result.shell,
+    fallback: result.fallback,
+    hash,
+    executedAt,
+    durationMs: result.durationMs,
+    output,
+    outputSummary: `shell=${result.shell}; hash=${hash}; duration=${result.durationMs}ms; chars=${output.length}`,
+    error: output ? '' : (result.stderr || 'PowerShell 无输出或执行失败')
+  };
 }
 
 function createWindow() {

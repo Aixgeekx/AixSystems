@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.41.0', date: '2026-04-25', items: [
+    '首页、成长仪表盘和 Aix 中枢新增黑科技总控令牌，把控制力、压力和下一步动作压成本地恢复信号',
+    'Aix 中枢新增 openclow 本地技能沙盒校验器，为 manifest 生成权限合约、dry-run 状态和 Claude Code 续跑提示',
+    '桌面超级管理器升级 PowerShell 7 安全账本执行底座，优先 pwsh 7 并记录白名单哈希、耗时和输出摘要'
+  ]},
   { ver: '0.40.0', date: '2026-04-25', items: [
     'Agent 中枢新增 Claude Code CLI 工作流交接舱，生成计划、权限、检查点和 Resume 续跑线索',
     'Aix 中枢新增 openclow 本地技能清单注册器，只校验 manifest、风险、兼容性和 Schema，不执行未知代码',
