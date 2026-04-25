@@ -82,11 +82,17 @@ export default function FocusPage() {
   const averageMin = sessions.length ? Math.round(totalMin / sessions.length) : 0;
   const qualitySessions = sessions.slice(0, 12).map(session => {
     const plannedRate = session.plannedMs ? Math.min(120, Math.round(session.actualMs / session.plannedMs * 100)) : 100;
-    const score = session.giveUp ? Math.max(20, Math.round(plannedRate * 0.45)) : Math.min(100, plannedRate + (session.strictMode ? 8 : 0));
+    const durationMin = Math.round(session.actualMs / 60_000);
+    const noiseBoost = session.impression?.includes('白噪音') ? 4 : 0;
+    const timeBoost = [8, 9, 10, 14, 15, 20, 21].includes(dayjs(session.startTime).hour()) ? 4 : 0;
+    const score = session.giveUp ? Math.max(20, Math.round(plannedRate * 0.45)) : Math.min(100, plannedRate + (session.strictMode ? 8 : 0) + noiseBoost + timeBoost + (durationMin >= 45 ? 6 : 0));
     const grade = score >= 90 ? 'S' : score >= 75 ? 'A' : score >= 55 ? 'B' : 'C';
-    return { ...session, score, grade };
+    const stars = Math.max(1, Math.min(5, Math.ceil(score / 20)));
+    const advice = score >= 90 ? '高质量深潜，适合复用同一时间段和环境。' : score >= 75 ? '质量稳定，可略微增加时长或严格模式。' : score >= 55 ? '有推进但不够稳，建议降低任务切片。' : '中断风险高，先用 15 分钟启动和白噪音降噪。';
+    return { ...session, score, grade, stars, advice, durationMin };
   });
   const qualityAverage = qualitySessions.length ? Math.round(qualitySessions.reduce((sum, session) => sum + session.score, 0) / qualitySessions.length) : 0;
+  const qualityAdvice = qualityAverage >= 90 ? '专注质量进入深潜区，继续复用当前时间段与严格策略。' : qualityAverage >= 75 ? '质量稳定，建议把高价值任务安排在最佳时段。' : qualityAverage >= 55 ? '质量中等，先减少任务切换并保留 25 分钟基础块。' : '质量偏低，先降低启动门槛，用 15 分钟和白噪音恢复节奏。';
   const currentHour = dayjs().hour();
   const scene = currentHour < 11 ? { name: '晨间破局', minutes: 45, mode: 'countdown' as const, strict: true, title: '核心目标推进', reason: '上午意志力窗口适合处理高价值任务' }
     : currentHour < 18 ? { name: '午后稳态', minutes: 25, mode: 'pomodoro' as const, strict: false, title: '单点推进', reason: '午后用番茄钟降低启动阻力' }
@@ -542,6 +548,33 @@ export default function FocusPage() {
               </Button>
             </Space>
             {aixFocusPlan ? <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', color: isDark ? 'rgba(226,232,240,0.82)' : '#475569', margin: '12px 0 0' }}>{aixFocusPlan}</Typography.Paragraph> : null}
+          </Card>
+
+          <Card
+            bordered={false}
+            className="anim-fade-in-up stagger-2 hover-lift"
+            style={{
+              marginTop: 16,
+              borderRadius: 24,
+              background: cardBg,
+              border: cardBorder,
+              boxShadow: isDark ? `0 12px 30px -10px rgba(0,0,0,0.3)` : '0 12px 30px -10px rgba(0,0,0,0.05)'
+            }}
+          >
+            <Typography.Text style={{ color: isDark ? 'rgba(226,232,240,0.72)' : '#64748b' }}>专注质量智能评级</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '4px 0 8px' }}>近 12 次平均 {qualityAverage || 0} 分 · {qualityAverage >= 90 ? 'S' : qualityAverage >= 75 ? 'A' : qualityAverage >= 55 ? 'B' : qualityAverage ? 'C' : '--'}</Typography.Title>
+            <Typography.Paragraph style={{ color: isDark ? 'rgba(226,232,240,0.72)' : '#64748b' }}>{qualityAdvice}</Typography.Paragraph>
+            <Space direction="vertical" size={8} style={{ width: '100%' }}>
+              {qualitySessions.slice(0, 4).map(session => (
+                <div key={session.id} style={{ padding: 12, borderRadius: 16, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.04)', border: `1px solid ${session.score >= 75 ? '#22c55e44' : '#f59e0b44'}` }}>
+                  <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Typography.Text strong style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>{session.title}</Typography.Text>
+                    <Tag color={session.score >= 90 ? 'green' : session.score >= 75 ? 'blue' : session.score >= 55 ? 'gold' : 'red'}>{'★'.repeat(session.stars)} · {session.grade}</Tag>
+                  </Space>
+                  <div style={{ color: isDark ? 'rgba(226,232,240,0.72)' : '#64748b', fontSize: 12, marginTop: 6 }}>{session.durationMin} 分钟 · {session.advice}</div>
+                </div>
+              ))}
+            </Space>
           </Card>
 
           {/* 白噪音 */}

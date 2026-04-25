@@ -52,6 +52,8 @@ export default function DiaryPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [mood, setMood] = useState('');
+  const [moodIntensity, setMoodIntensity] = useState(3);
+  const [moodTags, setMoodTags] = useState<string[]>([]);
   const [locked, setLocked] = useState(true);
   const [pwdOpen, setPwdOpen] = useState<null | 'setup' | 'verify'>(null);
   const [tab, setTab] = useState('list');
@@ -65,9 +67,9 @@ export default function DiaryPage() {
   const diaryLockHash = useLiveQuery(() => db.settings.get('diaryLockHash').then(row => row?.value), []) as string | undefined;
   const list = useLiveQuery(() => db.diaries.filter(diary => !diary.deletedAt).reverse().sortBy('date'), []) || [];
   const behaviorLinks = useLiveQuery(async () => {
-    const [items, sessions] = await Promise.all([db.items.toArray(), db.focusSessions.toArray()]);
-    return { items: items.filter(item => !item.deletedAt), sessions };
-  }, []) || { items: [], sessions: [] };
+    const [items, sessions, habits, habitLogs] = await Promise.all([db.items.toArray(), db.focusSessions.toArray(), db.habits.toArray(), db.habitLogs.toArray()]);
+    return { items: items.filter(item => !item.deletedAt), sessions, habits: habits.filter(habit => !habit.deletedAt), habitLogs };
+  }, []) || { items: [], sessions: [], habits: [], habitLogs: [] };
 
   useEffect(() => {
     if (!diaryLockHash) setLocked(false);
@@ -101,9 +103,43 @@ export default function DiaryPage() {
     const end = date.endOf('day').valueOf();
     const doneItems = behaviorLinks.items.filter(item => item.completeStatus === 'done' && (item.completeTime || item.updatedAt) >= start && (item.completeTime || item.updatedAt) <= end).length;
     const focusMin = Math.round(behaviorLinks.sessions.filter(session => session.startTime >= start && session.startTime <= end).reduce((sum, session) => sum + session.actualMs / 60_000, 0));
-    const signal = focusMin >= 45 || doneItems >= 3 ? '行动充足' : focusMin || doneItems ? '轻量推进' : '低行动日';
-    return { ...day, doneItems, focusMin, signal };
+    const habitDone = new Set(behaviorLinks.habitLogs.filter(log => log.date >= start && log.date <= end).map(log => log.habitId)).size;
+    const habitRate = behaviorLinks.habits.length ? Math.round(habitDone / behaviorLinks.habits.length * 100) : 0;
+    const controlScore = Math.min(100, doneItems * 16 + Math.min(40, focusMin) + Math.round(habitRate * 0.32));
+    const signal = controlScore >= 72 ? '高控制日' : controlScore >= 42 ? '稳定推进' : '低行动日';
+    return { ...day, doneItems, focusMin, habitRate, controlScore, signal };
   });
+  const emotionMap = useMemo(() => {
+    const grouped = new Map<string, { mood: string; count: number; intensity: number; done: number; focus: number; habit: number; score: number; tags: string[] }>();
+    list.filter(diary => diary.mood).forEach(diary => {
+      const moodKey = diary.mood!;
+      const start = dayjs(diary.date).startOf('day').valueOf();
+      const end = dayjs(diary.date).endOf('day').valueOf();
+      const done = behaviorLinks.items.filter(item => item.completeStatus === 'done' && (item.completeTime || item.updatedAt) >= start && (item.completeTime || item.updatedAt) <= end).length;
+      const focus = Math.round(behaviorLinks.sessions.filter(session => session.startTime >= start && session.startTime <= end).reduce((sum, session) => sum + session.actualMs / 60_000, 0));
+      const habitDone = new Set(behaviorLinks.habitLogs.filter(log => log.date >= start && log.date <= end).map(log => log.habitId)).size;
+      const habit = behaviorLinks.habits.length ? Math.round(habitDone / behaviorLinks.habits.length * 100) : 0;
+      const tags = (diary.tags || []).slice(0, 4);
+      const current = grouped.get(moodKey) || { mood: moodKey, count: 0, intensity: 0, done: 0, focus: 0, habit: 0, score: 0, tags: [] };
+      current.count += 1;
+      current.intensity += diary.moodIntensity || 3;
+      current.done += done;
+      current.focus += focus;
+      current.habit += habit;
+      current.score += Math.min(100, done * 16 + Math.min(40, focus) + Math.round(habit * 0.32));
+      current.tags = Array.from(new Set([...current.tags, ...tags])).slice(0, 6);
+      grouped.set(moodKey, current);
+    });
+    return Array.from(grouped.values()).map(item => ({
+      ...item,
+      intensity: Math.round(item.intensity / item.count),
+      done: Math.round(item.done / item.count),
+      focus: Math.round(item.focus / item.count),
+      habit: Math.round(item.habit / item.count),
+      score: Math.round(item.score / item.count),
+      advice: item.score / item.count >= 72 ? '保留当天行为组合，适合复制为稳定模板。' : item.focus / item.count < 25 ? '优先补一段短专注，减少情绪空转。' : '保持记录，继续观察触发条件。'
+    })).sort((a, b) => b.score - a.score).slice(0, 6);
+  }, [behaviorLinks, list]);
 
   function clearDraft() {
     localStorage.removeItem(DRAFT_KEY);
@@ -115,6 +151,8 @@ export default function DiaryPage() {
     setTitle('');
     setContent('');
     setMood('');
+    setMoodIntensity(3);
+    setMoodTags([]);
     setOpen(true);
   }
 
@@ -134,6 +172,8 @@ export default function DiaryPage() {
     setEditing(diary);
     setTitle(diary.title || '');
     setMood(diary.mood || '');
+    setMoodIntensity(diary.moodIntensity || 3);
+    setMoodTags(diary.tags || []);
     setOpen(true);
   }
 
@@ -151,6 +191,8 @@ export default function DiaryPage() {
     setEditing(null);
     setTitle(template.title);
     setMood(template.mood);
+    setMoodIntensity(template.mood === '焦虑' ? 4 : 3);
+    setMoodTags([template.title]);
     setContent(template.prompt);
     setOpen(true);
   }
@@ -159,9 +201,9 @@ export default function DiaryPage() {
     if (!content || content.replace(/<[^>]+>/g, '').trim() === '') return message.warning('内容不能为空');
     const nowTs = Date.now();
     if (editing) {
-      await db.diaries.update(editing.id, { title, content, mood, updatedAt: nowTs });
+      await db.diaries.update(editing.id, { title, content, mood, moodIntensity, tags: moodTags, updatedAt: nowTs });
     } else {
-      await db.diaries.add({ id: nanoid(), title, content, mood, date: today0(), createdAt: nowTs, updatedAt: nowTs });
+      await db.diaries.add({ id: nanoid(), title, content, mood, moodIntensity, tags: moodTags, date: today0(), createdAt: nowTs, updatedAt: nowTs });
       clearDraft();
     }
     message.success('保存成功');
@@ -347,13 +389,34 @@ export default function DiaryPage() {
               <Col xs={24} md={8} key={day.day}>
                 <div style={{ padding: 12, borderRadius: 16, background: tintedBg(day.focusMin >= 45 || day.doneItems >= 3 ? '#22c55e' : '#f59e0b'), border: `1px solid ${(day.focusMin >= 45 || day.doneItems >= 3) ? '#22c55e44' : '#f59e0b44'}` }}>
                   <Typography.Text strong style={{ color: titleColor }}>{day.day} · {day.mood}</Typography.Text>
-                  <div style={{ marginTop: 6, color: subColor, fontSize: 12 }}>完成 {day.doneItems} 项 · 专注 {day.focusMin} 分钟</div>
-                  <Tag color={day.signal === '行动充足' ? 'green' : day.signal === '轻量推进' ? 'gold' : 'default'} style={{ marginTop: 8, borderRadius: 6 }}>{day.signal}</Tag>
+                  <div style={{ marginTop: 6, color: subColor, fontSize: 12 }}>完成 {day.doneItems} 项 · 专注 {day.focusMin} 分钟 · 习惯 {day.habitRate}%</div>
+                  <Tag color={day.signal === '高控制日' ? 'green' : day.signal === '稳定推进' ? 'gold' : 'default'} style={{ marginTop: 8, borderRadius: 6 }}>{day.signal} · {day.controlScore}</Tag>
                 </div>
               </Col>
             ))}
           </Row>
         ) : null}
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Text style={{ color: subColor }}>情绪-行为关联图谱</Typography.Text>
+        <Typography.Title level={4} style={{ margin: '4px 0 14px', color: titleColor }}>本地洞察，不向 Aix 发送日记正文</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {emotionMap.length ? emotionMap.map(item => (
+            <Col xs={24} md={12} xl={8} key={item.mood}>
+              <div style={{ height: '100%', padding: 14, borderRadius: 18, background: tintedBg(item.score >= 72 ? '#22c55e' : item.score >= 42 ? '#f59e0b' : '#ef4444'), border: `1px solid ${(item.score >= 72 ? '#22c55e' : item.score >= 42 ? '#f59e0b' : '#ef4444')}33` }}>
+                <Space wrap>
+                  <Typography.Text strong style={{ color: titleColor }}>{item.mood}</Typography.Text>
+                  <Tag color={item.score >= 72 ? 'green' : item.score >= 42 ? 'gold' : 'red'}>控制力 {item.score}</Tag>
+                  <Tag>强度 {item.intensity}/5</Tag>
+                </Space>
+                <div style={{ marginTop: 10, color: subColor, fontSize: 12, lineHeight: 1.8 }}>平均完成 {item.done} 项 · 专注 {item.focus} 分钟 · 习惯 {item.habit}%</div>
+                <Typography.Paragraph style={{ color: subColor, margin: '8px 0 0', fontSize: 12 }}>{item.advice}</Typography.Paragraph>
+                {item.tags.length ? <Space wrap size={4} style={{ marginTop: 8 }}>{item.tags.map(tag => <Tag key={tag} color="purple" style={{ borderRadius: 6 }}>{tag}</Tag>)}</Space> : null}
+              </div>
+            </Col>
+          )) : <Col span={24}><div style={{ color: subColor }}>写下带情绪的日记后，本地会自动生成情绪与行动的控制力关联。</div></Col>}
+        </Row>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
@@ -540,7 +603,15 @@ export default function DiaryPage() {
           </Card>
         ) : null}
         <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="标题，可选" style={{ marginBottom: 8, borderRadius: 10 }} />
-        <Input value={mood} onChange={e => setMood(e.target.value)} placeholder="今日心情，如 开心 / 平静 / 沉思" style={{ marginBottom: 8, borderRadius: 10 }} />
+        <Row gutter={8} style={{ marginBottom: 8 }}>
+          <Col span={12}>
+            <Input value={mood} onChange={e => setMood(e.target.value)} placeholder="今日心情，如 开心" style={{ borderRadius: 10 }} />
+          </Col>
+          <Col span={12}>
+            <Input type="number" min={1} max={5} value={moodIntensity} onChange={e => setMoodIntensity(Number(e.target.value))} placeholder="情绪强度 1-5" style={{ borderRadius: 10 }} />
+          </Col>
+        </Row>
+        <Input placeholder="情绪标签，用空格分隔" value={moodTags.join(' ')} onChange={e => setMoodTags(e.target.value.split(/\s+/).filter(Boolean))} style={{ marginBottom: 8, borderRadius: 10 }} />
         <Suspense fallback={<Skeleton active paragraph={{ rows: 8 }} />}>
           <RichEditor value={content} onChange={setContent} placeholder="今天发生了哪些难忘的事？" minRows={10} />
         </Suspense>

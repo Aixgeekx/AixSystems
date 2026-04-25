@@ -100,6 +100,12 @@ export default function HomePage() {
     const pinnedNotes = memos.filter(memo => !memo.deletedAt && memo.pinned).slice(0, 4);
     const recentDiaries = diaries.filter(diary => !diary.deletedAt).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
     const recentSessions = sessions.sort((a, b) => b.startTime - a.startTime).slice(0, 6);
+    const qualitySample = sessions.slice().sort((a, b) => b.startTime - a.startTime).slice(0, 8).map(session => {
+      const plannedRate = session.plannedMs ? Math.min(120, Math.round(session.actualMs / session.plannedMs * 100)) : 100;
+      return session.giveUp ? Math.max(20, Math.round(plannedRate * 0.45)) : Math.min(100, plannedRate + (session.strictMode ? 8 : 0) + (session.actualMs >= 45 * 60_000 ? 6 : 0));
+    });
+    const focusQuality = qualitySample.length ? Math.round(qualitySample.reduce((sum, score) => sum + score, 0) / qualitySample.length) : 0;
+    const focusTasks = todayItems.filter(item => item.completeStatus !== 'done' && ['schedule', 'checklist', 'book'].includes(item.type)).slice(0, 3);
     const todayFocusMinutes = Math.round(sessions.filter(session => session.startTime >= todayStart && session.startTime <= todayEnd).reduce((sum, session) => sum + session.actualMs / 60_000, 0));
     const focusMinutes = sessions.reduce((sum, session) => sum + session.actualMs / 60_000, 0);
     const hourlyFocus = sessions.reduce<Record<number, number>>((map, session) => {
@@ -114,9 +120,11 @@ export default function HomePage() {
       todayFocusMinutes,
       focusGap,
       focusTarget,
+      quality: focusQuality,
+      tasks: focusTasks.map(item => item.title).filter(Boolean),
       peakHour: peakFocusHour ? `${peakFocusHour}:00-${String(Number(peakFocusHour) + 1).padStart(2, '0')}:00` : '完成一次专注后生成',
-      level: todayFocusMinutes >= focusTarget ? '达标' : todayFocusMinutes >= 25 ? '缺口' : '空窗',
-      advice: todayFocusMinutes >= focusTarget ? '今日专注已达标，可以转入轻量复盘。' : peakFocusHour ? `还差 ${focusGap} 分钟，建议在 ${peakFocusHour}:00 高能时段补一次专注。` : `还差 ${focusGap} 分钟，先启动 25 分钟番茄钟建立节奏。`
+      level: todayFocusMinutes >= focusTarget && focusQuality >= 75 ? '达标' : todayFocusMinutes < 25 ? '空窗' : focusQuality && focusQuality < 55 ? '质量滑坡' : '缺口',
+      advice: todayFocusMinutes >= focusTarget && focusQuality >= 75 ? '今日专注已达标，可以转入轻量复盘。' : focusQuality && focusQuality < 55 ? '近期质量滑坡，建议降低时长并开启白噪音。' : peakFocusHour ? `还差 ${focusGap} 分钟，建议在 ${peakFocusHour}:00 高能时段补一次专注。` : `还差 ${focusGap} 分钟，先启动 25 分钟番茄钟建立节奏。`
     };
     const riskGoalCount = goals.filter(goal => {
       const ms = goal.milestones || [];
@@ -784,9 +792,10 @@ export default function HomePage() {
           {[
             { label: '今日已专注', value: `${dashboard?.focusAlert.todayFocusMinutes || 0} 分`, color: '#f59e0b' },
             { label: '距离目标', value: `${dashboard?.focusAlert.focusGap || 0} 分`, color: '#ef4444' },
-            { label: '高能时段', value: dashboard?.focusAlert.peakHour || '完成一次专注后生成', color: '#22c55e' }
+            { label: '高能时段', value: dashboard?.focusAlert.peakHour || '完成一次专注后生成', color: '#22c55e' },
+            { label: '质量评分', value: dashboard?.focusAlert.quality ? `${dashboard.focusAlert.quality} 分` : '暂无样本', color: '#8b5cf6' }
           ].map(signal => (
-            <Col xs={24} md={8} key={signal.label}>
+            <Col xs={24} md={12} xl={6} key={signal.label}>
               <div style={{ minHeight: 96, borderRadius: 18, padding: 14, background: tintedBg(signal.color), border: `1px solid ${signal.color}44` }}>
                 <Typography.Text style={{ color: subColor, fontSize: 12 }}>{signal.label}</Typography.Text>
                 <div style={{ marginTop: 8, color: titleColor, fontSize: 22, fontWeight: 800 }}>{signal.value}</div>
@@ -794,6 +803,12 @@ export default function HomePage() {
             </Col>
           ))}
         </Row>
+        {dashboard?.focusAlert.tasks?.length ? (
+          <Space wrap size={8} style={{ marginTop: 14 }}>
+            <Typography.Text style={{ color: subColor, fontSize: 12 }}>建议进入专注的事项</Typography.Text>
+            {dashboard.focusAlert.tasks.map((task: string) => <Tag key={task} color="blue" style={{ borderRadius: 8 }}>{task}</Tag>)}
+          </Space>
+        ) : null}
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>

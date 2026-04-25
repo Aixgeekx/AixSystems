@@ -91,6 +91,8 @@ export interface Diary {                                   // 日记
   content: string;                                         // TipTap JSON 或 HTML
   date: number;                                            // 当日 0 点
   mood?: string;
+  moodIntensity?: number;                                  // 情绪强度 1-5
+  tags?: string[];                                         // 情绪标签
   weather?: string;
   location?: { lat: number; lng: number; name: string };
   tagIds?: string[];
