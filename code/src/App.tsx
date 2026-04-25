@@ -48,6 +48,7 @@ const MenuSort = lazy(() => import('@/pages/menusort'));
 const Habit = lazy(() => import('@/pages/habit'));
 const Goal = lazy(() => import('@/pages/goal'));
 const Growth = lazy(() => import('@/pages/growth'));
+const GrowthReport = lazy(() => import('@/pages/growth/Report'));
 const Review = lazy(() => import('@/pages/review'));
 
 function PageFallback() {
@@ -118,6 +119,7 @@ function AppShell() {                                           // 路由表 + �
           <Route path="home/habit" element={<Habit />} />
           <Route path="home/goal" element={<Goal />} />
           <Route path="home/growth" element={<Growth />} />
+          <Route path="home/growth/report" element={<GrowthReport />} />
           <Route path="home/review" element={<Review />} />
           <Route path="search/index" element={<Search />} />
           <Route path="dataio" element={<DataIO />} />

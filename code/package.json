@@ -1,7 +1,7 @@
 {
   "name": "aixsystems",
   "private": true,
-  "version": "0.24.0",
+  "version": "0.25.0",
   "type": "module",
   "description": "AixSystems - 时间管理系统 (离线本地版)",
   "scripts": {

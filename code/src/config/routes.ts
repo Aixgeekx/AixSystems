@@ -31,6 +31,7 @@ export const ROUTES = {
   HABIT: '/home/habit',                                // 习惯追踪
   GOAL: '/home/goal',                                  // 目标管理
   GROWTH: '/home/growth',                              // 成长仪表盘
+  GROWTH_REPORT: '/home/growth/report',                // 智能周期报告
   REVIEW: '/home/review',                              // 复习中心
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };

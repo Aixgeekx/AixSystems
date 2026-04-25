@@ -1,38 +1,33 @@
-# AixSystems v0.24.0 进度
+# AixSystems v0.25.0 进度
 
 ## 当前目标
 持续迭代增强功能，主导思想：**黑科技系统，个人成长和控制**。
 
-## 已完成（本轮迭代）
-- [x] 高级动态视觉层：`ThemeBackground`、全局动画、空状态和事项卡片升级为更强的玻璃态、光效、扫描线和动效层次
-- [x] 全局事项批处理工作台：全部事项页补齐搜索、类型/分类/状态筛选、排序、统计卡和批量完成
-- [x] 低频页面工作台化：贷款、生理期、课程表、回收站、用户中心、反馈、桌面小组件、周/月/年视图等页面补齐统计卡与管理界面
-- [x] 应用内更新日志新增 v0.24.0
-- [x] 版本号统一到 0.24.0：`code/package.json`、`desktop/package.json`、package-lock、`APP_VERSION`
-- [x] README、code/README、Aix_tools/readme、results/使用说明已同步 v0.24.0
-- [x] 测试通过：`npm --prefix code test`，39/39 Vitest
-- [x] 构建通过：`npm --prefix code run build`，tsc + Vite 成功
+## 已完成（本轮 v0.25.0）
+- [x] 跨模块关联洞察引擎：`useCorrelationInsights` hook + growth 页面新增"关联洞察"卡片，自动发现习惯↔情绪↔专注↔目标的隐藏关联模式
+- [x] 智能周期成长报告：新增 `Report.tsx` 页面，支持周/月/季/年四个周期维度，含每日专注趋势图、情绪分布饼图、习惯完成率水平条，支持导出 JSON/HTML
+- [x] 进阶成就与等级系统：成就从 10 项扩充至 22 项，新增 10 级成长等级（Lv.1-10），每日 XP 经验值追踪，各模块行为自动获取 XP
+- [x] 版本号统一到 0.25.0：`code/package.json`、`desktop/package.json`、`APP_VERSION`
+- [x] 应用内更新日志新增 v0.25.0
+- [x] Aix_tools/readme 已同步 v0.25.0
+- [x] 测试通过：39/39 Vitest
+- [x] 构建通过：tsc + Vite 成功
+
+## 新增文件
+- `code/src/hooks/useCorrelationInsights.ts` — 跨模块关联洞察分析引擎
+- `code/src/hooks/useGameLevel.ts` — XP/等级/称号计算 hook
+- `code/src/pages/growth/Report.tsx` — 智能周期成长报告页面
 
 ## 验证记录
 - `npm --prefix code test`：通过，6 个测试文件 / 39 个测试
-- `npm --prefix code run build`：通过；仍有既有 Vite chunk > 500k 和 MapleMono 字体运行时解析提示，不阻断构建
+- `npm --prefix code run build`：通过
 
-## 注意事项
-- 当前工作区还有 `.vscode/`、`image/` 未跟踪目录，未确认是否属于本轮，未纳入提交范围
-- 按安全规则，提交和推送需要用户明确确认后再执行
+## 待处理
+- `.vscode/`、`image/` 未跟踪目录，未纳入提交
+- 提交和推送需要用户确认
 
 ## 下一步候选方向
-1. **可视化体感验收**：启动 Vite，浏览器检查 v0.24.0 首页、全部事项、主题背景、低频页面视觉是否一致
-2. **发布提交**：用户确认后，仅暂存本轮相关源码/文档/版本文件，提交 `feat: AixSystems v0.24.0 - upgrade workspace experience`
-3. **继续下一轮三功能迭代**：围绕专注质量、日记情绪联动、报告分享增强继续推进
-
-## 关键文件路径
-- `code/src/components/Layout/ThemeBackground.tsx` — 高级动态主题背景
-- `code/src/components/ItemCard/index.tsx` — Premium 事项卡片
-- `code/src/components/Empty/index.tsx` — 高级插画空状态
-- `code/src/styles/animations.css` — 全局动效系统
-- `code/src/pages/matter/All.tsx` — 全部事项批处理工作台
-- `code/src/pages/focus/index.tsx` — 专注质量评级/统计增强
-- `code/src/pages/diary/index.tsx` — 情绪与事项/专注联动洞察
-- `code/src/pages/home/index.tsx` — 首页紧凑应用与专注警报
-- `code/src/pages/help/NewFeatures.tsx` — v0.24.0 应用内更新日志
+1. **专注智能场景识别**：根据时间段、事项类型自动推荐专注模式
+2. **习惯模板与链式习惯**：预设习惯模板 + 习惯链（完成A后触发B）
+3. **日记智能引导**：日记页增加情绪引导模板和反思提示
+4. **可视化体感验收**：启动 Vite 浏览器检查 v0.25.0 新功能

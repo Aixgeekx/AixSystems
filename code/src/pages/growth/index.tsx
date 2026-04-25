@@ -1,6 +1,6 @@
-// 成长仪表盘 - 整合习惯、目标、专注、事项的成长可视化 + 成就徽章 + 周期复盘 (v0.21.8)
+// 成长仪表盘 - 整合习惯、目标、专注、事项的成长可视化 + 成就徽章 + 周期复盘 + 关联洞察 (v0.25.0)
 import React, { Suspense, lazy } from 'react';
-import { App as AntApp, Button, Card, Col, Progress, Row, Space, Statistic, Tag, Typography, Tabs } from 'antd';
+import { App as AntApp, Button, Card, Col, Progress, Row, Space, Statistic, Tag, Typography, Tabs, Tooltip } from 'antd';
 import {
   CalendarOutlined,
   CheckCircleOutlined,
@@ -12,13 +12,19 @@ import {
   LockOutlined,
   StarOutlined,
   BookOutlined,
-  DownloadOutlined
+  DownloadOutlined,
+  ThunderboltOutlined,
+  SmileOutlined,
+  BulbOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
 import { useAchievements } from '@/hooks/useAchievements';
+import { useGameLevel } from '@/hooks/useGameLevel';
+import { useCorrelationInsights } from '@/hooks/useCorrelationInsights';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
 
@@ -101,6 +107,7 @@ function SummaryBlock({ data, prev, isDark, titleColor, subColor, cardBg, cardBo
 
 export default function GrowthPage() {
   const { message } = AntApp.useApp();
+  const nav = useNavigate();
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
@@ -259,6 +266,8 @@ export default function GrowthPage() {
 
   const todayCompletion = dashboard?.todayTotal ? Math.round((dashboard.todayDone / dashboard.todayTotal) * 100) : 0;
   const achievements = useAchievements();
+  const gameLevel = useGameLevel();
+  const insights = useCorrelationInsights();
   const exportReport = (format: 'md' | 'html' | 'card') => {
     if (!dashboard) return message.warning('成长数据仍在加载中');
     if (format === 'card') downloadText(`aixsystems-growth-card-${dayjs().format('YYYY-MM-DD')}.html`, buildGrowthShareCard(dashboard, achievements), 'text/html;charset=utf-8');
@@ -293,14 +302,49 @@ export default function GrowthPage() {
             <Typography.Title level={2} style={{ margin: '8px 0 10px', color: '#fff', textShadow: isDark ? `0 0 20px ${accent}44` : 'none' }}>
               看见自己的成长轨迹
             </Typography.Title>
+            {gameLevel && (
+              <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{
+                  padding: '6px 18px', borderRadius: 20, background: 'rgba(255,255,255,0.18)',
+                  backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.25)',
+                  display: 'flex', alignItems: 'center', gap: 8
+                }}>
+                  <span style={{ fontSize: 22 }}>{gameLevel.icon}</span>
+                  <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Lv.{gameLevel.level}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>{gameLevel.title}</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 140, maxWidth: 280 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>{gameLevel.totalXp} XP</span>
+                    <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>
+                      {gameLevel.levelProgress < 100 ? `距升级还需 ${gameLevel.xpToNext} XP` : '已满级'}
+                    </span>
+                  </div>
+                  <Progress
+                    percent={gameLevel.levelProgress}
+                    strokeColor={{ '0%': '#fff', '100%': '#67e8f9' }}
+                    trailColor="rgba(255,255,255,0.15)"
+                    size="small"
+                    showInfo={false}
+                    strokeLinecap="round"
+                  />
+                </div>
+                <Tag style={{ borderRadius: 8, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', color: '#a5f3fc' }}>
+                  今日 +{gameLevel.todayXp} XP
+                </Tag>
+              </div>
+            )}
             <Typography.Paragraph style={{ marginBottom: 16, color: 'rgba(226,232,240,0.84)' }}>
               整合习惯、目标、专注和事项数据，用一个页面看清自己每天都在向哪个方向前进。
             </Typography.Paragraph>
             <Space wrap>
+              <Button type="primary" icon={<RiseOutlined />} onClick={() => nav('/home/growth/report')} style={{ borderRadius: 12, fontWeight: 700, background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', border: 'none' }}>
+                智能周期报告
+              </Button>
               <Button icon={<DownloadOutlined />} onClick={() => exportReport('md')} style={{ borderRadius: 12, fontWeight: 700 }}>
                 导出 Markdown
               </Button>
-              <Button type="primary" icon={<DownloadOutlined />} onClick={() => exportReport('html')} style={{ borderRadius: 12, fontWeight: 700 }}>
+              <Button icon={<DownloadOutlined />} onClick={() => exportReport('html')} style={{ borderRadius: 12, fontWeight: 700 }}>
                 导出 HTML 报告
               </Button>
               <Button icon={<DownloadOutlined />} onClick={() => exportReport('card')} style={{ borderRadius: 12, fontWeight: 700 }}>
@@ -557,6 +601,85 @@ export default function GrowthPage() {
           </div>
         ) : (
           <div style={{ color: subColor }}>加载中...</div>
+        )}
+      </Card>
+
+      {/* 跨模块关联洞察 */}
+      <Card
+        bordered={false}
+        className="anim-fade-in-up stagger-7"
+        style={{ borderRadius: 24, background: cardBg, border: cardBorder, boxShadow: isDark ? `0 12px 30px -10px rgba(0,0,0,0.3)` : '0 12px 30px -10px rgba(0,0,0,0.05)' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <Typography.Text style={{ color: subColor }}><ThunderboltOutlined /> 黑科技引擎</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '4px 0 0', color: titleColor }}>跨模块关联洞察</Typography.Title>
+          </div>
+          {insights && insights.length > 0 && (
+            <Tag color="purple" style={{ borderRadius: 6, fontSize: 13, padding: '4px 12px' }}>
+              <BulbOutlined /> {insights.length} 条洞察
+            </Tag>
+          )}
+        </div>
+        <Typography.Paragraph style={{ color: subColor, marginBottom: 16 }}>
+          基于你全部本地数据的统计分析，发现习惯、专注、情绪、目标之间隐藏的关联模式。
+        </Typography.Paragraph>
+
+        {insights ? (
+          insights.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+              {insights.map(insight => (
+                <Tooltip key={insight.id} title={insight.detail} placement="top">
+                  <div
+                    className="hover-lift"
+                    style={{
+                      padding: 20,
+                      borderRadius: 18,
+                      background: isDark ? `${insight.color}0d` : `${insight.color}08`,
+                      border: `1px solid ${insight.color}25`,
+                      cursor: 'default',
+                      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute', top: -16, right: -16, width: 64, height: 64,
+                      borderRadius: '50%', background: `${insight.color}12`, pointerEvents: 'none'
+                    }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, position: 'relative' }}>
+                      <span style={{ fontSize: 28 }}>{insight.icon}</span>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: titleColor, lineHeight: 1.3 }}>{insight.title}</div>
+                        <div style={{ fontSize: 11, color: subColor, marginTop: 2 }}>
+                          {insight.modules.join(' × ')}
+                          <Tag
+                            style={{ marginLeft: 8, fontSize: 10, borderRadius: 4, lineHeight: '16px' }}
+                            color={insight.confidence === 'high' ? 'green' : insight.confidence === 'medium' ? 'blue' : 'default'}
+                          >
+                            {insight.confidence === 'high' ? '高置信' : insight.confidence === 'medium' ? '中信度' : '低置信'}
+                          </Tag>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 13, color: subColor, lineHeight: 1.6, position: 'relative' }}>{insight.detail}</div>
+                  </div>
+                </Tooltip>
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              textAlign: 'center', padding: '40px 20px', borderRadius: 16,
+              background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(15,23,42,0.02)',
+              border: `1px dashed ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'}`
+            }}>
+              <SmileOutlined style={{ fontSize: 36, color: subColor, marginBottom: 12 }} />
+              <div style={{ color: subColor, fontSize: 14, marginBottom: 4 }}>数据不足，暂未发现显著关联</div>
+              <div style={{ color: subColor, fontSize: 12 }}>持续记录习惯、专注和日记，AixSystems 会自动发现隐藏的成长模式。</div>
+            </div>
+          )
+        ) : (
+          <div style={{ color: subColor }}>分析中...</div>
         )}
       </Card>
     </Space>
