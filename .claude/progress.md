@@ -15,9 +15,14 @@
 ## 待完成
 - [x] 运行 Vitest 与前端构建
 - [x] 桌面安装包构建
-- [ ] 提交并推送 `origin main`
-- [ ] 创建并推送 tag：`v0.31.0`
-- [ ] 创建 GitHub Release 并上传 `AixSystems-0.31.0-Setup.exe` 与 blockmap
+- [x] 提交并推送 `origin main`
+- [x] 创建并推送 tag：`v0.31.0`
+- [x] 创建 GitHub Release 并上传 `AixSystems-0.31.0-Setup.exe` 与 blockmap
+
+## 发布结果
+- Commit：`2092373 feat: AixSystems v0.31.0 - add Aix agent control center`
+- Release：https://github.com/Aixgeekx/AixSystems/releases/tag/v0.31.0
+- 资产：`AixSystems-0.31.0-Setup.exe`、`AixSystems-0.31.0-Setup.exe.blockmap`
 
 ## 新增/修改重点
 - `desktop/main.cjs`、`desktop/preload.cjs`、`code/src/utils/electron.ts` — 只读系统扫描与 PowerShell 预设 IPC
