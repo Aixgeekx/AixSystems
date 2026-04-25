@@ -14,9 +14,14 @@
 ## 待完成
 - [x] 运行 Vitest 与前端构建
 - [x] 桌面安装包构建
-- [ ] 提交并推送 `origin main`
-- [ ] 创建并推送 tag：`v0.33.0`
-- [ ] 创建 GitHub Release 并上传 `AixSystems-0.33.0-Setup.exe` 与 blockmap
+- [x] 提交并推送 `origin main`
+- [x] 创建并推送 tag：`v0.33.0`
+- [x] 创建 GitHub Release 并上传 `AixSystems-0.33.0-Setup.exe` 与 blockmap
+
+## 发布结果
+- Commit：`6b302e1 feat: AixSystems v0.33.0 - add plugin and proxy workflows`
+- Release：https://github.com/Aixgeekx/AixSystems/releases/tag/v0.33.0
+- 资产：`AixSystems-0.33.0-Setup.exe`、`AixSystems-0.33.0-Setup.exe.blockmap`
 
 ## 新增/修改重点
 - `code/src/pages/aix/index.tsx` — 插件广场二期和 Aix 本地代理中心
