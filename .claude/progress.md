@@ -45,8 +45,8 @@
 - [x] 复习削峰建议：复习中心对未来高压日给出提前拆分和轻量回顾策略
 - [x] 构建通过（tsc + vite）
 - [x] 测试通过（39/39 Vitest）
-- [ ] 已提交并推送 v0.23.6 到 main/origin
-- [ ] 已创建 GitHub Release v0.23.6
+- [x] 已提交并推送 v0.23.6 到 main/origin
+- [x] 已创建 GitHub Release v0.23.6：https://github.com/Aixgeekx/AixSystems/releases/tag/v0.23.6
 
 ## 关键洞察（来自时光序调研文档）
 - 时光序核心策略："一事 App 化"，对小白用户心智门槛极低
