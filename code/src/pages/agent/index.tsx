@@ -15,6 +15,13 @@ const AGENT_TEMPLATES = [
 
 const RISK_WEIGHT: Record<string, number> = { '低风险': 18, '中风险': 42, '需授权': 68 };
 
+const CLI_WORKFLOW_STEPS = [
+  { title: 'Plan', desc: '生成可复制计划和任务边界', color: '#38bdf8' },
+  { title: 'Permission', desc: '列出允许工具、禁止动作和授权阶段', color: '#f59e0b' },
+  { title: 'Checkpoint', desc: '记录验证证据、恢复点和下一步', color: '#10b981' },
+  { title: 'Resume', desc: '沉淀 CLI 续跑提示和交接说明', color: '#8b5cf6' }
+];
+
 export default function AgentPage() {
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
@@ -68,7 +75,7 @@ export default function AgentPage() {
         { id: nanoid(), title: '等待人工确认权限', done: false },
         { id: nanoid(), title: '执行后写入恢复日志', done: false }
       ],
-      extra: { agent: true, risk: template.risk, recoverable: true, contract: { allow: template.allow, deny: template.deny, evidence: template.evidence, approval: template.risk === '低风险' ? '自动记录' : '人工确认' } },
+      extra: { agent: true, risk: template.risk, recoverable: true, contract: { allow: template.allow, deny: template.deny, evidence: template.evidence, approval: template.risk === '低风险' ? '自动记录' : '人工确认' }, claudeWorkflow: { plan: template.desc, tools: template.allow, forbidden: template.deny, checkpoint: template.evidence, resume: `claude code cli 续跑：恢复 ${template.title}，先读本地 Item.extra.contract，再按子任务继续。` } },
       createdAt: now,
       updatedAt: now
     });
@@ -103,6 +110,32 @@ export default function AgentPage() {
           </Col>
         ))}
       </Row>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <ThunderboltOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Claude Code CLI 工作流交接舱</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>把每个 Agent 分支压成 Claude Code 式计划、权限、检查点和 Resume 提示，方便中断后从本地任务继续。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {CLI_WORKFLOW_STEPS.map((step, index) => <Col xs={24} md={12} xl={6} key={step.title}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${step.color}12` : `${step.color}08`, border: `1px solid ${step.color}24` }}>
+              <Space wrap><Tag color="blue">#{index + 1}</Tag><Typography.Text strong style={{ color: titleColor }}>{step.title}</Typography.Text></Space>
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0 0', fontSize: 12 }}>{step.desc}</Typography.Paragraph>
+            </div>
+          </Col>)}
+        </Row>
+        <Space direction="vertical" size={8} style={{ width: '100%', marginTop: 14 }}>
+          {recoveryQueue.slice(0, 3).map(item => {
+            const workflow = item.task.extra?.claudeWorkflow;
+            return <div key={item.task.id} style={{ padding: 12, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}><Typography.Text strong style={{ color: titleColor }}>{item.task.title}</Typography.Text><Tag color={workflow ? 'green' : 'gold'}>{workflow ? 'CLI 交接已生成' : '等待新建工作流'}</Tag></Space>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>Resume：{workflow?.resume || `读取任务 ${item.task.id}，按未完成子任务继续执行。`}</div>
+            </div>;
+          })}
+          {!recoveryQueue.length ? <Alert type="info" showIcon message="创建 Agent 分支后会自动生成 CLI 工作流交接信息。" style={{ borderRadius: 12 }} /> : null}
+        </Space>
+      </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>
         <Space size={8} style={{ marginBottom: 12 }}>

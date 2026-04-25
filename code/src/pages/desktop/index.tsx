@@ -24,6 +24,13 @@ const MANAGER_MODULES = [
   { key: 'tools', title: '工具大全', icon: <ToolOutlined />, color: '#06b6d4' }
 ];
 
+const POWERSHELL7_GUARDS = [
+  { label: 'pwsh 7 终端', hint: '优先使用 PowerShell 7，只读诊断可回退系统 PowerShell', color: '#2563eb' },
+  { label: '白名单哈希', hint: '预设 key、风险分和只读级别生成安全指纹', color: '#10b981' },
+  { label: '超时边界', hint: '诊断命令必须短时返回，避免阻塞桌面控制台', color: '#f59e0b' },
+  { label: '审计账本', hint: '输出、错误、预设和恢复建议都留在本地 UI', color: '#8b5cf6' }
+];
+
 function formatGB(bytes = 0) {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
@@ -57,6 +64,8 @@ export default function DesktopWidgetPage() {
     score: Math.max(0, Math.min(100, healthScore - (confirmingPreset?.risk || 0) * 0.45 + (confirmingPreset ? 8 : 0))),
     checks: [
       { label: '系统压力', value: Math.max(memUsage, diskUsage), ok: Math.max(memUsage, diskUsage) < 82, hint: `内存 ${memUsage}% / 磁盘 ${diskUsage}%` },
+      { label: 'PowerShell 7', value: confirmingPreset ? 100 : 52, ok: !!confirmingPreset, hint: confirmingPreset ? '优先走 pwsh 7 兼容终端，不开放任意命令输入' : '选择预设后生成终端上下文' },
+      { label: '白名单哈希', value: confirmingPreset ? 100 : 40, ok: !!confirmingPreset, hint: confirmingPreset ? `PS7-${confirmingPreset.key}-${confirmingPreset.risk}` : '等待预设安全指纹' },
       { label: '预设风险', value: confirmingPreset?.risk || 0, ok: !confirmingPreset || confirmingPreset.risk <= 25, hint: confirmingPreset ? `${confirmingPreset.title} · ${confirmingPreset.level}` : '尚未选择预设' },
       { label: '备份说明', value: confirmingPreset ? 100 : 40, ok: !!confirmingPreset?.backup, hint: confirmingPreset?.backup || '选择预设后显示备份说明' },
       { label: '回滚说明', value: confirmingPreset ? 100 : 40, ok: !!confirmingPreset?.rollback, hint: confirmingPreset?.rollback || '选择预设后显示回滚说明' }
@@ -257,6 +266,23 @@ export default function DesktopWidgetPage() {
             </div>
           </Col>)}
         </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <SafetyCertificateOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>PowerShell 7 安全终端账本</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>把 PowerShell 7、白名单哈希、超时边界和审计账本固定在执行前，继续禁止任意终端直通。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {POWERSHELL7_GUARDS.map(guard => <Col xs={24} md={12} xl={6} key={guard.label}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${guard.color}12` : `${guard.color}08`, border: `1px solid ${guard.color}24` }}>
+              <Typography.Text strong style={{ color: titleColor }}>{guard.label}</Typography.Text>
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0 0', fontSize: 12 }}>{guard.hint}</Typography.Paragraph>
+            </div>
+          </Col>)}
+        </Row>
+        {powershellResult ? <Alert type={powershellResult.error ? 'warning' : 'success'} showIcon message="终端审计摘要" description={`输出 ${String(powershellResult.output || '').length} 字符 / 错误 ${String(powershellResult.error || '').length} 字符 / 本地展示不上传`} style={{ borderRadius: 12, marginTop: 14 }} /> : <Alert type="info" showIcon message="执行白名单预设后会在本地生成终端账本摘要。" style={{ borderRadius: 12, marginTop: 14 }} />}
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

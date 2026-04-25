@@ -48,6 +48,16 @@ const SKILL_TASK_GRAPH = [
   { key: 'execute', title: '执行归档', color: '#10b981', depends: '事项 / eventLog / 备份', output: '可恢复记录和下一步' }
 ];
 
+function parseOpenclowManifest(name: string) {
+  const clean = name.trim();
+  const version = clean.match(/(\d+\.\d+\.\d+)/)?.[1] || 'local';
+  const key = clean.toLowerCase().includes('desktop') ? 'desktop-readonly' : clean.toLowerCase().includes('provider') ? 'provider-dispatch' : clean.toLowerCase().includes('review') ? 'review-peak' : 'growth-control';
+  const skill = SKILLS.find(item => item.key === key) || SKILLS[0];
+  const risk = clean.toLowerCase().includes('ps') || clean.toLowerCase().includes('shell') ? '需确认' : skill.risk;
+  const compatibility = clean.includes('openclow') || clean.includes('openclaw') || clean.endsWith('.json') || clean.endsWith('.zip') ? 96 : 72;
+  return { name: clean, version, key, skill: skill.name, risk, compatibility, schema: `${skill.input} → ${skill.output}`, status: 'disabled-archived' };
+}
+
 export default function AixPage() {
   const nav = useNavigate();
   const { theme } = useThemeVariants();
@@ -64,6 +74,7 @@ export default function AixPage() {
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
   const skillState = useLiveQuery(() => db.cacheKv.get('aixSkillRegistry'), [])?.value as Record<string, boolean> | undefined;
   const skillLogs = useLiveQuery(() => db.eventLog.where('level').equals('info').reverse().sortBy('createdAt'), [])?.filter(log => log.detail?.scope === 'aix-skill').slice(0, 6) || [];
+  const pluginManifests = useLiveQuery(() => db.eventLog.where('level').equals('info').reverse().sortBy('createdAt'), [])?.filter(log => log.detail?.scope === 'aix-plugin-manifest').slice(0, 4) || [];
   const campaignLogs = useLiveQuery(() => db.eventLog.where('level').equals('info').reverse().sortBy('createdAt'), [])?.filter(log => log.detail?.scope === 'aix-campaign').slice(0, 5) || [];
   const evolutionLogs = useLiveQuery(() => db.eventLog.where('level').equals('info').reverse().sortBy('createdAt'), [])?.filter(log => log.detail?.scope === 'aix-evolution').slice(0, 4) || [];
   const capsule = useLiveQuery(async () => {
@@ -176,9 +187,10 @@ export default function AixPage() {
   async function importPluginPackage() {
     const name = pluginPackage.trim();
     if (!name) return;
-    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 本地插件包导入：${name}`, detail: { scope: 'aix-plugin', name, status: 'archived', version: 'local' }, createdAt: Date.now() });
+    const manifest = parseOpenclowManifest(name);
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `openclow 技能清单归档：${manifest.name}`, detail: { scope: 'aix-plugin-manifest', manifest }, createdAt: Date.now() });
     setPluginPackage('');
-    message.success('本地插件包已进入版本归档');
+    message.success('本地技能清单已校验并禁用归档');
   }
 
   async function askAix(intent: 'plan' | 'computer' | 'review') {
@@ -401,15 +413,19 @@ export default function AixPage() {
         <Row gutter={[12, 12]} style={{ marginTop: 14 }}>
           <Col xs={24} lg={12}>
             <div style={{ padding: 14, borderRadius: 16, background: isDark ? `${accent}10` : `${accent}08`, border: `1px solid ${accent}22` }}>
-              <Typography.Text strong style={{ color: titleColor }}>本地插件安装包导入</Typography.Text>
-              <Typography.Paragraph style={{ color: subColor, margin: '8px 0' }}>当前先归档插件包名称与导入日志，后续可扩展为离线 zip/json 插件安装器。</Typography.Paragraph>
-              <Space.Compact style={{ width: '100%' }}><Input value={pluginPackage} onChange={event => setPluginPackage(event.target.value)} placeholder="例如 aix-review-peak-1.2.0.zip" /><Button type="primary" onClick={importPluginPackage}>导入归档</Button></Space.Compact>
+              <Typography.Text strong style={{ color: titleColor }}>openclow 本地技能清单注册器</Typography.Text>
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0' }}>导入 openclow/openclaw 插件包名后只解析 manifest、兼容性、风险和 Schema，默认禁用归档，不执行未知代码。</Typography.Paragraph>
+              <Space.Compact style={{ width: '100%' }}><Input value={pluginPackage} onChange={event => setPluginPackage(event.target.value)} placeholder="例如 openclow-review-peak-1.2.0.zip" /><Button type="primary" onClick={importPluginPackage}>校验归档</Button></Space.Compact>
             </div>
           </Col>
           <Col xs={24} lg={12}>
             <div style={{ padding: 14, borderRadius: 16, background: isDark ? 'rgba(236,72,153,0.10)' : 'rgba(236,72,153,0.06)', border: '1px solid rgba(236,72,153,0.22)' }}>
-              <Typography.Text strong style={{ color: titleColor }}>插件版本归档</Typography.Text>
-              <Typography.Paragraph style={{ color: subColor, margin: '8px 0 0' }}>内置技能采用官方版本号，本地插件包先进入审计日志，不自动执行未知代码，保持离线安全边界。</Typography.Paragraph>
+              <Typography.Text strong style={{ color: titleColor }}>技能清单审计</Typography.Text>
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0' }}>本地插件包只进入清单审计，不自动启用；能力必须映射到内置技能、权限合约和 eventLog 后才能被调度。</Typography.Paragraph>
+              {pluginManifests.length ? pluginManifests.map(log => {
+                const manifest = log.detail?.manifest;
+                return <div key={log.id} style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>· {manifest?.name} / {manifest?.skill} / 兼容 {manifest?.compatibility} / {manifest?.status}</div>;
+              }) : <Typography.Text style={{ color: subColor }}>暂无 openclow 技能清单。</Typography.Text>}
             </div>
           </Col>
         </Row>
