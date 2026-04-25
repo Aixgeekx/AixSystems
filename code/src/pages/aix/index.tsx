@@ -28,6 +28,13 @@ const PLUGIN_PROTOCOLS = [
   { key: 'ollama', name: 'Ollama Local', endpoint: '127.0.0.1:11434', use: '本地模型离线推理与便携部署' }
 ];
 
+const CAMPAIGN_STEPS = [
+  { key: 'triage', title: '失控清账', color: '#ef4444', desc: '先压逾期和今日待办，把不可控事项降到可处理范围。' },
+  { key: 'growth', title: '成长推进', color: '#10b981', desc: '推进一个目标里程碑并修复中断习惯，保持长期增长不断线。' },
+  { key: 'review', title: '复习削峰', color: '#8b5cf6', desc: '提前拆分未来 7 天复习压力，避免高峰日爆仓。' },
+  { key: 'closure', title: '复盘封存', color: '#06b6d4', desc: '用短复盘封存今日策略，写入审计日志方便明天恢复。' }
+];
+
 export default function AixPage() {
   const nav = useNavigate();
   const { theme } = useThemeVariants();
@@ -44,6 +51,7 @@ export default function AixPage() {
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
   const skillState = useLiveQuery(() => db.cacheKv.get('aixSkillRegistry'), [])?.value as Record<string, boolean> | undefined;
   const skillLogs = useLiveQuery(() => db.eventLog.where('level').equals('info').reverse().sortBy('createdAt'), [])?.filter(log => log.detail?.scope === 'aix-skill').slice(0, 6) || [];
+  const campaignLogs = useLiveQuery(() => db.eventLog.where('level').equals('info').reverse().sortBy('createdAt'), [])?.filter(log => log.detail?.scope === 'aix-campaign').slice(0, 5) || [];
   const capsule = useLiveQuery(async () => {
     const now = Date.now();
     const todayStart = dayjs().startOf('day').valueOf();
@@ -84,6 +92,25 @@ export default function AixPage() {
     try { return JSON.parse(aixProviderProfiles || '[]') as Array<{ name: string; health?: string; official?: boolean; model?: string }>; } catch { return []; }
   }, [aixProviderProfiles]);
   const enabledSkillCount = SKILLS.filter(skill => skillState?.[skill.key] !== false).length;
+  const campaignPlan = useMemo(() => {
+    const overdue = capsule?.overdue || 0;
+    const pending = capsule?.pending || 0;
+    const goalRisk = capsule?.goalRisk || 0;
+    const brokenHabits = capsule?.brokenHabits || 0;
+    const reviewPressure = capsule?.reviewPressure || 0;
+    const focusMinutes = capsule?.focusMinutes || 0;
+    return CAMPAIGN_STEPS.map(step => ({
+      ...step,
+      score: step.key === 'triage' ? Math.min(100, overdue * 24 + pending * 12) : step.key === 'growth' ? Math.min(100, goalRisk * 32 + brokenHabits * 20) : step.key === 'review' ? Math.min(100, reviewPressure * 8) : Math.min(100, Math.max(20, focusMinutes)),
+      action: step.key === 'triage'
+        ? `处理 ${Math.max(1, overdue + pending)} 个高压事项，先完成最短闭环。`
+        : step.key === 'growth'
+          ? `推进 ${Math.max(1, goalRisk)} 个风险目标，恢复 ${Math.max(1, brokenHabits)} 个中断习惯。`
+          : step.key === 'review'
+            ? `把未来 7 天 ${reviewPressure} 个复习节点拆成提前预热。`
+            : `记录 3 句复盘，封存今日控制战役和明日第一动作。`
+    }));
+  }, [capsule]);
 
   async function setSkill(key: string, enabled: boolean) {
     const next = { ...(skillState || {}), [key]: enabled };
@@ -125,6 +152,30 @@ export default function AixPage() {
     } finally {
       setThinking('');
     }
+  }
+
+  async function createCampaign() {
+    if (!capsule) return;
+    const now = Date.now();
+    const id = nanoid();
+    await db.items.add({
+      id,
+      type: 'work',
+      title: `Aix 控制战役 · ${dayjs().format('MM-DD')}`,
+      description: `控制力 ${capsule.controlScore}，逾期 ${capsule.overdue}，待办 ${capsule.pending}，目标风险 ${capsule.goalRisk}，复习压力 ${capsule.reviewPressure}`,
+      startTime: now,
+      allDay: false,
+      isLunar: false,
+      reminders: [],
+      completeStatus: 'pending',
+      importance: capsule.controlScore < 70 ? 0 : 1,
+      subtasks: campaignPlan.map(step => ({ id: nanoid(), title: `${step.title}：${step.action}`, done: false })),
+      extra: { aixCampaign: true, controlScore: capsule.controlScore, dataScore: capsule.dataScore, stages: campaignPlan },
+      createdAt: now,
+      updatedAt: now
+    });
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: 'Aix 控制战役已编排', detail: { scope: 'aix-campaign', itemId: id, controlScore: capsule.controlScore, stages: campaignPlan.map(step => step.title) }, createdAt: now });
+    message.success('Aix 控制战役已写入今日事项');
   }
 
   async function portableBackup() {
@@ -184,6 +235,28 @@ export default function AixPage() {
           <Button icon={<BranchesOutlined />} onClick={() => nav(ROUTES.AGENT)} style={{ borderRadius: 12 }}>进入 Agent 中枢</Button>
         </Space>
         {answer ? <Alert type="success" showIcon message="Aix 输出" description={<Typography.Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}>{answer}</Typography.Paragraph>} style={{ marginTop: 16, borderRadius: 12 }} /> : null}
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}><BranchesOutlined style={{ color: accent }} /><Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Aix 控制战役编排器</Typography.Title></Space>
+        <Typography.Paragraph style={{ color: subColor }}>把今日事项、逾期债务、目标风险、习惯中断和复习压力合成四阶段战役；离线可直接生成本地事项，有 API 时再由 Aix 注入策略灵魂。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {campaignPlan.map(step => <Col xs={24} md={12} xl={6} key={step.key}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${step.color}12` : `${step.color}08`, border: `1px solid ${step.color}22` }}>
+              <Space wrap><Typography.Text strong style={{ color: titleColor }}>{step.title}</Typography.Text><Tag color="blue">压力 {step.score}</Tag></Space>
+              <Progress percent={step.score} showInfo={false} strokeColor={step.color} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0 4px' }}>{step.desc}</Typography.Paragraph>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>动作：{step.action}</div>
+            </div>
+          </Col>)}
+        </Row>
+        <Space wrap style={{ marginTop: 14 }}>
+          <Button type="primary" onClick={createCampaign} style={{ borderRadius: 12 }}>一键写入今日战役</Button>
+          <Tag color="green">写入 Item 子任务</Tag>
+          <Tag color="purple">写入 eventLog 审计</Tag>
+          <Tag color="gold">可在 Agent 中枢恢复</Tag>
+        </Space>
+        {campaignLogs.length ? <div style={{ marginTop: 12 }}>{campaignLogs.map(log => <div key={log.id} style={{ color: subColor, lineHeight: 1.8 }}>· {log.message}</div>)}</div> : null}
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

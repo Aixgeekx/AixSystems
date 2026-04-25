@@ -45,6 +45,13 @@ export default function DesktopWidgetPage() {
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
   const memUsage = snapshot ? Math.round((1 - snapshot.freeMem / snapshot.totalMem) * 100) : 0;
   const diskUsage = snapshot ? Math.round(snapshot.diskUsed / snapshot.diskTotal * 100) : 0;
+  const healthScore = Math.max(0, Math.min(100, 100 - Math.max(0, memUsage - 65) - Math.max(0, diskUsage - 70) - (controlScan?.startup?.length || 0) * 2 - Math.max(0, (controlScan?.ports?.length || 0) - 12) - Math.min(18, controlScan?.temp?.oldCount || 0)));
+  const rehearsalSteps = [
+    { title: '性能降压', value: memUsage, action: memUsage > 75 ? '先识别高占用进程，只读观察不结束进程。' : '性能压力可控，保持观察。', color: '#3b82f6' },
+    { title: '磁盘保护', value: diskUsage, action: diskUsage > 75 ? '先导出备份，再定位旧安装包和临时文件。' : '磁盘空间健康，继续监控 data 目录。', color: '#10b981' },
+    { title: '启动瘦身', value: Math.min(100, (controlScan?.startup?.length || 0) * 12), action: `发现 ${controlScan?.startup?.length || 0} 个自启入口，只生成清单不修改。`, color: '#f59e0b' },
+    { title: '端口巡检', value: Math.min(100, (controlScan?.ports?.length || 0) * 4), action: `采样 ${controlScan?.ports?.length || 0} 个端口占用，定位异常服务。`, color: '#06b6d4' }
+  ];
   const electron = isElectron();
 
   async function refreshSnapshot() {
@@ -87,6 +94,32 @@ export default function DesktopWidgetPage() {
         <Typography.Paragraph style={{ marginBottom: 0, color: 'rgba(226,232,240,0.84)' }}>
           逐步扩展电脑配置概览、性能监控、隐私清理和工具大全，先以安全只读方式接入桌面原生能力。
         </Typography.Paragraph>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <SafetyCertificateOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>桌面超级管理器 · 健康演练</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>把 CPU/内存/磁盘、自启、临时目录、端口和 PowerShell 白名单结果压成健康分，先演练、再确认、后执行，保持电脑控制安全边界。</Typography.Paragraph>
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} md={6}>
+            <Progress type="dashboard" percent={electron ? healthScore : 0} strokeColor={healthScore >= 80 ? '#10b981' : healthScore >= 55 ? '#f59e0b' : '#ef4444'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+            <Typography.Text style={{ color: subColor }}>桌面健康分</Typography.Text>
+          </Col>
+          <Col xs={24} md={18}>
+            <Row gutter={[10, 10]}>
+              {rehearsalSteps.map(step => <Col xs={24} md={12} key={step.title}>
+                <div style={{ padding: 12, borderRadius: 14, background: isDark ? `${step.color}10` : `${step.color}08`, border: `1px solid ${step.color}22` }}>
+                  <Space wrap><Typography.Text strong style={{ color: titleColor }}>{step.title}</Typography.Text><Tag color="blue">压力 {step.value}</Tag></Space>
+                  <Progress percent={step.value} showInfo={false} strokeColor={step.color} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+                  <div style={{ color: subColor, fontSize: 12 }}>{step.action}</div>
+                </div>
+              </Col>)}
+            </Row>
+          </Col>
+        </Row>
+        <Alert type="info" showIcon message="健康演练只读生成建议，不自动清理、不结束进程、不改自启；高风险动作必须另走确认、备份、回滚。" style={{ borderRadius: 12, marginTop: 14 }} />
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

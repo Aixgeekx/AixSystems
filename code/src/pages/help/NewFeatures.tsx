@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.34.0', date: '2026-04-25', items: [
+    'Aix 控制战役编排器新增四阶段本地战役，可把今日压力一键写入事项子任务和审计日志',
+    'Agent 恢复驾驶舱新增分支队列、权限阶段、恢复进度和下一步动作视图',
+    '桌面超级管理器健康演练新增健康分、性能/磁盘/自启/端口只读演练和安全边界提示'
+  ]},
   { ver: '0.33.0', date: '2026-04-25', items: [
     '插件广场二期新增技能详情、输入输出 Schema、版本归档和本地插件包导入雏形',
     'PowerShell 白名单工作流新增预设风险评分、执行前确认、备份说明和回滚说明',

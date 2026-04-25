@@ -1,31 +1,26 @@
-# AixSystems v0.33.0 进度
+# AixSystems v0.34.0 进度
 
 ## 当前目标
-持续迭代增强功能，主导思想：**黑科技全能系统，个人成长和控制**。本轮把 v0.32.0 的 Aix 主入口继续升级为可扩展插件系统、安全 PowerShell 白名单工作流和本地代理中心，保持离线可用、便携优先、API 注入灵魂。
+持续迭代增强功能，主导思想：**黑科技全能系统，个人成长和控制**。本轮把 v0.33.0 的 Aix 插件/代理/PowerShell 基础继续升级为可执行的个人控制战役、可恢复 Agent 编排和桌面超级管理器健康演练，保持离线可用、便携优先、API 作为灵魂增强。
 
-## 计划实现（本轮 v0.33.0）
-- [x] 插件广场二期：插件详情、输入/输出 schema、版本归档、本地安装包导入雏形
-- [x] PowerShell 白名单工作流：预设命令风险评分、执行前确认、备份计划、回滚计划和审计记录
-- [x] Aix 本地代理中心：OpenAI / Claude / Ollama 协议能力卡、Provider 自动探活、失败自动切换建议
-- [x] 版本号统一到 0.33.0：`code/package.json`、`desktop/package.json`、`APP_VERSION`、lockfile 顶层版本
-- [x] 应用内更新日志新增 v0.33.0
-- [x] README、code/README、results/使用说明、Aix_tools/readme 同步 v0.33.0
+## 计划实现（本轮 v0.34.0）
+- [x] Aix 控制战役编排器：基于今日事项、逾期、目标风险、习惯中断、复习压力生成多阶段可执行战役，并一键写入本地事项与审计日志
+- [x] Agent 恢复驾驶舱：展示 Agent 分支队列、权限阶段、恢复状态和下一步动作，支持从 eventLog / Item 状态恢复执行视图
+- [x] 桌面超级管理器健康演练：融合 CPU/内存/磁盘、自启、临时目录、端口和 PowerShell 输出，生成健康分、清理演练和安全边界
+- [x] 版本号统一到 0.34.0：`code/package.json`、`desktop/package.json`、`APP_VERSION`、lockfile 顶层版本
+- [x] 应用内更新日志新增 v0.34.0
+- [x] README、code/README、results/使用说明、Aix_tools/readme 同步 v0.34.0
 
 ## 待完成
 - [x] 运行 Vitest 与前端构建
 - [x] 桌面安装包构建
-- [x] 提交并推送 `origin main`
-- [x] 创建并推送 tag：`v0.33.0`
-- [x] 创建 GitHub Release 并上传 `AixSystems-0.33.0-Setup.exe` 与 blockmap
-
-## 发布结果
-- Commit：`6b302e1 feat: AixSystems v0.33.0 - add plugin and proxy workflows`
-- Release：https://github.com/Aixgeekx/AixSystems/releases/tag/v0.33.0
-- 资产：`AixSystems-0.33.0-Setup.exe`、`AixSystems-0.33.0-Setup.exe.blockmap`
+- [ ] 提交并推送 `origin main`
+- [ ] 创建并推送 tag：`v0.34.0`
+- [ ] 创建 GitHub Release 并上传 `AixSystems-0.34.0-Setup.exe` 与 blockmap
 
 ## 新增/修改重点
-- `code/src/pages/aix/index.tsx` — 插件广场二期和 Aix 本地代理中心
-- `code/src/pages/desktop/index.tsx` — PowerShell 白名单工作流 UI
-- `desktop/main.cjs`、`desktop/preload.cjs`、`code/src/utils/electron.ts` — 白名单预设元信息与安全执行桥
-- `code/src/utils/aixModel.ts`、`code/src/stores/settingsStore.ts` — Provider 探活和本地代理能力扩展
+- `code/src/pages/aix/index.tsx` — Aix 控制战役编排器
+- `code/src/pages/agent/index.tsx` — Agent 恢复驾驶舱
+- `code/src/pages/desktop/index.tsx` — 桌面超级管理器健康演练
+- `code/src/config/constants.ts`、`code/package.json`、`desktop/package.json`、lockfile — 版本同步
 - `README.md`、`code/README.md`、`results/使用说明.md`、`Aix_tools/readme.md` — 文档同步
