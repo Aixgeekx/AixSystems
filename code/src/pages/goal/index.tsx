@@ -34,18 +34,22 @@ export default function GoalPage() {
 
   const activeGoals = goals.filter(g => g.status === 'active');
   const completedGoals = goals.filter(g => g.status === 'completed');
-  const riskGoals = activeGoals.map(goal => {
+  const goalInsights = activeGoals.map(goal => {
     const ms = goal.milestones || [];
+    const remaining = ms.filter(m => !m.done);
     const progress = ms.length ? Math.round(ms.filter(m => m.done).length / ms.length * 100) : 0;
     const daysLeft = goal.targetDate ? dayjs(goal.targetDate).diff(dayjs().startOf('day'), 'day') : 999;
     const expected = goal.targetDate ? Math.min(100, Math.max(0, Math.round((Date.now() - goal.createdAt) / Math.max(1, goal.targetDate - goal.createdAt) * 100))) : 0;
     const level = daysLeft < 0 ? '已逾期' : goal.targetDate && progress + 20 < expected ? '高风险' : goal.targetDate && daysLeft <= 7 && progress < 80 ? '临期' : '稳定';
     const gap = Math.max(0, expected - progress);
-    const action = ms.find(m => !m.done)?.title || '补充下一个可执行里程碑';
+    const action = remaining[0]?.title || '补充下一个可执行里程碑';
+    const cadence = daysLeft > 0 && ms.length ? `建议每 ${Math.max(1, Math.floor(daysLeft / Math.max(1, remaining.length)))} 天完成 1 个里程碑` : '建议今天立即收口一个里程碑';
+    const todayPush = remaining.length ? `今天优先推进「${remaining[0].title}」` : '今天做一次目标复盘';
     const reason = daysLeft < 0 ? '截止日已过但目标未完成' : gap > 0 ? `进度落后期望 ${gap}%` : `距离截止只剩 ${daysLeft} 天`;
-    const cadence = daysLeft > 0 && ms.length ? `建议每 ${Math.max(1, Math.floor(daysLeft / Math.max(1, ms.filter(m => !m.done).length)))} 天完成 1 个里程碑` : '建议今天立即收口一个里程碑';
-    return { goal, progress, daysLeft, expected, level, reason, cadence, action };
-  }).filter(item => item.level !== '稳定').slice(0, 3);
+    return { goal, progress, daysLeft, expected, level, reason, cadence, action, todayPush };
+  });
+  const riskGoals = goalInsights.filter(item => item.level !== '稳定').slice(0, 3);
+  const actionGoals = goalInsights.filter(item => item.daysLeft <= 14 || item.progress < 60).slice(0, 3);
 
   async function save() {
     if (!title.trim()) return message.warning('目标标题不能为空');
@@ -285,6 +289,25 @@ export default function GoalPage() {
           </Col>
         </Row>
       </Card>
+
+      {actionGoals.length > 0 && (
+        <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+          <Typography.Text style={{ color: subColor }}>目标推进建议器</Typography.Text>
+          <Typography.Title level={4} style={{ margin: '4px 0 14px', color: titleColor }}>今天该推进什么</Typography.Title>
+          <Row gutter={[12, 12]}>
+            {actionGoals.map(item => (
+              <Col xs={24} md={8} key={item.goal.id}>
+                <div style={{ padding: 14, borderRadius: 18, background: `${item.goal.color}12`, border: `1px solid ${item.goal.color}33`, height: '100%' }}>
+                  <Typography.Text strong style={{ color: titleColor }}>{item.goal.title}</Typography.Text>
+                  <Typography.Paragraph style={{ margin: '8px 0 6px', color: subColor, fontSize: 12 }}>{item.todayPush}</Typography.Paragraph>
+                  <Tag color="blue" style={{ borderRadius: 6 }}>{item.cadence}</Tag>
+                  <div style={{ marginTop: 8, color: item.goal.color, fontWeight: 700, fontSize: 12 }}>{item.progress}% 已完成</div>
+                </div>
+              </Col>
+            ))}
+          </Row>
+        </Card>
+      )}
 
       {riskGoals.length > 0 && (
         <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

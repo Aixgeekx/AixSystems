@@ -69,7 +69,11 @@ export default function ReviewCenterPage() {
       total: heatmap.reduce((sum, day) => sum + day.count, 0),
       highDays: heatmap.filter(day => day.count >= 3).length,
       peak,
-      advice: peak?.count >= 6 ? '峰值日压力过高，建议提前 1-2 天拆分复习。' : heatmap.some(day => day.count >= 3) ? '存在高压日，建议把易混内容提前巩固。' : '未来 30 天复习负载平稳。'
+      advice: peak?.count >= 6 ? '峰值日压力过高，建议提前 1-2 天拆分复习。' : heatmap.some(day => day.count >= 3) ? '存在高压日，建议把易混内容提前巩固。' : '未来 30 天复习负载平稳。',
+      plan: heatmap.filter(day => day.count >= 3).slice(0, 3).map(day => ({
+        ...day,
+        strategy: day.count >= 6 ? '提前两天完成一半复习，避免当天爆发' : '前一天先处理最难内容，当天只保留轻量回顾'
+      }))
     };
 
     return { todayPending, overdue, upcoming, recentFired, completed, mastered, fuzzy, recommendedDays, byDay, heatmap, pressure, total: reviewQueue.length };
@@ -241,6 +245,16 @@ export default function ReviewCenterPage() {
           </Space>
         </div>
         <Typography.Paragraph style={{ marginTop: 0, color: subColor }}>{dashboard?.pressure.advice}</Typography.Paragraph>
+        {dashboard?.pressure.plan?.length ? (
+          <Space direction="vertical" size={8} style={{ width: '100%', marginBottom: 12 }}>
+            {dashboard.pressure.plan.map((day: any) => (
+              <div key={day.date} style={{ padding: 10, borderRadius: 14, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)', border: `1px solid ${cardBorder}` }}>
+                <Typography.Text strong style={{ color: titleColor }}>{day.date} · {day.count} 条</Typography.Text>
+                <div style={{ color: subColor, fontSize: 12, marginTop: 4 }}>{day.strategy}</div>
+              </div>
+            ))}
+          </Space>
+        ) : null}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(54px, 1fr))', gap: 8 }}>
           {dashboard?.heatmap.map(day => {
             const color = day.count >= 6 ? '#ef4444' : day.count >= 3 ? '#f59e0b' : day.count >= 1 ? '#22c55e' : '#94a3b8';

@@ -90,6 +90,8 @@ export default function HomePage() {
     const todayItems = activeItems.filter(item => item.startTime >= todayStart && item.startTime <= todayEnd);
     const done = todayItems.filter(item => item.completeStatus === 'done').length;
     const pending = todayItems.filter(item => item.completeStatus === 'pending').length;
+    const overdueItems = activeItems.filter(item => item.completeStatus !== 'done' && item.startTime < todayStart).length;
+    const weekItems = activeItems.filter(item => item.completeStatus !== 'done' && item.startTime >= todayStart && item.startTime <= dayjs().add(7, 'day').endOf('day').valueOf()).length;
     const pinnedNotes = memos.filter(memo => !memo.deletedAt && memo.pinned).slice(0, 4);
     const recentDiaries = diaries.filter(diary => !diary.deletedAt).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
     const focusMinutes = sessions.reduce((sum, session) => sum + session.actualMs / 60_000, 0);
@@ -104,6 +106,17 @@ export default function HomePage() {
       return !last || dayjs().startOf('day').diff(dayjs(last.date).startOf('day'), 'day') >= 3;
     }).length;
     const reviewPressureCount = queue.filter(entry => entry.curveDay && !entry.completedAt && entry.fireAt >= todayStart && entry.fireAt <= dayjs().add(7, 'day').endOf('day').valueOf()).length;
+    const overloadSignals = [
+      { label: '今日待处理', value: pending, limit: 6, color: '#38bdf8', path: ROUTES.TODAY_DAY },
+      { label: '逾期事项', value: overdueItems, limit: 3, color: '#ef4444', path: ROUTES.MATTER_ALL },
+      { label: '7天事项', value: weekItems, limit: 18, color: '#0ea5e9', path: ROUTES.TODAY_WEEK },
+      { label: '目标风险', value: riskGoalCount, limit: 2, color: '#f59e0b', path: ROUTES.GOAL },
+      { label: '习惯中断', value: habitBreakCount, limit: 2, color: '#10b981', path: ROUTES.HABIT },
+      { label: '复习压力', value: reviewPressureCount, limit: 8, color: '#8b5cf6', path: ROUTES.REVIEW }
+    ].map(signal => ({ ...signal, percent: Math.min(100, Math.round(signal.value / signal.limit * 100)) }));
+    const overloadScore = Math.round(overloadSignals.reduce((sum, signal) => sum + signal.percent, 0) / overloadSignals.length);
+    const overloadLevel = overloadScore >= 72 ? '高压' : overloadScore >= 42 ? '紧绷' : '可控';
+    const overloadAdvice = overloadScore >= 72 ? '先清逾期与今日待处理，再拆分目标和复习压力。' : overloadScore >= 42 ? '建议今天压缩新增事项，优先完成最短闭环。' : '当前控制负载可控，可以保持正常推进。';
     const alerts = [
       { label: '目标风险', value: riskGoalCount, color: '#ef4444', path: ROUTES.GOAL },
       { label: '习惯中断', value: habitBreakCount, color: '#f59e0b', path: ROUTES.HABIT },
@@ -122,7 +135,11 @@ export default function HomePage() {
       sessions,
       focusMinutes,
       lastBackup,
-      alerts
+      alerts,
+      overloadSignals,
+      overloadScore,
+      overloadLevel,
+      overloadAdvice
     };
   }, []);
 
@@ -727,6 +744,31 @@ export default function HomePage() {
           </div>
         </Card>
       ) : null}
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div>
+            <Typography.Text style={{ color: subColor }}>事项过载雷达</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '4px 0 4px', color: titleColor }}>今日控制负载 · {dashboard?.overloadLevel || '可控'}</Typography.Title>
+            <Typography.Text style={{ color: subColor }}>{dashboard?.overloadAdvice || '当前控制负载可控，可以保持正常推进。'}</Typography.Text>
+          </div>
+          <Progress type="circle" percent={dashboard?.overloadScore || 0} size={82} strokeColor={(dashboard?.overloadScore || 0) >= 72 ? '#ef4444' : (dashboard?.overloadScore || 0) >= 42 ? '#f59e0b' : '#22c55e'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'} />
+        </div>
+        <Row gutter={[10, 10]}>
+          {dashboard?.overloadSignals.map((signal: any) => (
+            <Col xs={24} sm={12} xl={4} key={signal.label}>
+              <button type="button" onClick={() => nav(signal.path)} className="hover-lift" style={{ width: '100%', minHeight: 112, textAlign: 'left', cursor: 'pointer', borderRadius: 18, padding: 12, background: tintedBg(signal.color), border: `1px solid ${signal.color}44`, transition: 'all 0.3s ease' }}>
+                <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <Typography.Text strong style={{ color: titleColor, fontSize: 12 }}>{signal.label}</Typography.Text>
+                  <Tag style={{ marginInlineEnd: 0, borderRadius: 6 }} color={signal.percent >= 80 ? 'red' : signal.percent >= 50 ? 'gold' : 'green'}>{signal.value}</Tag>
+                </Space>
+                <Progress percent={signal.percent} showInfo={false} strokeColor={signal.color} trailColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'} style={{ margin: '12px 0 4px' }} />
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>阈值 {signal.limit} · {signal.percent >= 80 ? '需要削峰' : signal.percent >= 50 ? '保持警惕' : '负载正常'}</Typography.Text>
+              </button>
+            </Col>
+          ))}
+        </Row>
+      </Card>
 
       <Row gutter={[16, 16]}>
         {/* 快捷入口 */}
