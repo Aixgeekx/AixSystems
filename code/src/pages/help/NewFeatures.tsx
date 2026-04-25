@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.39.0', date: '2026-04-25', items: [
+    '数据中心新增数据迁移胶囊，按备份新鲜度、模块覆盖、记录规模和运行环境生成换机清单',
+    'Aix 中枢新增技能自检矩阵，按启用状态、数据输入、Provider、权限边界和日志证据给技能打分',
+    '桌面超级管理器新增执行前预检舱，在 PowerShell 白名单执行前汇总系统压力、风险、备份和回滚'
+  ]},
   { ver: '0.38.0', date: '2026-04-25', items: [
     'Agent 中枢新增自治队列，按风险、权限阶段、恢复进度和停滞时间自动排序待续跑分支',
     '成长仪表盘新增 90 天控制推演，生成 30/60/90 天控制力路径且不读取日记正文',

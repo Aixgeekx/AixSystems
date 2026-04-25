@@ -149,6 +149,17 @@ export default function AixPage() {
       next: index === 0 ? `读取 ${capsule?.todayItems.length || 0} 个今日事项和 ${capsule?.reviewPressure || 0} 个复习压力` : index === 1 ? `调度 ${enabledSkillCount} 个已启用技能生成任务链` : index === 2 ? '高风险电脑/模型动作必须经过权限合约确认' : '写入 eventLog，必要时生成事项或备份'
     }));
   }, [aixApiUrl, capsule, enabledSkillCount]);
+  const skillAuditMatrix = useMemo(() => SKILLS.map(skill => {
+    const enabled = skillState?.[skill.key] !== false;
+    const providerNeed = skill.key === 'provider-dispatch' || skill.key === 'focus-operator';
+    const desktopNeed = skill.key === 'desktop-readonly';
+    const dataReady = capsule ? skill.key === 'portable-capsule' ? capsule.dataScore : skill.key === 'growth-control' ? Math.max(0, 100 - capsule.goalRisk * 16 - capsule.brokenHabits * 12) : skill.key === 'review-peak' ? Math.min(100, capsule.reviewPressure * 10 + 45) : 78 : 0;
+    const providerReady = providerNeed ? (aixApiUrl || failoverTarget ? 96 : 38) : 82;
+    const permissionReady = desktopNeed || skill.risk !== '低风险' ? 68 : 96;
+    const logReady = skillLogs.some(log => log.detail?.skill === skill.key) ? 100 : 62;
+    const score = Math.round((dataReady * 0.36 + providerReady * 0.24 + permissionReady * 0.22 + logReady * 0.18) * (enabled ? 1 : 0.72));
+    return { ...skill, enabled, score, fix: !enabled ? '先启用技能' : score >= 82 ? '保持当前链路' : providerNeed && !aixApiUrl && !failoverTarget ? '配置 Provider 或官方回退' : desktopNeed ? '在桌面版执行白名单预检' : '执行一次技能并写入日志' };
+  }), [aixApiUrl, capsule, failoverTarget, skillLogs, skillState]);
 
   async function setSkill(key: string, enabled: boolean) {
     const next = { ...(skillState || {}), [key]: enabled };
@@ -281,6 +292,21 @@ export default function AixPage() {
           <Button icon={<BranchesOutlined />} onClick={() => nav(ROUTES.AGENT)} style={{ borderRadius: 12 }}>进入 Agent 中枢</Button>
         </Space>
         {answer ? <Alert type="success" showIcon message="Aix 输出" description={<Typography.Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}>{answer}</Typography.Paragraph>} style={{ marginTop: 16, borderRadius: 12 }} /> : null}
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}><SafetyCertificateOutlined style={{ color: accent }} /><Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Aix 技能自检矩阵</Typography.Title></Space>
+        <Typography.Paragraph style={{ color: subColor }}>按启用状态、数据输入、Provider、权限边界和日志证据给每个技能打分，优先修复影响自主控制的断点。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {skillAuditMatrix.map(skill => <Col xs={24} md={12} xl={8} key={skill.key}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${skill.color}12` : `${skill.color}08`, border: `1px solid ${skill.color}24` }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}><Typography.Text strong style={{ color: titleColor }}>{skill.name}</Typography.Text><Tag color={skill.score >= 82 ? 'green' : skill.score >= 58 ? 'gold' : 'red'}>健康 {skill.score}</Tag></Space>
+              <Progress percent={skill.score} showInfo={false} strokeColor={skill.color} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} style={{ margin: '10px 0 6px' }} />
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>输入：{skill.input}</div>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>修复：{skill.fix}</div>
+            </div>
+          </Col>)}
+        </Row>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

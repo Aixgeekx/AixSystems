@@ -51,6 +51,21 @@ export default function DataIOPage() {
   const disasterScore = Math.round(disasterRisks.reduce((sum, risk) => sum + risk.value, 0) / disasterRisks.length);
   const sovereigntyScore = Math.min(100, 60 + (lastBackup?.value ? 20 : 0) + (selectedModules.length === dataModules.length ? 10 : 20));
   const disasterLevel = disasterScore >= 85 ? '可迁移' : disasterScore >= 65 ? '需演练' : '高风险';
+  const migrationCapsule = {
+    readiness: Math.round((disasterScore + sovereigntyScore + coverage + (electron ? 96 : 74)) / 4),
+    packageName: `AixSystems-migration-${new Date().toISOString().slice(0, 10)}.json`,
+    checklist: [
+      `导出 ${selectedModules.length === dataModules.length ? '完整' : '选择性'}迁移包，覆盖 ${selectedTables.length} 张表 / ${selectedRows} 条记录`,
+      electron ? '复制 data 目录和安装包到目标电脑' : '把浏览器下载 JSON 保存到独立 U 盘或云盘目录',
+      '在目标环境先安装 v0.39.0，再执行导入恢复并核对 manifest',
+      hoursSinceBackup <= 24 ? '备份足够新鲜，可直接演练恢复' : '先生成一次新备份再迁移，避免迁移旧状态'
+    ],
+    risks: [
+      coverage < 100 ? '当前不是完整模块覆盖，迁移后可能缺少部分上下文。' : '模块覆盖完整，适合整机迁移。',
+      totalRows > 10000 ? '记录规模较大，目标电脑首次导入需要预留时间。' : '记录规模可控，适合快速验证。',
+      electron ? '桌面版可保留 data 目录便携迁移。' : '浏览器版需手动保管下载文件，避免清理浏览器数据。'
+    ]
+  };
 
   async function onBackup() {
     const result = await downloadBackup();
@@ -153,6 +168,30 @@ export default function DataIOPage() {
           ))}
         </Row>
         <Alert type={disasterScore >= 85 ? 'success' : disasterScore >= 65 ? 'warning' : 'error'} showIcon message="演练步骤" description={`1. 生成完整备份；2. 导出关键模块；3. ${electron ? '打开 data 目录确认文件存在' : '把下载 JSON 复制到独立目录'}；4. 在测试环境执行导入恢复。`} style={{ marginTop: 14, borderRadius: 12 }} />
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div>
+            <Typography.Text style={{ color: subColor }}>数据迁移胶囊</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '4px 0 0', color: titleColor }}>换机准备度 · {migrationCapsule.readiness}</Typography.Title>
+          </div>
+          <Tag color={migrationCapsule.readiness >= 85 ? 'green' : migrationCapsule.readiness >= 65 ? 'gold' : 'red'} style={{ height: 28, display: 'flex', alignItems: 'center' }}>{migrationCapsule.packageName}</Tag>
+        </div>
+        <Row gutter={[12, 12]}>
+          <Col xs={24} lg={14}>
+            <div style={{ padding: 14, borderRadius: 16, background: tintedBg('#14b8a6'), border: '1px solid rgba(20,184,166,0.24)' }}>
+              <Typography.Text strong style={{ color: titleColor }}>迁移步骤</Typography.Text>
+              {migrationCapsule.checklist.map((item, index) => <div key={item} style={{ color: subColor, fontSize: 12, lineHeight: 1.9, marginTop: index ? 2 : 8 }}>#{index + 1} {item}</div>)}
+            </div>
+          </Col>
+          <Col xs={24} lg={10}>
+            <div style={{ padding: 14, borderRadius: 16, background: tintedBg('#f59e0b'), border: '1px solid rgba(245,158,11,0.24)' }}>
+              <Typography.Text strong style={{ color: titleColor }}>风险提示</Typography.Text>
+              {migrationCapsule.risks.map(item => <div key={item} style={{ color: subColor, fontSize: 12, lineHeight: 1.9, marginTop: 6 }}>· {item}</div>)}
+            </div>
+          </Col>
+        </Row>
       </Card>
 
       <Row gutter={[16, 16]}>

@@ -53,6 +53,15 @@ export default function DesktopWidgetPage() {
     { title: '启动瘦身', value: Math.min(100, (controlScan?.startup?.length || 0) * 12), action: `发现 ${controlScan?.startup?.length || 0} 个自启入口，只生成清单不修改。`, color: '#f59e0b' },
     { title: '端口巡检', value: Math.min(100, (controlScan?.ports?.length || 0) * 4), action: `采样 ${controlScan?.ports?.length || 0} 个端口占用，定位异常服务。`, color: '#06b6d4' }
   ];
+  const preflight = {
+    score: Math.max(0, Math.min(100, healthScore - (confirmingPreset?.risk || 0) * 0.45 + (confirmingPreset ? 8 : 0))),
+    checks: [
+      { label: '系统压力', value: Math.max(memUsage, diskUsage), ok: Math.max(memUsage, diskUsage) < 82, hint: `内存 ${memUsage}% / 磁盘 ${diskUsage}%` },
+      { label: '预设风险', value: confirmingPreset?.risk || 0, ok: !confirmingPreset || confirmingPreset.risk <= 25, hint: confirmingPreset ? `${confirmingPreset.title} · ${confirmingPreset.level}` : '尚未选择预设' },
+      { label: '备份说明', value: confirmingPreset ? 100 : 40, ok: !!confirmingPreset?.backup, hint: confirmingPreset?.backup || '选择预设后显示备份说明' },
+      { label: '回滚说明', value: confirmingPreset ? 100 : 40, ok: !!confirmingPreset?.rollback, hint: confirmingPreset?.rollback || '选择预设后显示回滚说明' }
+    ]
+  };
   const electron = isElectron();
 
   async function refreshSnapshot() {
@@ -279,9 +288,13 @@ export default function DesktopWidgetPage() {
         </Row>
         <Modal open={!!confirmingPreset} title="确认执行 PowerShell 白名单预设" okText="确认执行" cancelText="取消" onCancel={() => setConfirmingPreset(null)} onOk={() => confirmingPreset && runPowerShell(confirmingPreset.key)}>
           <Space direction="vertical" size={8} style={{ width: '100%' }}>
-            <Alert type="info" showIcon message={`${confirmingPreset?.title || ''} · ${confirmingPreset?.level || ''} · 风险 ${confirmingPreset?.risk || 0}`} />
-            <Typography.Text>备份计划：{confirmingPreset?.backup}</Typography.Text>
-            <Typography.Text>回滚计划：{confirmingPreset?.rollback}</Typography.Text>
+            <Alert type={preflight.score >= 75 ? 'success' : preflight.score >= 52 ? 'warning' : 'error'} showIcon message={`执行前预检分 ${Math.round(preflight.score)} · ${confirmingPreset?.title || ''}`} />
+            {preflight.checks.map(check => (
+              <div key={check.label} style={{ padding: 10, borderRadius: 12, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)' }}>
+                <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}><Typography.Text>{check.label}</Typography.Text><Tag color={check.ok ? 'green' : 'gold'}>{check.ok ? '通过' : '需确认'}</Tag></Space>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{check.hint}</Typography.Text>
+              </div>
+            ))}
             <Typography.Text type="secondary">AixSystems 只执行内置只读脚本，不接收任意 PowerShell 命令。</Typography.Text>
           </Space>
         </Modal>
