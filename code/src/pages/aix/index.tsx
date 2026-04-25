@@ -202,6 +202,19 @@ export default function AixPage() {
     const action = skill.key === 'desktop-readonly' ? '生成 PowerShell 7 白名单预检卡，不执行任意命令' : skill.key === 'provider-dispatch' ? '检查 Provider 健康和故障转移，不暴露 API Key' : skill.key === 'portable-capsule' ? '生成备份与迁移清单草案' : `用 ${capsule?.controlToken.id || 'AIX-CORE'} 生成 ${skill.output}`;
     return { ...skill, priority, pressure: Math.round(Math.min(100, pressure)), approval, action, dispatch: `openclow://${skill.key}?token=${capsule?.controlToken.id || 'AIX-CORE'}&mode=dry-run`, evidence: skillLogs.find(log => log.detail?.skill === skill.key)?.message || '等待 eventLog 证据' };
   }).sort((a, b) => b.priority - a.priority), [aixApiUrl, capsule, failoverTarget, skillAuditMatrix, skillLogs]);
+  const autoCampaignPack = useMemo(() => {
+    const topSkills = skillDispatchPlan.slice(0, 3);
+    const score = Math.min(100, Math.round((capsule?.controlToken.score || 0) * 0.34 + topSkills.reduce((sum, skill) => sum + skill.priority, 0) / Math.max(1, topSkills.length) * 0.46 + (campaignLogs.length ? 12 : 0)));
+    return {
+      id: `AIX-WAR-${dayjs().format('YYYYMMDD')}-${score}`,
+      score,
+      mode: 'dry-run-only',
+      token: capsule?.controlToken.id || 'AIX-CORE',
+      title: capsule?.controlToken.command || '等待控制令牌',
+      tasks: topSkills.map(skill => ({ title: `${skill.name}：${skill.action}`, risk: skill.risk, dispatch: skill.dispatch })),
+      resume: `Claude Code 续跑：读取 ${capsule?.controlToken.id || 'AIX-CORE'}、skillDispatchPlan 和 eventLog，只生成战役包草案，确认后再写入 Item。`
+    };
+  }, [campaignLogs.length, capsule, skillDispatchPlan]);
 
   async function setSkill(key: string, enabled: boolean) {
     const next = { ...(skillState || {}), [key]: enabled };
@@ -366,6 +379,22 @@ export default function AixPage() {
           </Col>)}
         </Row>
         <Alert type="info" showIcon message="所有 openclow 调度均为 dry-run，不执行未知插件代码，不读取日记正文，不开放任意 PowerShell。" style={{ borderRadius: 12, marginTop: 14 }} />
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}><BranchesOutlined style={{ color: accent }} /><Typography.Title level={4} style={{ margin: 0, color: titleColor }}>本地控制战役自动编排器</Typography.Title></Space>
+        <Typography.Paragraph style={{ color: subColor }}>把总控令牌、openclow dry-run 调度和 eventLog 证据压成战役包草案；默认只生成子任务建议，不读取日记正文，不自动执行插件。</Typography.Paragraph>
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} md={6}>
+            <Progress type="dashboard" percent={autoCampaignPack.score} strokeColor={autoCampaignPack.score >= 78 ? '#10b981' : autoCampaignPack.score >= 52 ? '#f59e0b' : '#ef4444'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+            <Typography.Text style={{ color: subColor }}>{autoCampaignPack.id}</Typography.Text>
+          </Col>
+          <Col xs={24} md={18}>
+            <Space wrap style={{ marginBottom: 10 }}><Tag color="blue">{autoCampaignPack.mode}</Tag><Tag color="purple">{autoCampaignPack.token}</Tag><Tag color="gold">{autoCampaignPack.title}</Tag></Space>
+            <Row gutter={[10, 10]}>{autoCampaignPack.tasks.map(task => <Col xs={24} lg={8} key={task.dispatch}><div style={{ height: '100%', padding: 12, borderRadius: 14, background: isDark ? 'rgba(16,185,129,0.10)' : 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.22)' }}><Typography.Text strong style={{ color: titleColor }}>{task.title}</Typography.Text><div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>风险：{task.risk}</div><div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>{task.dispatch}</div></div></Col>)}</Row>
+            <Alert type="info" showIcon message={autoCampaignPack.resume} style={{ borderRadius: 12, marginTop: 12 }} />
+          </Col>
+        </Row>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

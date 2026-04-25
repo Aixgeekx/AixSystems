@@ -68,6 +68,13 @@ export default function AgentPage() {
     const priority = Math.min(100, Math.round((RISK_WEIGHT[risk] || 30) * 0.34 + (100 - percent) * 0.38 + (100 - workflowScore) * 0.28));
     return { task, percent, risk, workflowScore, breakpoint, priority, resume: workflow.resume || `claude code cli 续跑：读取 ${task.title} 的 Item.extra 和未完成子任务，从 ${breakpoint} 断点继续。`, next: subtasks.find(item => !item.done)?.title || '归档执行证据' };
   }).sort((a, b) => b.priority - a.priority).slice(0, 5);
+  const evidenceBundle = cliResumeRadar.map(item => ({
+    title: item.task.title,
+    checkpoint: item.task.extra?.claudeWorkflow?.checkpoint || item.task.extra?.contract?.evidence || '等待证据写入',
+    resume: item.resume,
+    proof: `risk=${item.risk}; progress=${item.percent}%; breakpoint=${item.breakpoint}; priority=${item.priority}`,
+    exportText: `### ${item.task.title}\n- Checkpoint: ${item.task.extra?.claudeWorkflow?.checkpoint || '待补充'}\n- Resume: ${item.resume}\n- Proof: risk=${item.risk}; progress=${item.percent}%; breakpoint=${item.breakpoint}`
+  }));
 
   async function createAgentTask(template: typeof AGENT_TEMPLATES[number]) {
     const now = Date.now();
@@ -166,6 +173,22 @@ export default function AgentPage() {
             </div>
           </Col>) : <Col span={24}><Alert type="info" showIcon message="创建 Agent 分支后会生成 CLI 续跑雷达。" style={{ borderRadius: 12 }} /></Col>}
         </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <HistoryOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>CLI 续跑证据链打包</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>把 Checkpoint、Resume、风险和子任务进度打成可复制证据链，便于 Claude Code 断点恢复；只输出文本，不自动执行。</Typography.Paragraph>
+        <Space direction="vertical" size={10} style={{ width: '100%' }}>
+          {evidenceBundle.length ? evidenceBundle.map(item => <div key={item.title} style={{ padding: 14, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
+            <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}><Typography.Text strong style={{ color: titleColor }}>{item.title}</Typography.Text><Tag color="blue">可复制证据链</Tag></Space>
+            <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>Checkpoint：{item.checkpoint}</div>
+            <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>Resume：{item.resume}</div>
+            <pre style={{ margin: '8px 0 0', padding: 10, borderRadius: 12, whiteSpace: 'pre-wrap', color: titleColor, background: isDark ? 'rgba(0,0,0,0.22)' : 'rgba(15,23,42,0.04)' }}>{item.exportText}</pre>
+          </div>) : <Alert type="info" showIcon message="暂无可打包 Agent 证据链；创建 Agent 分支后会自动生成。" style={{ borderRadius: 12 }} />}
+        </Space>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>

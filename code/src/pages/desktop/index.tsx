@@ -78,6 +78,12 @@ export default function DesktopWidgetPage() {
     recovery: powershellResult.error ? '保留错误输出，切换只读预设或回到系统健康演练复查。' : '可把摘要映射为电脑管理 Agent 的证据线索，继续走确认/备份/回滚链路。',
     evidence: [`Preset ${powershellResult.preset || 'unknown'}`, `Shell ${powershellResult.shell || 'unknown'}`, `Hash ${powershellResult.hash || 'none'}`, `Duration ${powershellResult.durationMs || 0}ms`]
   } : null;
+  const ps7SelfHealSandbox = [
+    { title: '性能自愈预检', preset: 'processes', score: Math.max(0, 100 - memUsage), action: memUsage > 75 ? '只读查看高占用进程，生成关闭建议但不结束进程。' : '内存压力可控，只保留巡检证据。' },
+    { title: '网络自愈预检', preset: 'network', score: controlScan?.ports?.length ? Math.max(35, 100 - controlScan.ports.length * 3) : 72, action: '只读采集 IP、DNS 和端口线索，不重置网卡。' },
+    { title: '时间自愈预检', preset: 'clock', score: 86, action: '检查时区和时间服务状态，只输出校准建议。' },
+    { title: 'Hosts 自愈预检', preset: 'hosts', score: 78, action: '只读查看 hosts 摘要，标记可疑行但不写文件。' }
+  ];
   const electron = isElectron();
 
   async function refreshSnapshot() {
@@ -316,6 +322,24 @@ export default function DesktopWidgetPage() {
             <Space wrap>{replayBlackBox.evidence.map(item => <Tag key={item} color="blue">{item}</Tag>)}<Tag color="purple">Agent 证据线索</Tag><Tag color="green">可回放</Tag></Space>
           </Col>
         </Row> : <Alert type="info" showIcon message="执行一次白名单 PowerShell 预设后生成可回放黑匣子审计卡。" style={{ borderRadius: 12 }} />}
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <SafetyCertificateOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>PowerShell 7 自愈预检沙盒</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>把常见电脑问题映射到白名单只读预设，生成自愈前检查建议；所有动作仍需人工确认，且不开放任意命令。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {ps7SelfHealSandbox.map(item => <Col xs={24} md={12} xl={6} key={item.title}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? 'rgba(16,185,129,0.10)' : 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.22)' }}>
+              <Space wrap><Typography.Text strong style={{ color: titleColor }}>{item.title}</Typography.Text><Tag color="blue">{item.preset}</Tag></Space>
+              <Progress percent={item.score} showInfo={false} strokeColor="#10b981" trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0', fontSize: 12 }}>{item.action}</Typography.Paragraph>
+              <Button size="small" disabled={!electron} onClick={() => setConfirmingPreset(powerShellPresets.find(preset => preset.key === item.preset) || { key: item.preset, title: item.title, risk: 18, level: '只读预检', backup: '执行前记录自愈预检意图', rollback: '无需回滚' })} style={{ borderRadius: 10 }}>确认后预检</Button>
+            </div>
+          </Col>)}
+        </Row>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

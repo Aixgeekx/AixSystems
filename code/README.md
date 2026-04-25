@@ -37,10 +37,10 @@ npm run build && npm run preview     # 打包后预览
 | 备忘录 | 富文本 + 文件夹 + 置顶 + 回收站 |
 | 主题 | 27 款内置主题 + 自动日夜切换 + 亮度 / 模糊调节 + 自定义字体 |
 | 成长 | 成长仪表盘 / Aix 30 天成长模拟 / 90 天控制推演 / 跨模块关联洞察 / 智能周期报告 / 成长雷达图 / 成长分享卡 / 习惯追踪 / 习惯恢复计划 / 目标管理 / 目标推进建议器 / 目标风险预警详情 / 22 项成就徽章 / XP 等级 / 周期复盘 / 复习中心 / 复习压力热力图 / 复习压力摘要 / 复习削峰建议 / 复习完成态追踪 / 巩固回流 / 复习强度配置 / 复习智能推荐 / Markdown + HTML 成长报告导出 |
-| Aix 中枢 | 独立 Aix 主入口，融合 openclaw/openclow 技能生态、Claude Code Agent 专业流程和时光序私人数据；支持黑科技总控令牌、控制令牌到 openclow dry-run 技能调度器、控制战役编排、自进化路线图、技能任务图谱、技能自检矩阵、openclow 本地技能沙盒校验器、技能详情 / Schema、本地插件包归档、OpenAI/Claude/Ollama 代理中心；无 API 是离线全能系统工具，有 API 是有灵魂的黑科技系统 |
+| Aix 中枢 | 独立 Aix 主入口，融合 openclaw/openclow 技能生态、Claude Code Agent 专业流程和时光序私人数据；支持黑科技总控令牌、控制令牌到 openclow dry-run 技能调度器、本地控制战役自动编排器、控制战役编排、自进化路线图、技能任务图谱、技能自检矩阵、openclow 本地技能沙盒校验器、技能详情 / Schema、本地插件包归档、OpenAI/Claude/Ollama 代理中心；无 API 是离线全能系统工具，有 API 是有灵魂的黑科技系统 |
 | Aix 模型 | 系统设置可配置 API 地址 / API Key / 模型名，并支持 cc-switch 风格 Provider 预设、原子切换、健康检查、可信路由、故障转移、配置备份和官方登录回退 |
-| Agent 中枢 | 本地 Agent 任务分支、自治队列、Claude Code CLI 工作流交接舱、CLI 续跑雷达、权限确认、权限合约、恢复驾驶舱和恢复日志，联动个人成长、电脑管理和模型调度 |
-| 桌面端 | 浮动小窗 + Windows 超级管理器，桌面版可读取 CPU / 内存 / 磁盘状态，执行自启 / 临时目录 / 端口只读扫描，并内置 PowerShell 白名单预设、PowerShell 7 安全账本执行底座、控制回放黑匣子、应急工具箱、健康演练、风险评分、确认、备份和回滚说明 |
+| Agent 中枢 | 本地 Agent 任务分支、自治队列、Claude Code CLI 工作流交接舱、CLI 续跑雷达、CLI 续跑证据链打包、权限确认、权限合约、恢复驾驶舱和恢复日志，联动个人成长、电脑管理和模型调度 |
+| 桌面端 | 浮动小窗 + Windows 超级管理器，桌面版可读取 CPU / 内存 / 磁盘状态，执行自启 / 临时目录 / 端口只读扫描，并内置 PowerShell 白名单预设、PowerShell 7 安全账本执行底座、控制回放黑匣子、自愈预检沙盒、应急工具箱、健康演练、风险评分、确认、备份和回滚说明 |
 | 搜索 | 跨事项 / 日记 / 备忘录 |
 | 导入导出 | JSON 全量备份 + 选择性模块导出 + Manifest 清单 + 数据迁移胶囊 + 数据主权评分 (桌面版直写磁盘) |
 
@@ -53,6 +53,11 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 见 `../Aix_tools/readme.md` 和 `../results/使用说明.md`。
 
 ## 更新日志
+
+### v0.43.0 (2026-04-25)
+- 本地控制战役自动编排器：Aix 中枢把总控令牌、openclow dry-run 调度和 eventLog 证据压成战役包草案，不读取日记正文。
+- Claude Code CLI 续跑证据链打包：Agent 中枢输出可复制 Checkpoint / Resume / 风险 / 进度证据，便于断点恢复。
+- PowerShell 7 自愈预检沙盒：桌面端把性能、网络、时间和 Hosts 问题映射到白名单只读预设，人工确认后仍禁止任意命令。
 
 ### v0.42.0 (2026-04-25)
 - 控制令牌到 openclow 技能调度器：Aix 中枢按总控令牌、技能健康和 eventLog 生成 dry-run 调度建议，默认不执行未知代码。

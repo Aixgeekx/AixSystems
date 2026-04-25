@@ -2,6 +2,11 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.43.0
+- Aix 中枢新增本地控制战役自动编排器，把总控令牌、openclow dry-run 调度和 eventLog 证据压成战役包草案。
+- Agent 中枢新增 Claude Code CLI 续跑证据链打包，输出可复制 Checkpoint / Resume / 风险 / 进度证据。
+- 桌面超级管理器新增 PowerShell 7 自愈预检沙盒，把常见电脑问题映射到白名单只读预设，人工确认后仍禁止任意命令。
+
 ## 最新版本 v0.42.0
 - Aix 中枢新增控制令牌到 openclow 技能调度器，基于总控令牌、技能健康和 eventLog 生成 dry-run 调度建议。
 - Agent 中枢新增 Claude Code CLI 续跑雷达，按 Plan / Permission / Checkpoint / Resume 断点、子任务进度和风险权重排序恢复优先级。
