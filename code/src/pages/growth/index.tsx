@@ -270,6 +270,19 @@ export default function GrowthPage() {
   ];
 
   const todayCompletion = dashboard?.todayTotal ? Math.round((dashboard.todayDone / dashboard.todayTotal) * 100) : 0;
+  const riskScore = dashboard ? Math.min(100, Math.round((100 - todayCompletion) * 0.36 + Math.max(0, 90 - dashboard.summary.week.focusMin) * 0.28 + Math.max(0, 5 - dashboard.summary.week.checkins) * 6 + Math.max(0, 3 - dashboard.summary.week.diaries) * 5)) : 0;
+  const riskLevel = riskScore >= 70 ? '红色预警' : riskScore >= 42 ? '黄色预警' : '绿色稳定';
+  const orchestratorSteps = dashboard ? [
+    { title: '目标牵引', desc: dashboard.activeGoalsList[0]?.title ? `先推进「${dashboard.activeGoalsList[0].title}」的最小里程碑` : '先创建一个可衡量核心目标', color: '#8b5cf6' },
+    { title: '专注执行', desc: `今日完成率 ${todayCompletion}%，安排 ${todayCompletion < 60 ? 45 : 25} 分钟深度专注`, color: '#06b6d4' },
+    { title: '习惯闭环', desc: `本周打卡 ${dashboard.summary.week.checkins} 次，补齐一个最容易断裂的习惯链`, color: '#22c55e' },
+    { title: '日记校准', desc: dashboard.summary.week.diaries ? '今晚复盘行动与情绪的关联' : '今晚写一篇压力拆解日记建立反馈', color: '#f59e0b' }
+  ] : [];
+  const riskActions = [
+    riskScore >= 70 ? '立即削减非核心事项，只保留一个目标、一个习惯和一次专注。' : riskScore >= 42 ? '今天降低启动阻力，用 25 分钟专注和一次轻量复盘恢复节奏。' : '维持当前节奏，把稳定行为沉淀为固定模板。',
+    dashboard && dashboard.summary.week.focusMin < 90 ? '本周专注不足 90 分钟，优先补一段无打断深度工作。' : '专注时长处于可控区间，继续关注质量而不是堆时长。',
+    dashboard && dashboard.summary.week.diaries < 3 ? '日记样本偏少，今晚用智能引导记录情绪触发点。' : '日记记录充足，可从情绪趋势中提炼下一步策略。'
+  ];
   const achievements = useAchievements();
   const gameLevel = useGameLevel();
   const insights = useCorrelationInsights();
@@ -405,6 +418,38 @@ export default function GrowthPage() {
           <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', color: titleColor, marginBottom: 0 }}>{aixPlan}</Typography.Paragraph>
         </Card>
       ) : null}
+
+      <Card bordered={false} className="anim-fade-in-up hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Text style={{ color: subColor }}>成长控制任务编排器</Typography.Text>
+        <Typography.Title level={4} style={{ margin: '4px 0 14px', color: titleColor }}>今日自动控制流程</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {orchestratorSteps.map((step, index) => (
+            <Col xs={24} md={6} key={step.title}>
+              <div style={{ height: '100%', padding: 14, borderRadius: 18, background: tintedBg(step.color), border: `1px solid ${step.color}33` }}>
+                <Tag color="purple" style={{ borderRadius: 6 }}>第 {index + 1} 步</Tag>
+                <Typography.Title level={5} style={{ margin: '10px 0 6px', color: titleColor }}>{step.title}</Typography.Title>
+                <Typography.Paragraph style={{ margin: 0, color: subColor, fontSize: 12 }}>{step.desc}</Typography.Paragraph>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Text style={{ color: subColor }}>风险预警中心</Typography.Text>
+        <Space align="center" wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+          <Typography.Title level={4} style={{ margin: '4px 0 12px', color: titleColor }}>{riskLevel}</Typography.Title>
+          <Tag color={riskScore >= 70 ? 'red' : riskScore >= 42 ? 'gold' : 'green'} style={{ borderRadius: 8, padding: '4px 12px' }}>风险 {riskScore}</Tag>
+        </Space>
+        <Progress percent={riskScore} strokeColor={riskScore >= 70 ? '#ef4444' : riskScore >= 42 ? '#f59e0b' : '#22c55e'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)'} />
+        <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
+          {riskActions.map(action => (
+            <Col xs={24} md={8} key={action}>
+              <div style={{ padding: 12, borderRadius: 16, background: tintedBg(riskScore >= 70 ? '#ef4444' : riskScore >= 42 ? '#f59e0b' : '#22c55e'), color: subColor, minHeight: 72 }}>{action}</div>
+            </Col>
+          ))}
+        </Row>
+      </Card>
 
       <Row gutter={[16, 16]}>
         {statCards.map((stat, i) => (

@@ -17,11 +17,13 @@ import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
+import { callAixModel } from '@/utils/aixModel';
 import { FOCUS_MODES, FOCUS_MODE_LABELS } from '@/config/constants';
 import { useFocusStore } from '@/stores/focusStore';
 import { currentNoise, NOISE_LABELS, playNoise, setVolume, stopNoise } from '@/utils/audio';
 import { fmtDateTime } from '@/utils/time';
 import { useThemeVariants } from '@/hooks/useVariants';
+import { useSettingsStore } from '@/stores/settingsStore';
 import Empty from '@/components/Empty';
 
 const PRESETS = [15, 25, 45, 90];
@@ -40,6 +42,7 @@ function formatClock(totalSeconds: number) {
 export default function FocusPage() {
   const f = useFocusStore();
   const { theme } = useThemeVariants();
+  const { aixApiUrl, aixApiKey, aixModel } = useSettingsStore();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
 
@@ -50,6 +53,8 @@ export default function FocusPage() {
   const [noise, setNoise] = useState<string | null>(() => currentNoise());
   const [volume, setVolumeState] = useState(0.3);
   const [impression, setImpression] = useState('');
+  const [aixFocusPlan, setAixFocusPlan] = useState('');
+  const [aixLoading, setAixLoading] = useState(false);
 
   useEffect(() => {
     if (!f.running) return;
@@ -105,6 +110,20 @@ export default function FocusPage() {
   const lastMonthMin = sessions.filter(s => s.startTime >= lastMonthStart && s.startTime < monthStart).reduce((sum, s) => sum + s.actualMs / 60_000, 0);
   const weekChange = lastWeekMin > 0 ? Math.round((thisWeekMin - lastWeekMin) / lastWeekMin * 100) : 0;
   const monthChange = lastMonthMin > 0 ? Math.round((thisMonthMin - lastMonthMin) / lastMonthMin * 100) : 0;
+
+  async function generateAixFocusPlan() {
+    setAixLoading(true);
+    try {
+      const fallback = `${scene.name}：${scene.reason}。建议 ${scene.minutes} 分钟${scene.strict ? '严格' : '普通'}专注，结束后记录一句完成感想。`;
+      const text = await callAixModel({ apiUrl: aixApiUrl, apiKey: aixApiKey, model: aixModel }, [
+        { role: 'system', content: '你是 AixSystems 的专注控制模型，只输出 3 条短促、可执行的专注干预策略。' },
+        { role: 'user', content: JSON.stringify({ scene, recentCompletion, qualityAverage, todayMin: Math.round(todayMin), bestHourLabel }) }
+      ]).catch(() => fallback);
+      setAixFocusPlan(text);
+    } finally {
+      setAixLoading(false);
+    }
+  }
 
   function start() {
     f.start({ mode, plannedMs: minutes * 60_000, title, strict });
@@ -518,7 +537,11 @@ export default function FocusPage() {
               <Button size="small" type="primary" onClick={() => { setMode(scene.mode); setMinutes(scene.minutes); setStrict(scene.strict); setTitle(scene.title); }} style={{ borderRadius: 10 }}>
                 应用场景
               </Button>
+              <Button size="small" loading={aixLoading} onClick={generateAixFocusPlan} style={{ borderRadius: 10 }}>
+                Aix 深度策略
+              </Button>
             </Space>
+            {aixFocusPlan ? <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', color: isDark ? 'rgba(226,232,240,0.82)' : '#475569', margin: '12px 0 0' }}>{aixFocusPlan}</Typography.Paragraph> : null}
           </Card>
 
           {/* 白噪音 */}

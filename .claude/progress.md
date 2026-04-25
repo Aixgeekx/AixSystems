@@ -1,29 +1,28 @@
-# AixSystems v0.27.0 进度
+# AixSystems v0.28.0 进度
 
 ## 当前目标
 持续迭代增强功能，主导思想：**黑科技系统，个人成长和控制**。
 
-## 已完成（本轮 v0.27.0）
-- [x] 专注智能场景识别：根据时间段和近期专注完成质量推荐专注模式、时长和严格模式
-- [x] 习惯模板与链式习惯：新增成长控制链模板、链式触发字段和完成后下一习惯提示
-- [x] 日记智能引导：新增平静、焦虑、开心三类情绪反思模板，一键进入写作
-- [x] 版本号统一到 0.27.0：`code/package.json`、`desktop/package.json`、`APP_VERSION`、lockfile 顶层版本
-- [x] 应用内更新日志新增 v0.27.0
-- [x] README、code/README、results/使用说明、Aix_tools/readme 已同步 v0.27.0
+## 已完成（本轮 v0.28.0）
+- [x] Aix 专注深度策略：专注页基于场景、完成率和质量调用用户配置模型生成干预策略
+- [x] 成长控制任务编排器：成长仪表盘把目标、专注、习惯和日记串成今日控制流程
+- [x] 风险预警中心：识别完成率、专注、习惯和日记风险并输出即时干预动作
+- [x] 版本号统一到 0.28.0：`code/package.json`、`desktop/package.json`、`APP_VERSION`、lockfile 顶层版本
+- [x] 应用内更新日志新增 v0.28.0
+- [x] README、code/README、results/使用说明、Aix_tools/readme 已同步 v0.28.0
 - [x] 测试通过：39/39 Vitest
 - [x] 构建通过：tsc + Vite 成功
-- [x] Git 提交：`5d424ec feat: AixSystems v0.27.0 - add growth control chains`
-- [x] 已推送 `origin main`
-- [x] 已创建并推送 tag：`v0.27.0`
-- [x] GitHub Release 已创建：`https://github.com/Aixgeekx/AixSystems/releases/tag/v0.27.0`
+- [ ] Git 提交：待创建
+- [ ] 推送 `origin main`：待执行
+- [ ] 创建并推送 tag：`v0.28.0` 待执行
+- [ ] GitHub Release：待创建
+- [ ] Release 附件：待上传桌面安装包/便携包
 
 ## 新增/修改重点
-- `code/src/pages/focus/index.tsx` — 专注智能场景识别卡片
-- `code/src/pages/habit/index.tsx` — 习惯模板与链式触发
-- `code/src/pages/diary/index.tsx` — 情绪智能引导模板
-- `code/src/models/index.ts` — Habit 增加 extra 扩展字段
+- `code/src/pages/focus/index.tsx` — Aix 专注深度策略
+- `code/src/pages/growth/index.tsx` — 成长控制任务编排器、风险预警中心
 
 ## 下一步候选方向
-1. **Aix 模型深度接入**：让专注、习惯、日记建议可选调用用户配置 API 生成个性化策略
-2. **成长控制任务编排器**：把目标、习惯、专注和日记串成每日自动控制流程
-3. **风险预警中心**：识别连续拖延、低专注和情绪异常并给出干预动作
+1. **手机版规划与适配**：整理移动端导航、布局和触控优先级，为后续手机版做准备
+2. **Release 自动附加产物**：构建后自动上传安装包、blockmap 和便携包到 GitHub Release
+3. **Aix 模型跨页策略中心**：统一管理专注、成长、日记和习惯的模型策略调用

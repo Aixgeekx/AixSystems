@@ -2,6 +2,11 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.28.0
+- 专注页新增 Aix 深度策略：基于场景、完成率和质量调用模型生成干预。
+- 成长仪表盘新增任务编排器：把目标、专注、习惯、日记串成今日流程。
+- 成长仪表盘新增风险预警中心：输出风险分和即时干预动作。
+
 ## 最新版本 v0.27.0
 - 专注页新增智能场景识别：按当前时间段和近期完成质量推荐专注策略。
 - 习惯页新增模板与链式习惯：一键生成成长链，完成后提示下一环节。
@@ -120,8 +125,8 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.27.0-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.28.0-Setup.exe` (NSIS 安装包,约 80MB)
 
 目录便携版: `npm run dist:portable` → `desktop/dist-installer/win-unpacked/`
 
-单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.27.0-portable.exe`
+单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.28.0-portable.exe`
