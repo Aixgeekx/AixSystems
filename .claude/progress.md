@@ -13,6 +13,10 @@
 - [x] README、code/README、results/使用说明、Aix_tools/readme 已同步 v0.26.0
 - [x] 测试通过：39/39 Vitest
 - [x] 构建通过：tsc + Vite 成功
+- [x] Git 提交：`770c6c2 feat: AixSystems v0.26.0 - add Aix model control assistant`
+- [x] 已推送 `origin main`
+- [x] 已创建并推送 tag：`v0.26.0`
+- [x] GitHub Release 已创建：`https://github.com/Aixgeekx/AixSystems/releases/tag/v0.26.0`
 
 ## 新增文件
 - `code/src/utils/aixModel.ts` — Aix 模型 API 调用工具
@@ -20,11 +24,6 @@
 ## 验证记录
 - `npm --prefix code test -- --run`：通过，6 个测试文件 / 39 个测试
 - `npm --prefix code run build`：通过
-
-## 待处理
-- 创建提交并推送 `origin main`
-- 创建并推送 `v0.26.0` tag
-- 创建 GitHub Release：`AixSystems v0.26.0`
 
 ## 下一步候选方向
 1. **专注智能场景识别**：根据时间段、事项类型和近期表现自动推荐专注模式
