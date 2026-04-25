@@ -78,13 +78,18 @@ export default function DesktopWidgetPage() {
     recovery: powershellResult.error ? '保留错误输出，切换只读预设或回到系统健康演练复查。' : '可把摘要映射为电脑管理 Agent 的证据线索，继续走确认/备份/回滚链路。',
     evidence: [`Preset ${powershellResult.preset || 'unknown'}`, `Shell ${powershellResult.shell || 'unknown'}`, `Hash ${powershellResult.hash || 'none'}`, `Duration ${powershellResult.durationMs || 0}ms`]
   } : null;
+  const electron = isElectron();
   const ps7SelfHealSandbox = [
     { title: '性能自愈预检', preset: 'processes', score: Math.max(0, 100 - memUsage), action: memUsage > 75 ? '只读查看高占用进程，生成关闭建议但不结束进程。' : '内存压力可控，只保留巡检证据。' },
     { title: '网络自愈预检', preset: 'network', score: controlScan?.ports?.length ? Math.max(35, 100 - controlScan.ports.length * 3) : 72, action: '只读采集 IP、DNS 和端口线索，不重置网卡。' },
     { title: '时间自愈预检', preset: 'clock', score: 86, action: '检查时区和时间服务状态，只输出校准建议。' },
     { title: 'Hosts 自愈预检', preset: 'hosts', score: 78, action: '只读查看 hosts 摘要，标记可疑行但不写文件。' }
   ];
-  const electron = isElectron();
+  const desktopControlMirror = [
+    { title: '电脑压力 → 专注保护', score: electron ? Math.max(0, 100 - Math.max(memUsage, diskUsage)) : 0, action: Math.max(memUsage, diskUsage) > 78 ? '先跑 PowerShell 7 只读性能预检，再安排低干扰专注。' : '电脑状态可承载深度专注，保留健康证据。', preset: 'processes', color: '#3b82f6' },
+    { title: '端口噪音 → 环境清场', score: controlScan?.ports?.length ? Math.max(30, 100 - controlScan.ports.length * 4) : 72, action: '只读查看端口占用，把异常服务作为 Agent 证据，不结束进程。', preset: 'network', color: '#06b6d4' },
+    { title: '黑匣子 → 恢复信心', score: replayBlackBox?.health || 50, action: replayBlackBox ? replayBlackBox.recovery : '等待一次白名单预设执行后生成可恢复证据链。', preset: 'computer', color: '#10b981' }
+  ];
 
   async function refreshSnapshot() {
     const next = await getElectron()?.getSystemSnapshot?.();
@@ -322,6 +327,23 @@ export default function DesktopWidgetPage() {
             <Space wrap>{replayBlackBox.evidence.map(item => <Tag key={item} color="blue">{item}</Tag>)}<Tag color="purple">Agent 证据线索</Tag><Tag color="green">可回放</Tag></Space>
           </Col>
         </Row> : <Alert type="info" showIcon message="执行一次白名单 PowerShell 预设后生成可回放黑匣子审计卡。" style={{ borderRadius: 12 }} />}
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <ControlOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>桌面控制力镜像</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>把 PowerShell 7 白名单只读健康信号映射到个人控制力建议；只生成建议和证据，不清理、不结束进程、不开放任意命令。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {desktopControlMirror.map(item => <Col xs={24} md={8} key={item.title}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${item.color}12` : `${item.color}08`, border: `1px solid ${item.color}24` }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}><Typography.Text strong style={{ color: titleColor }}>{item.title}</Typography.Text><Tag color="blue">{item.preset}</Tag></Space>
+              <Progress percent={item.score} showInfo={false} strokeColor={item.color} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} style={{ margin: '10px 0 6px' }} />
+              <Typography.Paragraph style={{ color: subColor, margin: 0, fontSize: 12 }}>{item.action}</Typography.Paragraph>
+            </div>
+          </Col>)}
+        </Row>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

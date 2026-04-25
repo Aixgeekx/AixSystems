@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.44.0', date: '2026-04-25', items: [
+    'Aix 中枢新增个人失控预警，按总控令牌、逾期、习惯中断、目标风险和复习压力输出三色干预建议',
+    'Agent 中枢新增自律教练，把自治队列和 CLI 续跑雷达压成今日最小下一步',
+    '桌面超级管理器新增桌面控制力镜像，把 PowerShell 7 只读健康信号映射到个人控制力建议'
+  ]},
   { ver: '0.43.0', date: '2026-04-25', items: [
     'Aix 中枢新增本地控制战役自动编排器，把总控令牌、openclow dry-run 调度和 eventLog 压成战役包草案',
     'Agent 中枢新增 CLI 续跑证据链打包，输出可复制 Checkpoint / Resume / 风险 / 进度证据',

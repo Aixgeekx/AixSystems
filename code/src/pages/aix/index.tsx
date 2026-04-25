@@ -215,6 +215,14 @@ export default function AixPage() {
       resume: `Claude Code 续跑：读取 ${capsule?.controlToken.id || 'AIX-CORE'}、skillDispatchPlan 和 eventLog，只生成战役包草案，确认后再写入 Item。`
     };
   }, [campaignLogs.length, capsule, skillDispatchPlan]);
+  const controlDriftWarnings = useMemo(() => {
+    const token = capsule?.controlToken.id || 'AIX-CORE';
+    return [
+      { title: '事项债务失控', level: (capsule?.overdue || 0) + (capsule?.pending || 0) >= 6 ? '红色' : (capsule?.pending || 0) >= 3 ? '黄色' : '绿色', value: (capsule?.overdue || 0) + (capsule?.pending || 0), action: `用 ${token} 先清 1 个逾期和 1 个最短待办，只生成本地战役草案。`, color: '#ef4444' },
+      { title: '成长链路断点', level: (capsule?.goalRisk || 0) + (capsule?.brokenHabits || 0) >= 3 ? '红色' : (capsule?.goalRisk || 0) + (capsule?.brokenHabits || 0) ? '黄色' : '绿色', value: (capsule?.goalRisk || 0) + (capsule?.brokenHabits || 0), action: '优先恢复一个中断习惯，再推进一个风险目标里程碑。', color: '#f59e0b' },
+      { title: '复习压力堆积', level: (capsule?.reviewPressure || 0) >= 12 ? '红色' : (capsule?.reviewPressure || 0) >= 7 ? '黄色' : '绿色', value: capsule?.reviewPressure || 0, action: '提前拆分未来 7 天复习节点，保持 openclow dry-run 不自动写入。', color: '#8b5cf6' }
+    ];
+  }, [capsule]);
 
   async function setSkill(key: string, enabled: boolean) {
     const next = { ...(skillState || {}), [key]: enabled };
@@ -395,6 +403,21 @@ export default function AixPage() {
             <Alert type="info" showIcon message={autoCampaignPack.resume} style={{ borderRadius: 12, marginTop: 12 }} />
           </Col>
         </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}><SafetyCertificateOutlined style={{ color: accent }} /><Typography.Title level={4} style={{ margin: 0, color: titleColor }}>个人失控预警</Typography.Title></Space>
+        <Typography.Paragraph style={{ color: subColor }}>用总控令牌、逾期、习惯中断、目标风险和复习压力生成三色干预建议；只用本地统计信号，不读取日记正文。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {controlDriftWarnings.map(item => <Col xs={24} md={8} key={item.title}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${item.color}12` : `${item.color}08`, border: `1px solid ${item.color}24` }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}><Typography.Text strong style={{ color: titleColor }}>{item.title}</Typography.Text><Tag color={item.level === '红色' ? 'red' : item.level === '黄色' ? 'gold' : 'green'}>{item.level}</Tag></Space>
+              <Typography.Title level={3} style={{ color: item.color, margin: '8px 0' }}>{item.value}</Typography.Title>
+              <Typography.Paragraph style={{ color: subColor, margin: 0, fontSize: 12 }}>{item.action}</Typography.Paragraph>
+            </div>
+          </Col>)}
+        </Row>
+        <Alert type="warning" showIcon message="预警只生成干预草案，写入事项或调用模型前仍遵守本地隐私边界。" style={{ borderRadius: 12, marginTop: 14 }} />
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

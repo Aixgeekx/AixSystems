@@ -75,6 +75,13 @@ export default function AgentPage() {
     proof: `risk=${item.risk}; progress=${item.percent}%; breakpoint=${item.breakpoint}; priority=${item.priority}`,
     exportText: `### ${item.task.title}\n- Checkpoint: ${item.task.extra?.claudeWorkflow?.checkpoint || '待补充'}\n- Resume: ${item.resume}\n- Proof: risk=${item.risk}; progress=${item.percent}%; breakpoint=${item.breakpoint}`
   }));
+  const disciplineCoach = autonomyQueue.map(item => ({
+    title: item.task.title,
+    risk: String(item.task.extra?.risk || (item.task.extra?.aixCampaign ? '中风险' : '低风险')),
+    action: item.phase === '等待授权' ? '先补权限确认和禁止动作清单，不自动执行。' : item.percent === 100 ? '今天只做归档复盘，把证据写入恢复日志。' : `今天只完成：${item.next}`,
+    token: `coach://${item.task.id}?phase=${encodeURIComponent(item.phase)}&mode=min-step`,
+    color: item.color
+  }));
 
   async function createAgentTask(template: typeof AGENT_TEMPLATES[number]) {
     const now = Date.now();
@@ -189,6 +196,23 @@ export default function AgentPage() {
             <pre style={{ margin: '8px 0 0', padding: 10, borderRadius: 12, whiteSpace: 'pre-wrap', color: titleColor, background: isDark ? 'rgba(0,0,0,0.22)' : 'rgba(15,23,42,0.04)' }}>{item.exportText}</pre>
           </div>) : <Alert type="info" showIcon message="暂无可打包 Agent 证据链；创建 Agent 分支后会自动生成。" style={{ borderRadius: 12 }} />}
         </Space>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <SafetyCertificateOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Agent 自律教练</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>把自治队列和 CLI 续跑雷达压成今日最小下一步；中高风险只补权限和证据，不自动执行。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {disciplineCoach.length ? disciplineCoach.map(item => <Col xs={24} md={12} xl={8} key={item.token}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${item.color}12` : `${item.color}08`, border: `1px solid ${item.color}28` }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}><Typography.Text strong style={{ color: titleColor }}>{item.title}</Typography.Text><Tag color={item.risk === '低风险' ? 'green' : 'gold'}>{item.risk}</Tag></Space>
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0', fontSize: 12 }}>{item.action}</Typography.Paragraph>
+              <div style={{ color: subColor, fontSize: 12 }}>{item.token}</div>
+            </div>
+          </Col>) : <Col span={24}><Alert type="success" showIcon message="暂无停滞 Agent，今日保持低摩擦自律节奏。" style={{ borderRadius: 12 }} /></Col>}
+        </Row>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>
