@@ -13,12 +13,14 @@
 - [x] README、code/README、results/使用说明、Aix_tools/readme 已同步 v0.29.0
 
 ## 待完成
-- [ ] 运行 Vitest 与前端构建
-- [ ] 桌面安装包构建
-- [ ] 提交并推送 `origin main`
-- [ ] 创建并推送 tag：`v0.29.0`
-- [ ] 创建 GitHub Release 并上传 `AixSystems-0.29.0-Setup.exe` 与 blockmap
-- [ ] 执行历史 Release 资产补档
+- [x] 运行 Vitest 与前端构建：39/39 Vitest，tsc + Vite 成功
+- [x] 桌面安装包构建：`AixSystems-0.29.0-Setup.exe` 与 blockmap
+- [x] Git 提交：`3812f5b feat: AixSystems v0.29.0 - add mobile and system control foundations`
+- [x] 已推送 `origin main`
+- [x] 已创建并推送 tag：`v0.29.0`
+- [x] GitHub Release 已创建：`https://github.com/Aixgeekx/AixSystems/releases/tag/v0.29.0`
+- [x] Release 附件：已上传 `AixSystems-0.29.0-Setup.exe` 与 blockmap
+- [x] 历史 Release 资产补档：已上传本地已有 0.19.0、0.19.1、0.19.2、0.21.9、0.22.0、0.22.1、0.22.2、0.22.3、0.25.0 安装包/blockmap；0.17.0、0.20.0、0.28.0、0.29.0 已存在跳过
 
 ## 新增/修改重点
 - `code/src/components/Layout/index.tsx` — 手机版导航抽屉与窄屏布局
