@@ -23,19 +23,25 @@ This workspace is **not a single codebase** — it is a multi-directory project 
 cd code
 npm install
 npm run dev        # Dev server http://127.0.0.1:5173
-npm run build      # Production build → code/dist/
+npm run build      # TypeScript + production build → code/dist/
 npm run preview    # Preview production build on http://127.0.0.1:4173
-npm test           # Run Vitest unit tests
+npm test           # Run Vitest unit tests once
+npm run test:watch # Run Vitest in watch mode
+npx vitest run src/path/to/file.test.ts  # Run a single test file
 ```
+
+There is currently no lint script in `code/package.json`; use TypeScript build and Vitest as the verification gates.
 
 ### Electron packaging (`desktop/`)
 
 ```bash
 cd desktop
 npm install
-npm run dist                # NSIS installer → desktop/dist-installer/
-npm run dist:portable       # Directory portable → desktop/dist-installer/win-unpacked/
-npm run dist:portable-exe   # Single-file portable .exe
+npm start                  # Launch Electron against built app
+npm run dev                # Launch Electron dev mode with SGX_DEV=1
+npm run dist               # NSIS installer → desktop/dist-installer/
+npm run dist:portable      # Directory portable → desktop/dist-installer/win-unpacked/
+npm run dist:portable-exe  # Single-file portable .exe
 ```
 
 ### Windows launch scripts (from `results/`)
@@ -119,6 +125,15 @@ The Electron shell in `desktop/` loads the built web app. IPC is bridged through
 
 When accessing Electron APIs from the renderer, check `window.sgx` safely — `code/` runs both bare in browser and inside Chromium.
 
+### Aix model integration
+
+AixSystems remains local-first, but v0.26.0 added an optional user-configured Aix model endpoint for personal control suggestions.
+
+- **Central caller**: `src/utils/aixModel.ts` exports `callAixModel(config, messages)` and sends an OpenAI-style `{ model, messages }` request.
+- **Local settings**: `src/stores/settingsStore.ts` persists `aixApiUrl`, `aixApiKey`, and `aixModel` in IndexedDB settings rows only.
+- **Configuration UI**: system settings exposes API URL, optional API key, and model name fields.
+- **Consumers**: the home dashboard assistant and growth dashboard simulator call the model and keep local fallback suggestions when the endpoint is absent or fails.
+
 ### Build output splitting
 
 `vite.config.ts` configures `manualChunks` for code splitting:
@@ -163,10 +178,15 @@ Tests use Vitest with jsdom. Configuration in `code/vitest.config.ts`:
 - `@/` alias resolves to `src/`
 - **Rule**: When modifying business logic (time, crypto, lunar calendar, export/import), always write or update accompanying `*.test.ts(x)` files.
 
+## Rule files
+
+No `.cursor/rules`, `.cursorrules`, or `.github/copilot-instructions.md` files are present; this `CLAUDE.md` and the README files are the active repository guidance.
+
 ## Security constraints
 
-- **Local-first only**: Do not introduce HTTP/Cloud network syncing unless explicitly asked. The app is zero-server, offline local.
-- **No backend**: There is no API server, no authentication flow, no cloud storage. All data stays in IndexedDB.
+- **Local-first core**: do not add server sync, authentication flows, or cloud storage unless explicitly requested. Product data stays in IndexedDB.
+- **Optional model endpoint**: HTTP calls are limited to the user-configured Aix API URL; API keys are local settings and must not be logged, committed, or copied into docs.
+- **Electron bridge**: renderer code must access desktop features only through `window.sgx` and remain safe when running in a normal browser.
 
 ## Git & release conventions
 

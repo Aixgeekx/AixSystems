@@ -1,31 +1,29 @@
-# AixSystems v0.26.0 进度
+# AixSystems v0.27.0 进度
 
 ## 当前目标
 持续迭代增强功能，主导思想：**黑科技系统，个人成长和控制**。
 
-## 已完成（本轮 v0.26.0）
-- [x] Aix 模型 API 配置入口：系统设置新增 API 地址、API Key、模型名配置，数据仅保存到本地 IndexedDB
-- [x] Aix 模型调用工具：新增 `callAixModel`，集中处理临时 API 接口请求和响应解析
-- [x] 成长轨迹 AI 模拟器：成长仪表盘新增 30 天轨迹模拟，基于专注、目标、习惯和雷达数据生成干预建议
-- [x] 首页智能控制助手：首页工作台新增今日计划、专注建议、晚间复盘三类一键策略
-- [x] 版本号统一到 0.26.0：`code/package.json`、`desktop/package.json`、`APP_VERSION`、lockfile 顶层版本
-- [x] 应用内更新日志新增 v0.26.0
-- [x] README、code/README、results/使用说明、Aix_tools/readme 已同步 v0.26.0
+## 已完成（本轮 v0.27.0）
+- [x] 专注智能场景识别：根据时间段和近期专注完成质量推荐专注模式、时长和严格模式
+- [x] 习惯模板与链式习惯：新增成长控制链模板、链式触发字段和完成后下一习惯提示
+- [x] 日记智能引导：新增平静、焦虑、开心三类情绪反思模板，一键进入写作
+- [x] 版本号统一到 0.27.0：`code/package.json`、`desktop/package.json`、`APP_VERSION`、lockfile 顶层版本
+- [x] 应用内更新日志新增 v0.27.0
+- [x] README、code/README、results/使用说明、Aix_tools/readme 已同步 v0.27.0
 - [x] 测试通过：39/39 Vitest
 - [x] 构建通过：tsc + Vite 成功
-- [x] Git 提交：`770c6c2 feat: AixSystems v0.26.0 - add Aix model control assistant`
-- [x] 已推送 `origin main`
-- [x] 已创建并推送 tag：`v0.26.0`
-- [x] GitHub Release 已创建：`https://github.com/Aixgeekx/AixSystems/releases/tag/v0.26.0`
+- [ ] Git 提交：待创建
+- [ ] 推送 `origin main`：待执行
+- [ ] 创建并推送 tag：`v0.27.0` 待执行
+- [ ] GitHub Release：待创建
 
-## 新增文件
-- `code/src/utils/aixModel.ts` — Aix 模型 API 调用工具
-
-## 验证记录
-- `npm --prefix code test -- --run`：通过，6 个测试文件 / 39 个测试
-- `npm --prefix code run build`：通过
+## 新增/修改重点
+- `code/src/pages/focus/index.tsx` — 专注智能场景识别卡片
+- `code/src/pages/habit/index.tsx` — 习惯模板与链式触发
+- `code/src/pages/diary/index.tsx` — 情绪智能引导模板
+- `code/src/models/index.ts` — Habit 增加 extra 扩展字段
 
 ## 下一步候选方向
-1. **专注智能场景识别**：根据时间段、事项类型和近期表现自动推荐专注模式
-2. **习惯模板与链式习惯**：预设习惯模板 + 习惯链（完成 A 后触发 B）
-3. **日记智能引导**：日记页增加情绪引导模板和反思提示
+1. **Aix 模型深度接入**：让专注、习惯、日记建议可选调用用户配置 API 生成个性化策略
+2. **成长控制任务编排器**：把目标、习惯、专注和日记串成每日自动控制流程
+3. **风险预警中心**：识别连续拖延、低专注和情绪异常并给出干预动作

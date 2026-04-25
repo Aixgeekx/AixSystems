@@ -82,6 +82,12 @@ export default function FocusPage() {
     return { ...session, score, grade };
   });
   const qualityAverage = qualitySessions.length ? Math.round(qualitySessions.reduce((sum, session) => sum + session.score, 0) / qualitySessions.length) : 0;
+  const currentHour = dayjs().hour();
+  const scene = currentHour < 11 ? { name: '晨间破局', minutes: 45, mode: 'countdown' as const, strict: true, title: '核心目标推进', reason: '上午意志力窗口适合处理高价值任务' }
+    : currentHour < 18 ? { name: '午后稳态', minutes: 25, mode: 'pomodoro' as const, strict: false, title: '单点推进', reason: '午后用番茄钟降低启动阻力' }
+      : { name: '夜间收束', minutes: 15, mode: 'countdown' as const, strict: false, title: '复盘与清理', reason: '夜间适合轻量整理，避免过度兴奋' };
+  const recentCompletion = qualitySessions.length ? Math.round(qualitySessions.filter(session => !session.giveUp).length / qualitySessions.length * 100) : 0;
+  const sceneBoost = recentCompletion >= 80 ? '近期完成率稳定，可以提高 5 分钟挑战强度。' : recentCompletion ? '近期有中断信号，先降低阻力保持连续。' : '暂无专注样本，先从当前场景模板开始校准。';
 
   const hourMap: Record<number, number> = {};
   for (const s of sessions) { hourMap[dayjs(s.startTime).hour()] = (hourMap[dayjs(s.startTime).hour()] || 0) + s.actualMs / 60_000; }
@@ -489,6 +495,30 @@ export default function FocusPage() {
                 </Space>
               </Space>
             )}
+          </Card>
+
+          <Card
+            bordered={false}
+            className="anim-fade-in-up stagger-2 hover-lift"
+            style={{
+              marginTop: 16,
+              borderRadius: 24,
+              background: cardBg,
+              border: cardBorder,
+              boxShadow: isDark ? `0 12px 30px -10px rgba(0,0,0,0.3)` : '0 12px 30px -10px rgba(0,0,0,0.05)'
+            }}
+          >
+            <Typography.Text style={{ color: isDark ? 'rgba(226,232,240,0.72)' : '#64748b' }}>专注智能场景识别</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '4px 0 10px' }}>{scene.name} · {scene.minutes} 分钟</Typography.Title>
+            <Typography.Paragraph style={{ color: isDark ? 'rgba(226,232,240,0.72)' : '#64748b' }}>{scene.reason}。{sceneBoost}</Typography.Paragraph>
+            <Space wrap>
+              <Tag color={scene.strict ? 'red' : 'blue'}>{scene.strict ? '严格模式' : '普通模式'}</Tag>
+              <Tag color="purple">{FOCUS_MODE_LABELS[scene.mode]}</Tag>
+              <Tag color="green">近况 {recentCompletion || 0}%</Tag>
+              <Button size="small" type="primary" onClick={() => { setMode(scene.mode); setMinutes(scene.minutes); setStrict(scene.strict); setTitle(scene.title); }} style={{ borderRadius: 10 }}>
+                应用场景
+              </Button>
+            </Space>
           </Card>
 
           {/* 白噪音 */}

@@ -25,6 +25,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 
 const RichEditor = lazy(() => import('@/components/RichEditor'));
 const DRAFT_KEY = 'diary-draft';
+const GUIDE_TEMPLATES = [
+  { mood: '平静', title: '控制力复盘', prompt: '<p>今天最能体现控制力的一件事是什么？</p><p>我下一步要保留哪个动作？</p>' },
+  { mood: '焦虑', title: '压力拆解', prompt: '<p>焦虑来自哪一个具体问题？</p><p>我现在能做的最小一步是什么？</p>' },
+  { mood: '开心', title: '正反馈采样', prompt: '<p>今天哪个行为带来了正反馈？</p><p>如何把它变成可重复的系统？</p>' }
+];
 
 interface DiaryDraft {
   title: string;
@@ -139,6 +144,14 @@ export default function DiaryPage() {
     setTitle(draft.title || '');
     setContent(draft.content || '');
     setMood(draft.mood || '');
+    setOpen(true);
+  }
+
+  function applyGuide(template: typeof GUIDE_TEMPLATES[number]) {
+    setEditing(null);
+    setTitle(template.title);
+    setMood(template.mood);
+    setContent(template.prompt);
     setOpen(true);
   }
 
@@ -341,6 +354,22 @@ export default function DiaryPage() {
             ))}
           </Row>
         ) : null}
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Text style={{ color: subColor }}>日记智能引导</Typography.Text>
+        <Typography.Title level={4} style={{ margin: '4px 0 14px', color: titleColor }}>按情绪启动反思模板</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {GUIDE_TEMPLATES.map(template => (
+            <Col xs={24} md={8} key={template.title}>
+              <div style={{ height: '100%', padding: 14, borderRadius: 18, background: tintedBg(template.mood === '焦虑' ? '#f59e0b' : template.mood === '开心' ? '#22c55e' : '#8b5cf6'), border: isDark ? `1px solid ${accent}22` : '1px solid transparent' }}>
+                <Typography.Text strong style={{ color: titleColor }}>{template.mood} · {template.title}</Typography.Text>
+                <Typography.Paragraph style={{ margin: '8px 0 12px', color: subColor, fontSize: 12 }}>{previewOf(template.prompt, 42)}</Typography.Paragraph>
+                <Button size="small" type="primary" onClick={() => applyGuide(template)} style={{ borderRadius: 10 }}>使用引导</Button>
+              </div>
+            </Col>
+          ))}
+        </Row>
       </Card>
 
       <Row gutter={[16, 16]}>

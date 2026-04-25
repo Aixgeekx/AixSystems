@@ -1,6 +1,6 @@
 // 习惯追踪 - 每日打卡 + 连续天数 + 统计 (v0.21.0 成长系统)
 import React, { useState } from 'react';
-import { Button, Card, Col, Input, Modal, Progress, Row, Space, Statistic, Tag, Typography, message } from 'antd';
+import { Button, Card, Col, Input, Modal, Progress, Row, Select, Space, Statistic, Tag, Typography, message } from 'antd';
 import {
   CheckCircleOutlined,
   PlusOutlined,
@@ -18,6 +18,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 import type { Habit, HabitLog } from '@/models';
 
 const WEEK_DAYS = ['日', '一', '二', '三', '四', '五', '六'];
+const HABIT_TEMPLATES = [
+  { name: '晨间启动链', color: '#f59e0b', targetCount: 1, description: '起床后喝水、拉伸、列今日三件事' },
+  { name: '深度学习链', color: '#2563eb', targetCount: 1, description: '完成 25 分钟学习后输出 3 句笔记' },
+  { name: '夜间复盘链', color: '#8b5cf6', targetCount: 1, description: '睡前复盘完成、情绪和明日最小动作' }
+];
 
 function getStreak(habitId: string, logs: HabitLog[]) {
   const sorted = logs
@@ -65,6 +70,7 @@ export default function HabitPage() {
   const [color, setColor] = useState('#2563eb');
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [targetCount, setTargetCount] = useState(1);
+  const [chainNextId, setChainNextId] = useState('');
 
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
@@ -81,12 +87,13 @@ export default function HabitPage() {
     const now = Date.now();
     if (editing) {
       await db.habits.update(editing.id, {
-        name, color, frequency, targetCount, updatedAt: now
+        name, color, frequency, targetCount, extra: { ...(editing as any).extra, chainNextId: chainNextId || undefined }, updatedAt: now
       });
     } else {
       await db.habits.add({
         id: nanoid(),
         name, color, frequency, targetCount,
+        extra: { chainNextId: chainNextId || undefined },
         sortOrder: habits.length,
         createdAt: now,
         updatedAt: now
@@ -115,7 +122,8 @@ export default function HabitPage() {
       count: 1,
       createdAt: now
     });
-    message.success('打卡成功');
+    const nextHabit = habits.find(h => h.id === (habit as any).extra?.chainNextId);
+    message.success(nextHabit ? `打卡成功，下一环节：${nextHabit.name}` : '打卡成功');
   }
 
   async function undoCheckIn(habit: Habit) {
@@ -143,6 +151,7 @@ export default function HabitPage() {
     setColor('#2563eb');
     setFrequency('daily');
     setTargetCount(1);
+    setChainNextId('');
     setOpen(true);
   }
 
@@ -152,7 +161,24 @@ export default function HabitPage() {
     setColor(habit.color);
     setFrequency(habit.frequency);
     setTargetCount(habit.targetCount);
+    setChainNextId((habit as any).extra?.chainNextId || '');
     setOpen(true);
+  }
+
+  async function createTemplate(template: typeof HABIT_TEMPLATES[number]) {
+    const now = Date.now();
+    await db.habits.add({
+      id: nanoid(),
+      name: template.name,
+      color: template.color,
+      description: template.description,
+      frequency: 'daily',
+      targetCount: template.targetCount,
+      sortOrder: habits.length,
+      createdAt: now,
+      updatedAt: now
+    });
+    message.success('习惯模板已创建');
   }
 
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
@@ -231,6 +257,22 @@ export default function HabitPage() {
         </Row>
       </Card>
 
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Text style={{ color: subColor }}>习惯模板与链式习惯</Typography.Text>
+        <Typography.Title level={4} style={{ margin: '4px 0 14px', color: titleColor }}>一键生成成长控制链</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {HABIT_TEMPLATES.map(template => (
+            <Col xs={24} md={8} key={template.name}>
+              <div style={{ padding: 14, borderRadius: 18, background: `${template.color}12`, border: `1px solid ${template.color}33` }}>
+                <Typography.Text strong style={{ color: titleColor }}>{template.name}</Typography.Text>
+                <Typography.Paragraph style={{ margin: '8px 0 12px', color: subColor, fontSize: 12 }}>{template.description}</Typography.Paragraph>
+                <Button size="small" type="primary" onClick={() => createTemplate(template)} style={{ borderRadius: 10 }}>套用模板</Button>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </Card>
+
       {recoveryPlans.length > 0 && (
         <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
           <Typography.Text style={{ color: subColor }}>习惯恢复计划</Typography.Text>
@@ -300,6 +342,7 @@ export default function HabitPage() {
                         <div style={{ color: subColor, fontSize: 12, marginTop: 2 }}>
                           {habit.frequency === 'daily' ? '每日' : habit.frequency === 'weekly' ? '每周' : '每月'}
                           · 目标 {habit.targetCount} 次
+                          {(habit as any).extra?.chainNextId ? ` · 链到 ${habits.find(h => h.id === (habit as any).extra?.chainNextId)?.name || '下一习惯'}` : ''}
                         </div>
                       </div>
                     </div>
@@ -438,6 +481,17 @@ export default function HabitPage() {
           <div>
             <div style={{ marginBottom: 6, fontSize: 14 }}>每日目标次数</div>
             <Input type="number" min={1} max={99} value={targetCount} onChange={e => setTargetCount(Number(e.target.value) || 1)} />
+          </div>
+          <div>
+            <div style={{ marginBottom: 6, fontSize: 14 }}>链式触发</div>
+            <Select
+              allowClear
+              value={chainNextId || undefined}
+              onChange={value => setChainNextId(value || '')}
+              placeholder="完成后提示下一个习惯"
+              style={{ width: '100%' }}
+              options={habits.filter(h => h.id !== editing?.id).map(h => ({ value: h.id, label: h.name }))}
+            />
           </div>
         </Space>
       </Modal>

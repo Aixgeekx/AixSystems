@@ -2,6 +2,11 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.27.0
+- 专注页新增智能场景识别：按当前时间段和近期完成质量推荐专注策略。
+- 习惯页新增模板与链式习惯：一键生成成长链，完成后提示下一环节。
+- 日记页新增智能引导：按情绪快速套用反思模板。
+
 ## 最新版本 v0.26.0
 
 - **Aix 模型 API 配置**: 系统设置新增 Aix 模型接口，支持配置 API 地址、API Key 和模型名，配置仅保存在本地 IndexedDB
@@ -115,8 +120,8 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.26.0-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.27.0-Setup.exe` (NSIS 安装包,约 80MB)
 
 目录便携版: `npm run dist:portable` → `desktop/dist-installer/win-unpacked/`
 
-单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.26.0-portable.exe`
+单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.27.0-portable.exe`

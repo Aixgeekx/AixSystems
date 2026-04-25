@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.27.0', date: '2026-04-25', items: [
+    '专注页新增智能场景识别，按时间段和近期完成质量推荐专注模式、时长与严格模式',
+    '习惯页新增成长控制链模板，可一键创建晨间、学习、夜间复盘链并设置完成后的下一习惯提示',
+    '日记页新增情绪智能引导模板，按平静、焦虑、开心快速启动控制力复盘和反思写作'
+  ]},
   { ver: '0.26.0', date: '2026-04-25', items: [
     '系统设置新增 Aix 模型 API 接口配置，可填写接口地址、API Key 和模型名，本地 IndexedDB 保存',
     '成长仪表盘新增 Aix 30 天成长轨迹模拟器，基于专注、目标、习惯和成长雷达生成干预建议',

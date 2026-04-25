@@ -219,6 +219,7 @@ export interface Habit {                                     // 习惯
   weekDays?: number[];
   sortOrder: number;
   deletedAt?: number;
+  extra?: Record<string, any>;
   createdAt: number;
   updatedAt: number;
 }

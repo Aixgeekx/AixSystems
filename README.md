@@ -39,6 +39,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 
 ## 最近更新
 
+- `v0.27.0`：新增专注智能场景识别、习惯模板与链式习惯、日记智能引导
 - `v0.26.0`：新增 Aix 模型 API 配置、30 天成长轨迹模拟器和首页智能控制助手
 - `v0.25.0`：新增跨模块关联洞察、智能周期成长报告和进阶成就等级系统
 - `v0.24.0`：升级高级动态视觉层、事项批处理工作台和低频页面工作台化
@@ -188,7 +189,7 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物:`desktop/dist-installer/AixSystems-0.26.0-Setup.exe`(约 80MB NSIS 向导包)
+产物:`desktop/dist-installer/AixSystems-0.27.0-Setup.exe`(约 80MB NSIS 向导包)
 
 ## 便携路线
 
