@@ -12,11 +12,11 @@
 - [x] README、code/README、results/使用说明、Aix_tools/readme 已同步 v0.28.0
 - [x] 测试通过：39/39 Vitest
 - [x] 构建通过：tsc + Vite 成功
-- [ ] Git 提交：待创建
-- [ ] 推送 `origin main`：待执行
-- [ ] 创建并推送 tag：`v0.28.0` 待执行
-- [ ] GitHub Release：待创建
-- [ ] Release 附件：待上传桌面安装包/便携包
+- [x] Git 提交：`bffd6b3 feat: AixSystems v0.28.0 - add control risk center`
+- [x] 已推送 `origin main`
+- [x] 已创建并推送 tag：`v0.28.0`
+- [x] GitHub Release 已创建：`https://github.com/Aixgeekx/AixSystems/releases/tag/v0.28.0`
+- [x] Release 附件：已上传 `AixSystems-0.28.0-Setup.exe` 与 blockmap；手机版为后续规划项
 
 ## 新增/修改重点
 - `code/src/pages/focus/index.tsx` — Aix 专注深度策略
