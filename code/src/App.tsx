@@ -50,6 +50,7 @@ const Goal = lazy(() => import('@/pages/goal'));
 const Growth = lazy(() => import('@/pages/growth'));
 const GrowthReport = lazy(() => import('@/pages/growth/Report'));
 const Review = lazy(() => import('@/pages/review'));
+const Agent = lazy(() => import('@/pages/agent'));
 
 function PageFallback() {
   return (
@@ -121,6 +122,7 @@ function AppShell() {                                           // 路由表 + �
           <Route path="home/growth" element={<Growth />} />
           <Route path="home/growth/report" element={<GrowthReport />} />
           <Route path="home/review" element={<Review />} />
+          <Route path="home/agent" element={<Agent />} />
           <Route path="search/index" element={<Search />} />
           <Route path="dataio" element={<DataIO />} />
           <Route path="help" element={<Help />} />

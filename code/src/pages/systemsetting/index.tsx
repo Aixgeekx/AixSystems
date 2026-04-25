@@ -10,6 +10,7 @@ import { db } from '@/db';
 import { requestPerm } from '@/utils/notify';
 import { getElectron, isElectron } from '@/utils/electron';
 import { downloadBackup } from '@/utils/export';
+import { probeAixProvider } from '@/utils/aixModel';
 import { fmtDateTime, fmtFromNow } from '@/utils/time';
 import Empty from '@/components/Empty';
 import { useThemeVariants } from '@/hooks/useVariants';
@@ -27,8 +28,9 @@ export default function SystemPage() {
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
 
-  const { startPage, setKV, customFont, aixApiUrl, aixApiKey, aixModel, aixProviderProfiles, aixActiveProfile } = useSettingsStore();
+  const { startPage, setKV, customFont, aixApiUrl, aixApiKey, aixModel, aixProviderProfiles, aixActiveProfile, aixProviderHistory } = useSettingsStore();
   const [profileName, setProfileName] = useState('');
+  const [probingProvider, setProbingProvider] = useState('');
   const [storageEstimate, setStorageEstimate] = useState<{ usage?: number; quota?: number }>({});
   const [permissionState, setPermissionState] = useState(Notification.permission);
   const electron = isElectron();
@@ -111,7 +113,8 @@ export default function SystemPage() {
   }
 
   const allPages = MENU_GROUPS.flatMap(group => group.children).map(child => ({ value: child.path, label: child.label }));
-  const providerProfiles = JSON.parse(aixProviderProfiles || '[]') as Array<{ name: string; apiUrl: string; model: string; keyHint?: string; provider?: string; health?: string; official?: boolean }>;
+  const providerProfiles = JSON.parse(aixProviderProfiles || '[]') as Array<{ name: string; apiUrl: string; model: string; keyHint?: string; provider?: string; health?: string; official?: boolean; latency?: number; checkedAt?: number }>;
+  const providerHistory = JSON.parse(aixProviderHistory || '[]') as Array<{ name: string; ok: boolean; latency: number; checkedAt: number; error?: string }>;
   const activeProfile = providerProfiles.find(profile => profile.name === aixActiveProfile);
   const providerPresets = [
     { name: 'Claude Code 官方', apiUrl: '', model: 'claude-opus-4-7', provider: 'official', official: true },
@@ -146,6 +149,32 @@ export default function SystemPage() {
     setProfileName(preset.name);
     await setKV('aixApiUrl', preset.apiUrl);
     await setKV('aixModel', preset.model);
+  }
+
+  async function checkProvider(profile = { name: profileName || '当前配置', apiUrl: aixApiUrl, model: aixModel }) {
+    if (!profile.apiUrl) {
+      message.info('官方登录回退槽无需健康检查');
+      return;
+    }
+    setProbingProvider(profile.name);
+    const result = await probeAixProvider({ apiUrl: profile.apiUrl, apiKey: aixApiKey, model: profile.model });
+    const health = result.ok ? `正常 ${result.latency}ms` : `异常 ${result.error}`;
+    const nextProfiles = providerProfiles.map(item => item.name === profile.name ? { ...item, health, latency: result.latency, checkedAt: result.checkedAt } : item);
+    const nextHistory = [{ name: profile.name, ...result }, ...providerHistory].slice(0, 20);
+    await setKV('aixProviderProfiles', JSON.stringify(nextProfiles));
+    await setKV('aixProviderHistory', JSON.stringify(nextHistory));
+    setProbingProvider('');
+    message[result.ok ? 'success' : 'warning'](result.ok ? `Provider 正常：${result.latency}ms` : `Provider 异常：${result.error}`);
+  }
+
+  async function failoverProvider() {
+    const target = providerProfiles.find(item => item.name !== aixActiveProfile && item.health?.startsWith('正常')) || providerProfiles.find(item => item.official);
+    if (!target) {
+      message.warning('没有可回退 Provider，请先保存官方或健康配置槽');
+      return;
+    }
+    await switchAixProfile(target.name);
+    await setKV('aixProviderHistory', JSON.stringify([{ name: target.name, ok: true, latency: 0, checkedAt: Date.now(), error: '故障转移切换' }, ...providerHistory].slice(0, 20)));
   }
 
   return (
@@ -277,6 +306,8 @@ export default function SystemPage() {
               <Input value={profileName} onChange={event => setProfileName(event.target.value)} placeholder="配置槽名称，例如 Claude Code / cc-switch / 本地模型" />
               <Space wrap>
                 <Button type="primary" onClick={saveAixProfile} style={{ borderRadius: 10 }}>保存为 Provider 槽</Button>
+                <Button onClick={() => checkProvider()} loading={probingProvider === (profileName || '当前配置')} style={{ borderRadius: 10 }}>健康检查</Button>
+                <Button onClick={failoverProvider} style={{ borderRadius: 10 }}>故障转移</Button>
                 {activeProfile ? <Tag color="blue">当前槽：{activeProfile.name}</Tag> : <Tag>未选择配置槽</Tag>}
               </Space>
               <Space wrap size={[8, 8]}>
@@ -289,12 +320,21 @@ export default function SystemPage() {
               <Space wrap size={[8, 8]}>
                 {providerProfiles.map(profile => (
                   <Button key={profile.name} size="small" onClick={() => switchAixProfile(profile.name)} style={{ borderRadius: 10 }}>
-                    {profile.name} · {profile.model}
+                    {profile.name} · {profile.health || profile.model}
                   </Button>
                 ))}
               </Space>
+              {providerHistory.length ? (
+                <div style={{ display: 'grid', gap: 6 }}>
+                  {providerHistory.slice(0, 3).map(item => (
+                    <div key={`${item.name}-${item.checkedAt}`} style={{ color: subColor, fontSize: 12 }}>
+                      {item.ok ? '✓' : '!'} {item.name} · {item.latency}ms · {fmtFromNow(item.checkedAt)}{item.error ? ` · ${item.error}` : ''}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <div style={{ padding: 12, borderRadius: 12, background: isDark ? `${accent}0d` : `${accent}08`, border: `1px solid ${accent}22`, color: subColor, fontSize: 12, lineHeight: 1.8 }}>
-                Provider 抽象：API 地址、模型、Key 提示和健康状态统一管理；切换前会备份旧槽；官方登录可作为无 Key 回退；后续可同步到 Claude Code / 本地代理配置。
+                Provider 抽象：API 地址、模型、Key 提示、健康状态和故障转移统一管理；切换前会备份旧槽；官方登录可作为无 Key 回退；后续可同步到 Claude Code / 本地代理配置。
               </div>
             </Space>
           </Card>

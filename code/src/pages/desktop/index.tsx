@@ -31,6 +31,8 @@ function formatGB(bytes = 0) {
 export default function DesktopWidgetPage() {
   const [show, setShow] = useState(false);
   const [snapshot, setSnapshot] = useState<any>(null);
+  const [controlScan, setControlScan] = useState<any>(null);
+  const [powershellResult, setPowerShellResult] = useState<any>(null);
   const [managerPlan, setManagerPlan] = useState<Record<string, string[]>>({});
   const { theme, getPanelStyle } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
@@ -46,8 +48,15 @@ export default function DesktopWidgetPage() {
   async function refreshSnapshot() {
     const next = await getElectron()?.getSystemSnapshot?.();
     const plan = await getElectron()?.getSystemManagerPlan?.();
+    const scan = await getElectron()?.scanSystemControl?.();
     if (next) setSnapshot(next);
     if (plan) setManagerPlan(plan);
+    if (scan) setControlScan(scan);
+  }
+
+  async function runPowerShell(preset: 'computer' | 'processes' | 'services') {
+    const result = await getElectron()?.runPowerShellPreset?.(preset);
+    if (result) setPowerShellResult(result);
   }
 
   useEffect(() => {
@@ -139,6 +148,63 @@ export default function DesktopWidgetPage() {
             </Col>
           ))}
         </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <ToolOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>超级管理器三期 · 只读控制扫描</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>
+          桌面端先以只读方式枚举自启入口、临时目录和端口占用，后续任何修改都必须经过确认、备份和回滚。
+        </Typography.Paragraph>
+        {electron && controlScan ? (
+          <Row gutter={[12, 12]}>
+            <Col xs={24} md={8}>
+              <div style={{ padding: 16, borderRadius: 18, background: isDark ? 'rgba(37,99,235,0.12)' : 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.22)' }}>
+                <Typography.Text style={{ color: subColor }}>自启入口</Typography.Text>
+                <Typography.Title level={4} style={{ color: titleColor, margin: '4px 0' }}>{controlScan.startup?.length || 0}</Typography.Title>
+                {(controlScan.startup || []).slice(0, 3).map((item: any) => <div key={`${item.source}-${item.name}`} style={{ color: subColor, fontSize: 12 }}>· {item.source} / {item.name}</div>)}
+              </div>
+            </Col>
+            <Col xs={24} md={8}>
+              <div style={{ padding: 16, borderRadius: 18, background: isDark ? 'rgba(139,92,246,0.12)' : 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.22)' }}>
+                <Typography.Text style={{ color: subColor }}>临时目录</Typography.Text>
+                <Typography.Title level={4} style={{ color: titleColor, margin: '4px 0' }}>{controlScan.temp?.count || 0} 项</Typography.Title>
+                <div style={{ color: subColor, fontSize: 12 }}>7 天前项目 {controlScan.temp?.oldCount || 0} · 采样 {formatGB(controlScan.temp?.totalBytes || 0)}</div>
+              </div>
+            </Col>
+            <Col xs={24} md={8}>
+              <div style={{ padding: 16, borderRadius: 18, background: isDark ? 'rgba(6,182,212,0.12)' : 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.22)' }}>
+                <Typography.Text style={{ color: subColor }}>端口占用</Typography.Text>
+                <Typography.Title level={4} style={{ color: titleColor, margin: '4px 0' }}>{controlScan.ports?.length || 0}</Typography.Title>
+                {(controlScan.ports || []).slice(0, 3).map((item: any) => <div key={`${item.local}-${item.pid}`} style={{ color: subColor, fontSize: 12 }}>· {item.protocol} {item.local} / PID {item.pid}</div>)}
+              </div>
+            </Col>
+          </Row>
+        ) : (
+          <Alert type="info" showIcon message="桌面版启动后可执行只读扫描；浏览器模式不会访问系统自启、临时目录或端口。" style={{ borderRadius: 12 }} />
+        )}
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <ToolOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>内置 PowerShell · 安全预设通道</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>
+          先开放只读 PowerShell 预设，用于读取电脑信息、进程和服务；暂不提供任意命令输入，避免误操作。
+        </Typography.Paragraph>
+        <Space wrap style={{ marginBottom: 12 }}>
+          <Button onClick={() => runPowerShell('computer')} disabled={!electron} style={{ borderRadius: 10 }}>电脑信息</Button>
+          <Button onClick={() => runPowerShell('processes')} disabled={!electron} style={{ borderRadius: 10 }}>高占用进程</Button>
+          <Button onClick={() => runPowerShell('services')} disabled={!electron} style={{ borderRadius: 10 }}>运行服务</Button>
+        </Space>
+        {powershellResult ? (
+          <pre style={{ maxHeight: 220, overflow: 'auto', margin: 0, padding: 12, borderRadius: 14, color: titleColor, background: isDark ? 'rgba(0,0,0,0.28)' : 'rgba(15,23,42,0.04)', whiteSpace: 'pre-wrap' }}>
+            {powershellResult.error || powershellResult.output}
+          </pre>
+        ) : <Alert type="info" showIcon message="桌面版可调用系统 PowerShell 只读预设；浏览器模式不可用。" style={{ borderRadius: 12 }} />}
       </Card>
 
       <Row gutter={[16, 16]}>

@@ -3,6 +3,7 @@ const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron')
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
+const { execFile } = require('node:child_process');
 
 const DEV = !!process.env.SGX_DEV;                                      // SGX_DEV=1 启用开发模式
 const PORTABLE_MARKERS = ['AixSystems.portable', 'portable.flag'];
@@ -43,6 +44,59 @@ function getDiskStats() {
     free,
     used: total - free
   };
+}
+
+function runCommand(file, args) {
+  return new Promise(resolve => {
+    execFile(file, args, { windowsHide: true, timeout: 5000, maxBuffer: 1024 * 1024 }, (error, stdout) => {
+      resolve(error ? '' : stdout.toString());
+    });
+  });
+}
+
+async function scanStartupItems() {
+  const startupDir = path.join(os.homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup');
+  const fileItems = fs.existsSync(startupDir)
+    ? fs.readdirSync(startupDir).slice(0, 20).map(name => ({ source: 'Startup 文件夹', name, path: path.join(startupDir, name) }))
+    : [];
+  const regText = await runCommand('reg', ['query', 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run']);
+  const regItems = regText.split(/\r?\n/).map(line => line.trim()).filter(line => /^\S+\s+REG_/.test(line)).slice(0, 20).map(line => ({ source: 'HKCU Run', name: line.split(/\s+REG_/)[0], path: line }));
+  return [...fileItems, ...regItems];
+}
+
+function scanTempFiles() {
+  const tempDir = os.tmpdir();
+  const entries = fs.existsSync(tempDir) ? fs.readdirSync(tempDir, { withFileTypes: true }).slice(0, 300) : [];
+  let totalBytes = 0;
+  let oldCount = 0;
+  const oldLimit = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  entries.forEach(entry => {
+    try {
+      const stat = fs.statSync(path.join(tempDir, entry.name));
+      totalBytes += stat.size;
+      if (stat.mtimeMs < oldLimit) oldCount += 1;
+    } catch {}
+  });
+  return { path: tempDir, count: entries.length, oldCount, totalBytes };
+}
+
+async function scanPorts() {
+  const text = await runCommand('netstat', ['-ano']);
+  return text.split(/\r?\n/).map(line => line.trim()).filter(line => /^(TCP|UDP)\s+/i.test(line)).slice(0, 30).map(line => {
+    const parts = line.split(/\s+/);
+    return { protocol: parts[0], local: parts[1], state: parts.length === 5 ? parts[3] : 'LISTEN', pid: parts[parts.length - 1] };
+  });
+}
+
+async function runPowerShellPreset(preset) {
+  const scripts = {
+    computer: 'Get-ComputerInfo | Select-Object CsName,WindowsProductName,OsArchitecture,OsBuildNumber | ConvertTo-Json -Compress',
+    processes: 'Get-Process | Sort-Object CPU -Descending | Select-Object -First 8 ProcessName,Id,CPU,WorkingSet64 | ConvertTo-Json -Compress',
+    services: 'Get-Service | Where-Object Status -eq Running | Select-Object -First 12 Name,DisplayName,Status | ConvertTo-Json -Compress'
+  };
+  if (!scripts[preset]) return { preset, output: '', error: '未知 PowerShell 预设' };
+  const output = await runCommand('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', scripts[preset]]);
+  return { preset, output: output.slice(0, 12000), error: output ? '' : 'PowerShell 无输出或执行失败' };
 }
 
 function createWindow() {
@@ -136,6 +190,13 @@ ipcMain.handle('sgx:get-system-manager-plan', () => ({
   scan: ['按扩展名扫描可疑脚本', '识别重复文件和超大附件', '所有删除动作进入人工确认'],
   tools: ['断网急救', '时间校准', '二维码生成', 'HOST 修改', '批量重命名', '端口扫描']
 }));
+ipcMain.handle('sgx:scan-system-control', async () => ({
+  startup: await scanStartupItems(),
+  temp: scanTempFiles(),
+  ports: await scanPorts(),
+  scannedAt: Date.now()
+}));
+ipcMain.handle('sgx:run-powershell-preset', async (_, preset) => runPowerShellPreset(preset));
 
 Menu.setApplicationMenu(null);
 

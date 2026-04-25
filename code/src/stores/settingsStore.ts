@@ -22,6 +22,7 @@ interface SettingsState {
   aixModel: string;
   aixProviderProfiles: string;
   aixActiveProfile: string;
+  aixProviderHistory: string;
   setTheme: (k: string) => Promise<void>;
   setBrightness: (n: number) => Promise<void>;
   setBlur: (n: number) => Promise<void>;
@@ -50,6 +51,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   aixModel: 'aix-growth-control',
   aixProviderProfiles: '[]',
   aixActiveProfile: '',
+  aixProviderHistory: '[]',
   async load() {
     const rows = await db.settings.toArray();
     const kv: Record<string, any> = {};
@@ -71,7 +73,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       aixApiKey: kv.aixApiKey ?? '',
       aixModel: kv.aixModel ?? 'aix-growth-control',
       aixProviderProfiles: kv.aixProviderProfiles ?? '[]',
-      aixActiveProfile: kv.aixActiveProfile ?? ''
+      aixActiveProfile: kv.aixActiveProfile ?? '',
+      aixProviderHistory: kv.aixProviderHistory ?? '[]'
     });
   },
   async setTheme(k) { await save('theme', k); set({ theme: k }); },

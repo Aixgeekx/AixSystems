@@ -33,6 +33,7 @@ export const ROUTES = {
   GROWTH: '/home/growth',                              // 成长仪表盘
   GROWTH_REPORT: '/home/growth/report',                // 智能周期报告
   REVIEW: '/home/review',                              // 复习中心
+  AGENT: '/home/agent',                                // Agent 中枢
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
 
@@ -82,6 +83,7 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
     key: 'tools', label: '工具',
     children: [
       { key: 'functions', label: '实用功能', path: '/home/functions', icon: 'appstore' },
+      { key: 'agent', label: 'Agent 中枢', path: ROUTES.AGENT, icon: 'thunderbolt' },
       { key: 'focus', label: '番茄专注', path: ROUTES.FOCUS, icon: 'fire' },
       { key: 'widget', label: '桌面小部件', path: ROUTES.DESKTOP_WIDGET, icon: 'desktop' },
       { key: 'lock', label: '应用锁', path: ROUTES.APP_LOCK, icon: 'lock' },

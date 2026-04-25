@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.31.0', date: '2026-04-25', items: [
+    '超级管理器三期新增只读控制扫描，可枚举自启入口、临时目录采样和端口占用，并加入 PowerShell 只读预设通道',
+    'Aix Provider 管理新增健康检查、延迟记录、策略历史和故障转移回退，提升模型调用稳定性',
+    '新增 Aix Agent 中枢，把成长控制、电脑管理和模型调度抽象为可分支、可授权、可恢复的本地任务'
+  ]},
   { ver: '0.30.0', date: '2026-04-25', items: [
     '桌面端超级管理器二期新增安全控制矩阵，规划自启管理、隐私清理、磁盘保护、文件扫描和工具大全',
     'Aix 模型管理升级为 cc-switch 风格 Provider 抽象，加入预设、原子切换、备份和官方登录回退提示',

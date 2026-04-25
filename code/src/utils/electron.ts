@@ -33,6 +33,13 @@ interface SgxBridge {
     scan: string[];
     tools: string[];
   }>;
+  scanSystemControl: () => Promise<{
+    startup: { source: string; name: string; path: string }[];
+    temp: { path: string; count: number; oldCount: number; totalBytes: number };
+    ports: { protocol: string; local: string; state: string; pid: string }[];
+    scannedAt: number;
+  }>;
+  runPowerShellPreset: (preset: 'computer' | 'processes' | 'services') => Promise<{ preset: string; output: string; error?: string }>;
 }
 
 export function getElectron(): SgxBridge | null {

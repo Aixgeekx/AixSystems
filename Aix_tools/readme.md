@@ -2,10 +2,10 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
-## 最新版本 v0.30.0
-- 桌面端超级管理器二期新增安全控制矩阵，覆盖自启管理、隐私清理、磁盘保护、文件扫描和工具大全。
-- Aix 模型管理升级为 cc-switch 风格 Provider 抽象，加入预设、原子切换、配置备份和官方登录回退提示。
-- 手机版适配新增底部四入口导航，移动端可快速进入首页、今天、成长和工具。
+## 最新版本 v0.31.0
+- 超级管理器三期新增自启入口、临时目录、端口占用只读扫描，并补充 PowerShell 只读预设通道。
+- Aix Provider 管理新增健康检查、延迟记录、策略历史和故障转移回退；Aix 是软件内置 AI 名称，由用户提供 API 与 Key。
+- 新增 Aix Agent 中枢，把个人成长、电脑管理和模型调度做成可分支、可授权、可恢复的本地任务。
 
 ## 最新版本 v0.29.0
 - 全局外壳新增手机版导航抽屉和窄屏布局，为后续手机版做准备。
@@ -137,8 +137,8 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.30.0-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.31.0-Setup.exe` (NSIS 安装包,约 80MB)
 
 目录便携版: `npm run dist:portable` → `desktop/dist-installer/win-unpacked/`
 
-单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.30.0-portable.exe`
+单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.31.0-portable.exe`
