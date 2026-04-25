@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { nanoid } from 'nanoid';
+import dayjs from 'dayjs';
 import { db } from '@/db';
 import { fmtDate, fmtDateTime, fmtFromNow, today0 } from '@/utils/time';
 import { previewOf } from '@/utils/html';
@@ -58,6 +59,10 @@ export default function DiaryPage() {
   const { setKV } = useSettingsStore();
   const diaryLockHash = useLiveQuery(() => db.settings.get('diaryLockHash').then(row => row?.value), []) as string | undefined;
   const list = useLiveQuery(() => db.diaries.filter(diary => !diary.deletedAt).reverse().sortBy('date'), []) || [];
+  const behaviorLinks = useLiveQuery(async () => {
+    const [items, sessions] = await Promise.all([db.items.toArray(), db.focusSessions.toArray()]);
+    return { items: items.filter(item => !item.deletedAt), sessions };
+  }, []) || { items: [], sessions: [] };
 
   useEffect(() => {
     if (!diaryLockHash) setLocked(false);
@@ -85,6 +90,15 @@ export default function DiaryPage() {
     return { day: `${day.getMonth() + 1}/${day.getDate()}`, mood: entries[0]?.mood || '', count: entries.length };
   });
   const moodSummary = moodDays.filter(day => day.mood).slice(-7);
+  const moodInsights = moodSummary.slice(-3).map(day => {
+    const date = dayjs(`${dayjs().year()}/${day.day}`, 'YYYY/M/D');
+    const start = date.startOf('day').valueOf();
+    const end = date.endOf('day').valueOf();
+    const doneItems = behaviorLinks.items.filter(item => item.completeStatus === 'done' && (item.completeTime || item.updatedAt) >= start && (item.completeTime || item.updatedAt) <= end).length;
+    const focusMin = Math.round(behaviorLinks.sessions.filter(session => session.startTime >= start && session.startTime <= end).reduce((sum, session) => sum + session.actualMs / 60_000, 0));
+    const signal = focusMin >= 45 || doneItems >= 3 ? '行动充足' : focusMin || doneItems ? '轻量推进' : '低行动日';
+    return { ...day, doneItems, focusMin, signal };
+  });
 
   function clearDraft() {
     localStorage.removeItem(DRAFT_KEY);
@@ -314,6 +328,19 @@ export default function DiaryPage() {
         <Typography.Paragraph style={{ margin: '12px 0 0', color: subColor }}>
           最近 7 条情绪：{moodSummary.length ? moodSummary.map(day => day.mood).join(' ') : '暂无记录'}。持续记录能帮助你看见情绪和行动之间的关系。
         </Typography.Paragraph>
+        {moodInsights.length ? (
+          <Row gutter={[10, 10]} style={{ marginTop: 12 }}>
+            {moodInsights.map(day => (
+              <Col xs={24} md={8} key={day.day}>
+                <div style={{ padding: 12, borderRadius: 16, background: tintedBg(day.focusMin >= 45 || day.doneItems >= 3 ? '#22c55e' : '#f59e0b'), border: `1px solid ${(day.focusMin >= 45 || day.doneItems >= 3) ? '#22c55e44' : '#f59e0b44'}` }}>
+                  <Typography.Text strong style={{ color: titleColor }}>{day.day} · {day.mood}</Typography.Text>
+                  <div style={{ marginTop: 6, color: subColor, fontSize: 12 }}>完成 {day.doneItems} 项 · 专注 {day.focusMin} 分钟</div>
+                  <Tag color={day.signal === '行动充足' ? 'green' : day.signal === '轻量推进' ? 'gold' : 'default'} style={{ marginTop: 8, borderRadius: 6 }}>{day.signal}</Tag>
+                </div>
+              </Col>
+            ))}
+          </Row>
+        ) : null}
       </Card>
 
       <Row gutter={[16, 16]}>

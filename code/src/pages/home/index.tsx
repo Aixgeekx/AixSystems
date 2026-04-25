@@ -76,7 +76,7 @@ export default function HomePage() {
       db.items.toArray(),
       db.diaries.toArray(),
       db.memos.toArray(),
-      db.focusSessions.orderBy('startTime').reverse().limit(6).toArray(),
+      db.focusSessions.toArray(),
       db.cacheKv.get('lastBackupMeta'),
       db.goals.filter(g => !g.deletedAt && g.status === 'active').toArray(),
       db.habits.filter(h => !h.deletedAt).toArray(),
@@ -94,7 +94,25 @@ export default function HomePage() {
     const weekItems = activeItems.filter(item => item.completeStatus !== 'done' && item.startTime >= todayStart && item.startTime <= dayjs().add(7, 'day').endOf('day').valueOf()).length;
     const pinnedNotes = memos.filter(memo => !memo.deletedAt && memo.pinned).slice(0, 4);
     const recentDiaries = diaries.filter(diary => !diary.deletedAt).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
+    const recentSessions = sessions.sort((a, b) => b.startTime - a.startTime).slice(0, 6);
+    const todayFocusMinutes = Math.round(sessions.filter(session => session.startTime >= todayStart && session.startTime <= todayEnd).reduce((sum, session) => sum + session.actualMs / 60_000, 0));
     const focusMinutes = sessions.reduce((sum, session) => sum + session.actualMs / 60_000, 0);
+    const hourlyFocus = sessions.reduce<Record<number, number>>((map, session) => {
+      const hour = dayjs(session.startTime).hour();
+      map[hour] = (map[hour] || 0) + session.actualMs / 60_000;
+      return map;
+    }, {});
+    const peakFocusHour = Object.entries(hourlyFocus).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const focusTarget = 60;
+    const focusGap = Math.max(0, focusTarget - todayFocusMinutes);
+    const focusAlert = {
+      todayFocusMinutes,
+      focusGap,
+      focusTarget,
+      peakHour: peakFocusHour ? `${peakFocusHour}:00-${String(Number(peakFocusHour) + 1).padStart(2, '0')}:00` : '完成一次专注后生成',
+      level: todayFocusMinutes >= focusTarget ? '达标' : todayFocusMinutes >= 25 ? '缺口' : '空窗',
+      advice: todayFocusMinutes >= focusTarget ? '今日专注已达标，可以转入轻量复盘。' : peakFocusHour ? `还差 ${focusGap} 分钟，建议在 ${peakFocusHour}:00 高能时段补一次专注。` : `还差 ${focusGap} 分钟，先启动 25 分钟番茄钟建立节奏。`
+    };
     const riskGoalCount = goals.filter(goal => {
       const ms = goal.milestones || [];
       const progress = ms.length ? Math.round(ms.filter(m => m.done).length / ms.length * 100) : 0;
@@ -132,8 +150,9 @@ export default function HomePage() {
       memos,
       pinnedNotes,
       recentDiaries,
-      sessions,
+      sessions: recentSessions,
       focusMinutes,
+      focusAlert,
       lastBackup,
       alerts,
       overloadSignals,
@@ -237,15 +256,16 @@ export default function HomePage() {
   };
 
   const heroStyle: React.CSSProperties = {
-    borderRadius: 30,
+    borderRadius: 32,
     overflow: 'hidden',
+    position: 'relative',
     background: isDark
-      ? `linear-gradient(135deg, ${accent}15 0%, rgba(10,14,28,0.95) 46%, rgba(6,8,18,0.98) 100%)`
-      : `linear-gradient(135deg, ${theme.gradient[0]} 0%, ${theme.gradient[1]} 100%)`,
+      ? `linear-gradient(135deg, rgba(20,24,39,0.9) 0%, rgba(10,14,28,0.95) 46%, rgba(6,8,18,0.98) 100%)`
+      : `linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%)`,
     boxShadow: isDark
-      ? `0 28px 60px ${accent}24, 0 0 40px ${accent}10`
-      : `0 28px 60px ${accent}20`,
-    border: isDark ? `1px solid ${accent}33` : 'none'
+      ? `0 24px 64px -12px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.05)`
+      : `0 24px 64px -12px rgba(15,23,42,0.06), inset 0 1px 1px rgba(255,255,255,1)`,
+    border: isDark ? `1px solid rgba(255,255,255,0.05)` : `1px solid rgba(255,255,255,0.8)`
   };
 
   const actionButtonStyle: React.CSSProperties = {
@@ -533,100 +553,67 @@ export default function HomePage() {
       >
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>{modeSwitcher}</div>
         <Row gutter={[20, 20]} align="middle">
-          <Col xs={24} xl={15}>
-            <Typography.Text style={{ color: subColor }}>
-              {dayjs().format('YYYY 年 M 月 D 日 · dddd')}
-            </Typography.Text>
-            <Typography.Title
-              level={2}
-              style={{
-                margin: '8px 0 10px',
-                color: titleColor,
-                lineHeight: 1.12,
-                fontFamily: theme.fontFamily,
-                textShadow: isDark ? `0 0 20px ${accent}44` : 'none'
-              }}
-            >
-              首页工作台
-            </Typography.Title>
-            <Typography.Paragraph
-              style={{
-                marginBottom: 14,
-                color: subColor,
-                fontSize: 14,
-                maxWidth: 720
-              }}
-            >
-              打开后直接看到今日事项、专注状态、存储占用和最近内容。首页现在优先强调可读性，不再让大块空白和白卡抢掉视线。
-            </Typography.Paragraph>
-            <Space wrap size={[10, 10]}>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                className="hover-scale"
+          <Col xs={24} xl={13}>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '10px 0' }}>
+              <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.05em' }}>
+                {dayjs().format('YYYY / MM / DD')} · {dayjs().format('dddd')}
+              </Typography.Text>
+              <Typography.Title
+                level={1}
                 style={{
-                  borderRadius: 14,
-                  height: 42,
-                  fontWeight: 700,
-                  boxShadow: `0 10px 26px ${accent}44`,
-                  transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                }}
-                onClick={() => openItemForm(undefined, 'schedule')}
-              >
-                新建日程
-              </Button>
-              <Button
-                icon={<SearchOutlined />}
-                className="hover-lift"
-                style={actionButtonStyle}
-                onClick={() => nav(ROUTES.SEARCH)}
-              >
-                全局搜索
-              </Button>
-              <Button
-                icon={<DownloadOutlined />}
-                className="hover-lift"
-                style={actionButtonStyle}
-                onClick={quickBackup}
-              >
-                快速备份
-              </Button>
-            </Space>
-            <Space wrap size={[8, 8]} style={{ marginTop: 14 }}>
-              <Tag
-                bordered={false}
-                style={{
-                  background: tintedBg('#3b82f6'),
-                  color: isDark ? '#93c5fd' : '#2563eb',
-                  borderRadius: 6
+                  margin: '12px 0 16px',
+                  color: titleColor,
+                  lineHeight: 1.1,
+                  fontWeight: 800,
+                  fontFamily: theme.fontFamily,
+                  letterSpacing: '-0.02em'
                 }}
               >
-                本地离线
-              </Tag>
-              <Tag
-                bordered={false}
+                工作台
+              </Typography.Title>
+              <Typography.Paragraph
                 style={{
-                  background: tintedBg('#16a34a'),
-                  color: isDark ? '#86efac' : '#15803d',
-                  borderRadius: 6
+                  marginBottom: 24,
+                  color: subColor,
+                  fontSize: 15,
+                  maxWidth: 580,
+                  lineHeight: 1.6
                 }}
               >
-                实时保存
-              </Tag>
-              <Tag
-                bordered={false}
-                style={{
-                  background: tintedBg('#f59e0b'),
-                  color: isDark ? '#fde68a' : '#b45309',
-                  borderRadius: 6
-                }}
-              >
-                便携运行
-              </Tag>
-            </Space>
+                这是你的核心控制中心。所有事项、数据、目标和复盘均汇聚于此。保持专注，让每一天都有迹可循。
+              </Typography.Paragraph>
+              <Space wrap size={12}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  className="hover-scale"
+                  style={{
+                    borderRadius: 16,
+                    height: 48,
+                    padding: '0 24px',
+                    fontSize: 15,
+                    fontWeight: 600,
+                    boxShadow: `0 12px 28px -6px ${accent}66`,
+                    border: 'none',
+                    transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                  }}
+                  onClick={() => openItemForm(undefined, 'schedule')}
+                >
+                  新建事项
+                </Button>
+                <Button
+                  icon={<SearchOutlined />}
+                  className="hover-lift"
+                  style={{...actionButtonStyle, height: 48, borderRadius: 16, padding: '0 24px', fontSize: 15}}
+                  onClick={() => nav(ROUTES.SEARCH)}
+                >
+                  搜索
+                </Button>
+              </Space>
+            </div>
           </Col>
 
-          <Col xs={24} xl={9}>
+          <Col xs={24} xl={11}>
             <div
               className="anim-fade-in-up stagger-2"
               style={{
@@ -656,7 +643,9 @@ export default function HomePage() {
                     background: tintedBg(accent),
                     color: titleColor,
                     marginInlineEnd: 0,
-                    borderRadius: 6
+                    borderRadius: 8,
+                    padding: '2px 10px',
+                    fontWeight: 700
                   }}
                 >
                   {completion}%
@@ -665,11 +654,12 @@ export default function HomePage() {
               <Progress
                 percent={completion}
                 strokeColor={accent}
-                trailColor={isDark ? 'rgba(255,255,255,0.10)' : 'rgba(15,23,42,0.08)'}
+                trailColor={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.04)'}
                 showInfo={false}
                 strokeLinecap="round"
+                size={['100%', 8]}
               />
-              <Row gutter={[10, 10]} style={{ marginTop: 12 }}>
+              <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
                 {statTiles.map(tile => (
                   <Col span={12} key={tile.label}>
                     <div
@@ -728,16 +718,16 @@ export default function HomePage() {
       </Card>
 
       {dashboard?.alerts?.length ? (
-        <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 22 }}>
+        <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
-              <Typography.Text style={{ color: subColor }}>成长警报</Typography.Text>
-              <Typography.Title level={4} style={{ margin: '4px 0 0', color: titleColor }}>需要今天处理的控制信号</Typography.Title>
+              <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.02em' }}>成长警报</Typography.Text>
+              <Typography.Title level={4} style={{ margin: '6px 0 0', color: titleColor, fontWeight: 700 }}>需要今天处理的控制信号</Typography.Title>
             </div>
-            <Space wrap size={8}>
+            <Space wrap size={10}>
               {dashboard.alerts.map((alert: any) => (
-                <Button key={alert.label} onClick={() => nav(alert.path)} style={{ borderRadius: 999, color: alert.color, borderColor: `${alert.color}66`, background: tintedBg(alert.color) }}>
-                  {alert.label} · {alert.value}
+                <Button key={alert.label} onClick={() => nav(alert.path)} style={{ borderRadius: 12, color: alert.color, borderColor: `${alert.color}44`, background: tintedBg(alert.color), fontWeight: 600, padding: '0 16px' }}>
+                  {alert.label} · <span style={{fontSize: 16, marginLeft: 4}}>{alert.value}</span>
                 </Button>
               ))}
             </Space>
@@ -745,24 +735,49 @@ export default function HomePage() {
         </Card>
       ) : null}
 
-      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 22 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
           <div>
-            <Typography.Text style={{ color: subColor }}>事项过载雷达</Typography.Text>
-            <Typography.Title level={4} style={{ margin: '4px 0 4px', color: titleColor }}>今日控制负载 · {dashboard?.overloadLevel || '可控'}</Typography.Title>
-            <Typography.Text style={{ color: subColor }}>{dashboard?.overloadAdvice || '当前控制负载可控，可以保持正常推进。'}</Typography.Text>
+            <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.02em' }}>今日专注警报</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '6px 0 6px', color: titleColor, fontWeight: 700 }}>专注控制 · {dashboard?.focusAlert.level || '空窗'}</Typography.Title>
+            <Typography.Text style={{ color: subColor, fontSize: 13 }}>{dashboard?.focusAlert.advice || '先启动 25 分钟番茄钟建立节奏。'}</Typography.Text>
           </div>
-          <Progress type="circle" percent={dashboard?.overloadScore || 0} size={82} strokeColor={(dashboard?.overloadScore || 0) >= 72 ? '#ef4444' : (dashboard?.overloadScore || 0) >= 42 ? '#f59e0b' : '#22c55e'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'} />
+          <Button type="primary" icon={<FireOutlined />} onClick={() => nav(ROUTES.FOCUS)} style={{ borderRadius: 16, height: 44, padding: '0 24px', fontWeight: 600, boxShadow: `0 12px 28px -6px ${accent}66`, border: 'none' }}>开始专注</Button>
         </div>
-        <Row gutter={[10, 10]}>
+        <Row gutter={[16, 16]}>
+          {[
+            { label: '今日已专注', value: `${dashboard?.focusAlert.todayFocusMinutes || 0} 分`, color: '#f59e0b' },
+            { label: '距离目标', value: `${dashboard?.focusAlert.focusGap || 0} 分`, color: '#ef4444' },
+            { label: '高能时段', value: dashboard?.focusAlert.peakHour || '完成一次专注后生成', color: '#22c55e' }
+          ].map(signal => (
+            <Col xs={24} md={8} key={signal.label}>
+              <div style={{ minHeight: 96, borderRadius: 18, padding: 14, background: tintedBg(signal.color), border: `1px solid ${signal.color}44` }}>
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>{signal.label}</Typography.Text>
+                <div style={{ marginTop: 8, color: titleColor, fontSize: 22, fontWeight: 800 }}>{signal.value}</div>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+          <div>
+            <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.02em' }}>事项过载雷达</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '6px 0 6px', color: titleColor, fontWeight: 700 }}>今日控制负载 · {dashboard?.overloadLevel || '可控'}</Typography.Title>
+            <Typography.Text style={{ color: subColor, fontSize: 13 }}>{dashboard?.overloadAdvice || '当前控制负载可控，可以保持正常推进。'}</Typography.Text>
+          </div>
+          <Progress type="circle" percent={dashboard?.overloadScore || 0} size={82} strokeColor={(dashboard?.overloadScore || 0) >= 72 ? '#ef4444' : (dashboard?.overloadScore || 0) >= 42 ? '#f59e0b' : '#22c55e'} trailColor={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.04)'} />
+        </div>
+        <Row gutter={[16, 16]}>
           {dashboard?.overloadSignals.map((signal: any) => (
             <Col xs={24} sm={12} xl={4} key={signal.label}>
-              <button type="button" onClick={() => nav(signal.path)} className="hover-lift" style={{ width: '100%', minHeight: 112, textAlign: 'left', cursor: 'pointer', borderRadius: 18, padding: 12, background: tintedBg(signal.color), border: `1px solid ${signal.color}44`, transition: 'all 0.3s ease' }}>
+              <button type="button" onClick={() => nav(signal.path)} className="hover-lift" style={{ width: '100%', minHeight: 120, textAlign: 'left', cursor: 'pointer', borderRadius: 20, padding: 16, background: tintedBg(signal.color), border: `1px solid ${signal.color}33`, transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                 <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                  <Typography.Text strong style={{ color: titleColor, fontSize: 12 }}>{signal.label}</Typography.Text>
-                  <Tag style={{ marginInlineEnd: 0, borderRadius: 6 }} color={signal.percent >= 80 ? 'red' : signal.percent >= 50 ? 'gold' : 'green'}>{signal.value}</Tag>
+                  <Typography.Text strong style={{ color: titleColor, fontSize: 13 }}>{signal.label}</Typography.Text>
+                  <Tag style={{ marginInlineEnd: 0, borderRadius: 8, padding: '0 6px', fontWeight: 600 }} color={signal.percent >= 80 ? 'red' : signal.percent >= 50 ? 'gold' : 'green'}>{signal.value}</Tag>
                 </Space>
-                <Progress percent={signal.percent} showInfo={false} strokeColor={signal.color} trailColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'} style={{ margin: '12px 0 4px' }} />
+                <Progress percent={signal.percent} showInfo={false} strokeColor={signal.color} trailColor={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.04)'} size={['100%', 6]} style={{ margin: '16px 0 8px' }} />
                 <Typography.Text style={{ color: subColor, fontSize: 12 }}>阈值 {signal.limit} · {signal.percent >= 80 ? '需要削峰' : signal.percent >= 50 ? '保持警惕' : '负载正常'}</Typography.Text>
               </button>
             </Col>
@@ -778,16 +793,17 @@ export default function HomePage() {
             className="anim-fade-in-up stagger-2 hover-lift"
             style={{
               ...cardStyle,
+              borderRadius: 32,
               height: '100%'
             }}
-            bodyStyle={{ padding: 18 }}
+            bodyStyle={{ padding: 24 }}
           >
-            <Typography.Text style={{ color: subColor }}>
+            <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.02em' }}>
               快捷入口
             </Typography.Text>
             <Typography.Title
               level={4}
-              style={{ margin: '4px 0 14px', color: titleColor }}
+              style={{ margin: '6px 0 16px', color: titleColor, fontWeight: 700 }}
             >
               常用模块直接进入
             </Typography.Title>
@@ -809,11 +825,11 @@ export default function HomePage() {
                       width: '100%',
                       border: `1px solid ${borderColor}`,
                       textAlign: 'left',
-                      padding: '14px 12px',
-                      borderRadius: 18,
+                      padding: '14px 16px',
+                      borderRadius: 20,
                       cursor: 'pointer',
                       background: innerStrongBg,
-                      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                      transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 10
@@ -855,8 +871,8 @@ export default function HomePage() {
           <Card
             bordered={false}
             className="anim-fade-in-up stagger-3 hover-lift"
-            style={cardStyle}
-            bodyStyle={{ padding: 18 }}
+            style={{ ...cardStyle, borderRadius: 32 }}
+            bodyStyle={{ padding: 24 }}
           >
             <div
               style={{
@@ -864,16 +880,16 @@ export default function HomePage() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 12,
-                marginBottom: 14
+                marginBottom: 20
               }}
             >
               <div>
-                <Typography.Text style={{ color: subColor }}>
+                <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.02em' }}>
                   存储控件
                 </Typography.Text>
                 <Typography.Title
                   level={4}
-                  style={{ margin: '4px 0 0', color: titleColor }}
+                  style={{ margin: '6px 0 0', color: titleColor, fontWeight: 700 }}
                 >
                   应用存储与设备空间
                 </Typography.Title>
@@ -884,23 +900,25 @@ export default function HomePage() {
                   background: tintedBg(accent),
                   color: titleColor,
                   marginInlineEnd: 0,
-                  borderRadius: 6
+                  borderRadius: 8,
+                  padding: '2px 10px',
+                  fontWeight: 600
                 }}
               >
                 {electron ? '桌面版实时读取' : '浏览器环境'}
               </Tag>
             </div>
-            <Row gutter={[12, 12]}>
+            <Row gutter={[16, 16]}>
               {storageCards.map(card => (
                 <Col key={card.title} xs={24} md={8}>
                   <div
                     className="hover-lift"
                     style={{
-                      borderRadius: 20,
-                      padding: 14,
+                      borderRadius: 24,
+                      padding: 20,
                       background: tintedBg(card.color),
-                      border: `1px solid ${borderColor}`,
-                      minHeight: 168,
+                      border: `1px solid ${card.color}22`,
+                      minHeight: 176,
                       transition: 'all 0.3s ease'
                     }}
                   >
@@ -931,7 +949,9 @@ export default function HomePage() {
                           background: innerStrongBg,
                           color: titleColor,
                           marginInlineEnd: 0,
-                          borderRadius: 6
+                          borderRadius: 8,
+                          padding: '0 8px',
+                          fontWeight: 600
                         }}
                       >
                         {card.percent}%
@@ -960,9 +980,10 @@ export default function HomePage() {
                       percent={card.percent}
                       strokeColor={card.color}
                       showInfo={false}
-                      style={{ margin: '12px 0 6px' }}
-                      trailColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'}
+                      style={{ margin: '14px 0 8px' }}
+                      trailColor={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.04)'}
                       strokeLinecap="round"
+                      size={['100%', 8]}
                     />
                     <Typography.Text
                       style={{
@@ -984,46 +1005,46 @@ export default function HomePage() {
       <Card
         bordered={false}
         className="anim-fade-in-up stagger-4"
-        style={cardStyle}
-        bodyStyle={{ padding: 18 }}
+        style={{ ...cardStyle, borderRadius: 32 }}
+        bodyStyle={{ padding: 24 }}
       >
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: 14,
-            marginBottom: 14
+            gap: 16,
+            marginBottom: 20
           }}
         >
           <div>
-            <Typography.Text style={{ color: subColor }}>
+            <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.02em' }}>
               本地内容速览
             </Typography.Text>
             <Typography.Title
               level={4}
-              style={{ margin: '4px 0 0', color: titleColor }}
+              style={{ margin: '6px 0 0', color: titleColor, fontWeight: 700 }}
             >
               最近记录与备份状态
             </Typography.Title>
           </div>
-          <Typography.Text style={{ color: subColor, fontSize: 13 }}>
+          <Typography.Text style={{ color: subColor, fontSize: 13, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.04)', padding: '6px 12px', borderRadius: 8 }}>
             {dashboard?.lastBackup?.value?.exportedAt
               ? `最近备份 ${fmtDateTime(dashboard.lastBackup.value.exportedAt)}`
               : '暂无备份记录'}
           </Typography.Text>
         </div>
 
-        <Row gutter={[14, 14]}>
+        <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
             <div
               className="hover-lift"
               style={{
-                borderRadius: 20,
-                padding: 16,
+                borderRadius: 24,
+                padding: 20,
                 background: tintedBg('#2563eb'),
-                border: `1px solid ${borderColor}`,
-                transition: 'all 0.3s ease'
+                border: `1px solid rgba(37,99,235,0.2)`,
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
               }}
             >
               <div
@@ -1031,10 +1052,10 @@ export default function HomePage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  marginBottom: 10
+                  marginBottom: 14
                 }}
               >
-                <Typography.Text strong style={{ color: titleColor }}>
+                <Typography.Text strong style={{ color: titleColor, fontSize: 15 }}>
                   置顶备忘录
                 </Typography.Text>
                 <Button
@@ -1042,7 +1063,7 @@ export default function HomePage() {
                   size="small"
                   icon={<ArrowRightOutlined />}
                   onClick={() => nav(ROUTES.MEMO)}
-                  style={{ color: accent, padding: 0 }}
+                  style={{ color: accent, padding: 0, fontWeight: 600 }}
                 >
                   查看全部
                 </Button>
@@ -1052,20 +1073,20 @@ export default function HomePage() {
                   split={false}
                   dataSource={dashboard.pinnedNotes}
                   renderItem={(memo: any) => (
-                    <List.Item style={{ paddingInline: 0, paddingBlock: 10 }}>
+                    <List.Item style={{ paddingInline: 0, paddingBlock: 12 }}>
                       <div style={{ width: '100%' }}>
-                        <div style={{ fontWeight: 600, color: titleColor }}>
+                        <div style={{ fontWeight: 700, color: titleColor, fontSize: 14 }}>
                           {memo.title || '无标题备忘'}
                         </div>
-                        <div style={{ color: subColor, marginTop: 4, fontSize: 13 }}>
-                          {previewOf(memo.content, 56)}
+                        <div style={{ color: subColor, marginTop: 6, fontSize: 13, lineHeight: 1.5 }}>
+                          {previewOf(memo.content, 60)}
                         </div>
                       </div>
                     </List.Item>
                   )}
                 />
               ) : (
-                <div style={{ marginTop: 12, color: subColor, fontSize: 13 }}>
+                <div style={{ margin: '20px 0', color: subColor, fontSize: 13, textAlign: 'center' }}>
                   暂无置顶备忘录
                 </div>
               )}
@@ -1076,11 +1097,11 @@ export default function HomePage() {
             <div
               className="hover-lift"
               style={{
-                borderRadius: 20,
-                padding: 16,
+                borderRadius: 24,
+                padding: 20,
                 background: tintedBg('#16a34a'),
-                border: `1px solid ${borderColor}`,
-                transition: 'all 0.3s ease'
+                border: `1px solid rgba(22,163,74,0.2)`,
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
               }}
             >
               <div
@@ -1088,10 +1109,10 @@ export default function HomePage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  marginBottom: 10
+                  marginBottom: 14
                 }}
               >
-                <Typography.Text strong style={{ color: titleColor }}>
+                <Typography.Text strong style={{ color: titleColor, fontSize: 15 }}>
                   最近日记
                 </Typography.Text>
                 <Button
@@ -1099,7 +1120,7 @@ export default function HomePage() {
                   size="small"
                   icon={<ArrowRightOutlined />}
                   onClick={() => nav(ROUTES.DIARY_CAL)}
-                  style={{ color: accent, padding: 0 }}
+                  style={{ color: accent, padding: 0, fontWeight: 600 }}
                 >
                   查看全部
                 </Button>
@@ -1109,20 +1130,20 @@ export default function HomePage() {
                   split={false}
                   dataSource={dashboard.recentDiaries}
                   renderItem={(diary: any) => (
-                    <List.Item style={{ paddingInline: 0, paddingBlock: 10 }}>
+                    <List.Item style={{ paddingInline: 0, paddingBlock: 12 }}>
                       <div style={{ width: '100%' }}>
-                        <div style={{ fontWeight: 600, color: titleColor }}>
+                        <div style={{ fontWeight: 700, color: titleColor, fontSize: 14 }}>
                           {diary.title || '未命名日记'}
                         </div>
-                        <div style={{ color: subColor, marginTop: 4, fontSize: 13 }}>
-                          {previewOf(diary.content, 56)}
+                        <div style={{ color: subColor, marginTop: 6, fontSize: 13, lineHeight: 1.5 }}>
+                          {previewOf(diary.content, 60)}
                         </div>
                       </div>
                     </List.Item>
                   )}
                 />
               ) : (
-                <div style={{ marginTop: 12, color: subColor, fontSize: 13 }}>
+                <div style={{ margin: '20px 0', color: subColor, fontSize: 13, textAlign: 'center' }}>
                   暂无日记内容
                 </div>
               )}

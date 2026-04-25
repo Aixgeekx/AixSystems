@@ -75,6 +75,13 @@ export default function FocusPage() {
   const todayMin = todaySessions.reduce((sum, session) => sum + session.actualMs / 60_000, 0);
   const successRate = sessions.length ? Math.round((sessions.length - sessions.filter(session => session.giveUp).length) / sessions.length * 100) : 0;
   const averageMin = sessions.length ? Math.round(totalMin / sessions.length) : 0;
+  const qualitySessions = sessions.slice(0, 12).map(session => {
+    const plannedRate = session.plannedMs ? Math.min(120, Math.round(session.actualMs / session.plannedMs * 100)) : 100;
+    const score = session.giveUp ? Math.max(20, Math.round(plannedRate * 0.45)) : Math.min(100, plannedRate + (session.strictMode ? 8 : 0));
+    const grade = score >= 90 ? 'S' : score >= 75 ? 'A' : score >= 55 ? 'B' : 'C';
+    return { ...session, score, grade };
+  });
+  const qualityAverage = qualitySessions.length ? Math.round(qualitySessions.reduce((sum, session) => sum + session.score, 0) / qualitySessions.length) : 0;
 
   const hourMap: Record<number, number> = {};
   for (const s of sessions) { hourMap[dayjs(s.startTime).hour()] = (hourMap[dayjs(s.startTime).hour()] || 0) + s.actualMs / 60_000; }
@@ -553,7 +560,8 @@ export default function FocusPage() {
               { title: '总次数', value: sessions.length, suffix: '', icon: <FireOutlined />, color: accent + '88', key: 'total' },
               { title: '最佳时段', value: bestHourLabel, suffix: bestHourMin > 0 ? ` (${Math.round(bestHourMin)}分)` : '', icon: <AreaChartOutlined />, color: '#a78bfa', key: 'best' },
               { title: '周同比', value: weekChange > 0 ? `+${weekChange}` : weekChange, suffix: '%', icon: <RiseOutlined />, color: weekChange >= 0 ? '#22c55e' : '#ef4444', key: 'week' },
-              { title: '月同比', value: monthChange > 0 ? `+${monthChange}` : monthChange, suffix: '%', icon: <AreaChartOutlined />, color: monthChange >= 0 ? '#22c55e' : '#ef4444', key: 'month' }
+              { title: '月同比', value: monthChange > 0 ? `+${monthChange}` : monthChange, suffix: '%', icon: <AreaChartOutlined />, color: monthChange >= 0 ? '#22c55e' : '#ef4444', key: 'month' },
+              { title: '质量评级', value: qualityAverage >= 90 ? 'S' : qualityAverage >= 75 ? 'A' : qualityAverage >= 55 ? 'B' : qualityAverage ? 'C' : '--', suffix: qualityAverage ? ` ${qualityAverage}分` : '', icon: <TrophyOutlined />, color: qualityAverage >= 75 ? '#22c55e' : qualityAverage >= 55 ? '#f59e0b' : '#ef4444', key: 'quality' }
             ].map((stat, i) => (
               <Col span={12} key={stat.key}>
                 <Card
@@ -623,6 +631,30 @@ export default function FocusPage() {
                   children: sessions.length > 0
                     ? <LazyChart option={monthOpt} />
                     : <Empty text="暂无数据" subtext="完成专注后会自动对比本月与上月" />
+                },
+                {
+                  key: 'quality',
+                  label: '质量评级',
+                  children: qualitySessions.length === 0 ? (
+                    <Empty text="暂无评级" subtext="完成专注后会自动生成质量分" />
+                  ) : (
+                    <List
+                      split={false}
+                      dataSource={qualitySessions}
+                      renderItem={(session: any) => (
+                        <List.Item style={{ paddingInline: 0 }}>
+                          <div style={{ width: '100%', padding: 14, borderRadius: 18, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)', border: isDark ? `1px solid ${accent}15` : '1px solid transparent' }}>
+                            <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                              <Typography.Text strong>{session.title}</Typography.Text>
+                              <Tag color={session.grade === 'S' || session.grade === 'A' ? 'green' : session.grade === 'B' ? 'gold' : 'red'} style={{ borderRadius: 6 }}>{session.grade} · {session.score}分</Tag>
+                            </Space>
+                            <Progress percent={session.score} showInfo={false} strokeColor={session.grade === 'S' || session.grade === 'A' ? '#22c55e' : session.grade === 'B' ? '#f59e0b' : '#ef4444'} style={{ margin: '10px 0 4px' }} />
+                            <Typography.Text type="secondary">{Math.round(session.actualMs / 60_000)} / {Math.round(session.plannedMs / 60_000)} 分钟 · {session.giveUp ? '已放弃' : session.strictMode ? '严格完成' : '普通完成'}</Typography.Text>
+                          </div>
+                        </List.Item>
+                      )}
+                    />
+                  )
                 },
                 {
                   key: 'timeline',

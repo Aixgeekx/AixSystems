@@ -141,7 +141,7 @@ export default function Layout() {
         .workspace-shell .workspace-menu .ant-menu-item {
           height: auto;
           line-height: 1.4;
-          margin: 6px 8px;
+          margin: 4px 12px;
           padding: 10px 14px;
           border-radius: 12px;
           color: var(--menu-text-dim);
@@ -171,19 +171,8 @@ export default function Layout() {
         .workspace-shell .workspace-menu .ant-menu-item-selected {
           background: var(--menu-selected-bg) !important;
           color: ${isDark ? themeMeta.accent : '#fff'} !important;
-          box-shadow: inset 0 0 0 1px ${isDark ? themeMeta.accent + '33' : 'rgba(255,255,255,0.12)'}, 0 8px 20px rgba(0, 0, 0, 0.15);
-        }
-        .workspace-shell .workspace-menu .ant-menu-item-selected::after {
-          content: '';
-          position: absolute;
-          left: 0;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 3px;
-          height: 60%;
-          border-radius: 0 3px 3px 0;
-          background: ${themeMeta.accent};
-          box-shadow: 0 0 10px ${themeMeta.accent}88;
+          box-shadow: inset 0 1px 1px rgba(255,255,255,0.05), 0 2px 8px rgba(0, 0, 0, 0.08);
+          font-weight: 600;
         }
         .workspace-shell .workspace-menu .ant-menu-item .ant-menu-title-content {
           font-weight: 500;
@@ -224,7 +213,7 @@ export default function Layout() {
         width={260}
         style={{
           margin: 16,
-          borderRadius: 16,
+          borderRadius: 24,
           overflow: 'hidden',
           transition: 'all 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
           ...getPanelStyle()
@@ -362,9 +351,9 @@ export default function Layout() {
           className="anim-fade-in-down"
           style={{
             height: 'auto',
-            marginBottom: 20,
-            padding: '20px 28px',
-            borderRadius: 16,
+            marginBottom: 24,
+            padding: '24px 32px',
+            borderRadius: 32,
             ...getPanelStyle(),
             display: 'flex',
             alignItems: 'center',
@@ -506,11 +495,11 @@ export default function Layout() {
         <Content
           className="workspace-content"
           style={{
-            padding: '24px 32px',
+            padding: '32px 40px',
             background: panelSkin.background,
             backdropFilter: panelSkin.backdropFilter,
             WebkitBackdropFilter: panelSkin.WebkitBackdropFilter,
-            borderRadius: 16,
+            borderRadius: 32,
             minHeight: 'calc(100vh - 132px)',
             overflow: 'auto',
             border: panelSkin.border,
@@ -527,60 +516,50 @@ export default function Layout() {
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 12,
-              marginBottom: 18,
-              padding: '12px 16px',
-              borderRadius: 10,
-              background: isDark ? `${themeMeta.accent}08` : 'rgba(255,255,255,0.55)',
-              border: `1px solid ${themeMeta.accent}22`,
-              backdropFilter: 'blur(8px)'
+              marginBottom: 20,
+              padding: '10px 18px',
+              borderRadius: 16,
+              background: isDark ? `${themeMeta.accent}06` : 'rgba(255,255,255,0.6)',
+              border: `1px solid ${isDark ? `${themeMeta.accent}18` : 'rgba(255,255,255,0.85)'}`,
+              backdropFilter: 'blur(12px)'
             }}
           >
-            <Space wrap size={8}>
-              <Tag
-                color="blue"
-                style={{
-                  borderRadius: 6,
-                  background: isDark ? 'rgba(59,130,246,0.15)' : undefined
-                }}
-              >
-                事项 {localPulse.items}
-              </Tag>
-              <Tag
-                color="green"
-                style={{
-                  borderRadius: 6,
-                  background: isDark ? 'rgba(34,197,94,0.15)' : undefined
-                }}
-              >
-                日记 {localPulse.diaries}
-              </Tag>
-              <Tag
-                color="gold"
-                style={{
-                  borderRadius: 6,
-                  background: isDark ? 'rgba(245,158,11,0.15)' : undefined
-                }}
-              >
-                备忘录 {localPulse.memos}
-              </Tag>
-              {lastBackup?.value?.exportedAt ? (
-                <Tag
-                  color="purple"
-                  style={{
-                    borderRadius: 6,
-                    background: isDark ? 'rgba(168,85,247,0.15)' : undefined
-                  }}
-                >
-                  最近备份 {fmtFromNow(lastBackup.value.exportedAt)}
-                </Tag>
-              ) : (
-                <Tag style={{ borderRadius: 6 }}>尚未备份</Tag>
-              )}
+            <Space wrap size={10}>
+              {[
+                { color: '#3b82f6', label: '事项', count: localPulse.items },
+                { color: '#22c55e', label: '日记', count: localPulse.diaries },
+                { color: '#f59e0b', label: '备忘', count: localPulse.memos }
+              ].map(d => (
+                <span key={d.label} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  fontSize: 12, color: shellSub, fontWeight: 500
+                }}>
+                  <span style={{
+                    width: 7, height: 7, borderRadius: '50%',
+                    background: d.color, display: 'inline-block',
+                    boxShadow: `0 0 6px ${d.color}66`
+                  }} />
+                  {d.label} <b style={{ color: shellTitle }}>{d.count}</b>
+                </span>
+              ))}
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                fontSize: 12, color: shellSub, fontWeight: 500
+              }}>
+                <span style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: '#a855f7', display: 'inline-block',
+                  boxShadow: '0 0 6px rgba(168,85,247,0.6)'
+                }} />
+                {lastBackup?.value?.exportedAt
+                  ? <>备份 <b style={{ color: shellTitle }}>{fmtFromNow(lastBackup.value.exportedAt)}</b></>
+                  : '尚未备份'}
+              </span>
             </Space>
-            <Typography.Text style={{ color: shellSub, fontSize: 12 }}>
+            <Typography.Text style={{ color: shellSub, fontSize: 11, opacity: 0.7 }}>
               {localPulse.lastUpdate
-                ? `本地最近更新 ${fmtFromNow(localPulse.lastUpdate)}`
-                : '等待本地数据写入'}
+                ? `最近更新 ${fmtFromNow(localPulse.lastUpdate)}`
+                : '等待数据写入'}
             </Typography.Text>
           </div>
 

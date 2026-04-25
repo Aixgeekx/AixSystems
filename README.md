@@ -39,6 +39,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 
 ## 最近更新
 
+- `v0.24.0`：升级高级动态视觉层、事项批处理工作台和低频页面工作台化
 - `v0.23.6`：新增事项过载雷达、目标推进建议器和复习削峰建议
 - `v0.23.5`：新增专注能量曲线、日记情绪趋势和首页成长警报
 - `v0.23.4`：新增成长分享卡、目标风险详情和 30 天复习压力摘要
@@ -185,7 +186,7 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物:`desktop/dist-installer/AixSystems-0.23.6-Setup.exe`(约 80MB NSIS 向导包)
+产物:`desktop/dist-installer/AixSystems-0.24.0-Setup.exe`(约 80MB NSIS 向导包)
 
 ## 便携路线
 

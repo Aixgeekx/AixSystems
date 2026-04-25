@@ -1,53 +1,122 @@
-// 桌面小部件页 - Web 版用浮动窗替代真正的桌面嵌入
+// 桌面小部件页 - 工作台风格 (v0.24.0 完善升级)
 import React, { useState } from 'react';
-import { Alert, Card, Space, Switch, Tag, Typography } from 'antd';
+import { Alert, Card, Col, Row, Space, Switch, Tag, Typography } from 'antd';
+import { DesktopOutlined, BgColorsOutlined, ControlOutlined, EyeOutlined } from '@ant-design/icons';
 import FloatingReminder from '@/components/FloatingReminder';
 import { useThemeVariants } from '@/hooks/useVariants';
+
+const WIDGET_THEMES = [
+  { label: '跟随全局', color: 'default', key: 'global' },
+  { label: '白天', color: 'blue', key: 'light' },
+  { label: '黑夜', color: 'purple', key: 'dark' },
+  { label: '简约', color: 'default', key: 'minimal' },
+  { label: '赛博朋克', color: 'cyan', key: 'cyber' },
+  { label: '渐变', color: 'magenta', key: 'gradient' },
+  { label: '复古', color: 'gold', key: 'retro' }
+];
 
 export default function DesktopWidgetPage() {
   const [show, setShow] = useState(false);
   const { theme, getPanelStyle } = useThemeVariants();
+  const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
+  const accent = theme.accent;
+  const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
+  const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
+  const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
+
   return (
-    <div style={{ maxWidth: 860 }}>
-      <Alert message="浏览器环境无法嵌入真实桌面，当前使用浮动小窗作为替代。" type="info" showIcon style={{ marginBottom: 16 }} />
-      <Card
-        bordered={false}
-        style={{ ...getPanelStyle(), borderRadius: 24 }}
-      >
-        <Typography.Text type="secondary">小组件控制台</Typography.Text>
-        <Typography.Title level={4} style={{ margin: '4px 0 12px' }}>
-          多主题浮动小组件
+    <Space direction="vertical" size={20} style={{ width: '100%' }}>
+      <Card bordered={false} className="anim-fade-in-up" style={{
+        borderRadius: 28, overflow: 'hidden',
+        background: isDark
+          ? `linear-gradient(135deg, ${accent}18 0%, rgba(10,14,28,0.95) 46%, rgba(6,8,18,0.98) 100%)`
+          : 'linear-gradient(135deg, rgba(6,182,212,0.94), rgba(14,165,233,0.9) 45%, rgba(15,23,42,0.92) 100%)',
+        boxShadow: isDark ? `0 28px 60px ${accent}20` : '0 28px 60px rgba(6,182,212,0.16)',
+        border: isDark ? `1px solid ${accent}33` : 'none'
+      }} bodyStyle={{ padding: 24 }}>
+        <Typography.Text style={{ color: isDark ? `${accent}aa` : 'rgba(224,242,254,0.85)' }}>
+          <DesktopOutlined /> 小组件
+        </Typography.Text>
+        <Typography.Title level={2} style={{ margin: '8px 0 10px', color: '#f8fafc' }}>
+          桌面小部件 · 多主题浮动小窗
         </Typography.Title>
-        <Typography.Paragraph type="secondary">
-          现在可以在小组件设置里切换或跟随全局主题：白天、黑夜、简约、赛博朋克、渐变、复古。颜色会随着主题一起变化，不再固定为白色。
+        <Typography.Paragraph style={{ marginBottom: 0, color: 'rgba(226,232,240,0.84)' }}>
+          浏览器环境下使用浮动小窗替代桌面嵌入，支持 7 种主题风格和透明度调节。
         </Typography.Paragraph>
-        <Space wrap size={[8, 8]} style={{ marginBottom: 14 }}>
-          <Tag style={{ background: `${theme.accent}22`, color: theme.accent, border: 'none' }}>跟随全局</Tag>
-          <Tag color="blue">白天</Tag>
-          <Tag color="purple">黑夜</Tag>
-          <Tag>简约</Tag>
-          <Tag color="cyan">赛博朋克</Tag>
-          <Tag color="magenta">渐变</Tag>
-          <Tag color="gold">复古</Tag>
+      </Card>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} className="anim-fade-in-up stagger-2 hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder, height: '100%' }}>
+            <Space size={8} style={{ marginBottom: 12 }}>
+              <ControlOutlined style={{ color: accent }} />
+              <Typography.Title level={4} style={{ margin: 0, color: isDark ? '#f8fafc' : '#0f172a' }}>小组件控制台</Typography.Title>
+            </Space>
+            <Typography.Paragraph style={{ color: subColor }}>
+              开启后会在页面上显示一个浮动小窗，可以拖动位置并在设置面板中切换主题。
+            </Typography.Paragraph>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px',
+              borderRadius: 16, background: isDark ? `${accent}0d` : 'rgba(59,130,246,0.06)',
+              border: `1px solid ${isDark ? `${accent}18` : 'transparent'}`
+            }}>
+              <Switch checked={show} onChange={setShow} checkedChildren="显示" unCheckedChildren="隐藏" />
+              <Typography.Text style={{ color: isDark ? '#e2e8f0' : '#334155' }}>
+                {show ? '小组件已开启，可在页面上拖动' : '点击开关显示浮动小窗'}
+              </Typography.Text>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} className="anim-fade-in-up stagger-3 hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder, height: '100%' }}>
+            <Space size={8} style={{ marginBottom: 12 }}>
+              <BgColorsOutlined style={{ color: accent }} />
+              <Typography.Title level={4} style={{ margin: 0, color: isDark ? '#f8fafc' : '#0f172a' }}>可用主题</Typography.Title>
+            </Space>
+            <Typography.Paragraph style={{ color: subColor }}>
+              小组件支持跟随全局主题或独立切换以下风格：
+            </Typography.Paragraph>
+            <Space wrap size={[8, 10]}>
+              {WIDGET_THEMES.map(t => (
+                <Tag key={t.key} color={t.color} style={{
+                  borderRadius: 10, padding: '4px 14px', fontSize: 13, cursor: 'default',
+                  transition: 'all 0.25s ease'
+                }}>
+                  {t.label}
+                </Tag>
+              ))}
+            </Space>
+          </Card>
+        </Col>
+      </Row>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-4" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <EyeOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: isDark ? '#f8fafc' : '#0f172a' }}>使用建议</Typography.Title>
         </Space>
-        <div>
-          <Switch checked={show} onChange={setShow} checkedChildren="显示" unCheckedChildren="隐藏" />
-          <span style={{ marginLeft: 12, color: theme.style === 'dark' || theme.style === 'cyberpunk' ? 'rgba(226,232,240,0.72)' : '#64748b' }}>显示后可在页面上拖动浮动小窗，并打开设置面板切换主题。</span>
-        </div>
+        <Row gutter={[16, 12]}>
+          {[
+            { tip: '统一视觉', desc: '使用"跟随全局"让小组件始终和主界面保持一致' },
+            { tip: '突出显示', desc: '手动切到赛博朋克或渐变让悬浮窗更醒目' },
+            { tip: '透明度调节', desc: '在小组件设置面板中拖动滑块调整背景透明度' },
+            { tip: '位置记忆', desc: '拖动后小组件会记住位置，下次打开自动还原' }
+          ].map((item, i) => (
+            <Col xs={24} sm={12} key={i}>
+              <div style={{
+                padding: '12px 16px', borderRadius: 14,
+                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(248,250,252,0.9)',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#f0f0f0'}`
+              }}>
+                <Typography.Text strong style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>{item.tip}</Typography.Text>
+                <div style={{ marginTop: 4, color: subColor, fontSize: 12 }}>{item.desc}</div>
+              </div>
+            </Col>
+          ))}
+        </Row>
       </Card>
-      <Card
-        bordered={false}
-        style={{ ...getPanelStyle(), marginTop: 16, borderRadius: 24 }}
-      >
-        <Typography.Text type="secondary">使用建议</Typography.Text>
-        <Typography.Title level={4} style={{ margin: '4px 0 12px' }}>
-          让小组件跟着场景切换
-        </Typography.Title>
-        <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-          如果想完全统一视觉，可以使用“跟随全局”；如果只想让悬浮窗更突出，再手动切到赛博朋克、渐变或复古。
-        </Typography.Paragraph>
-      </Card>
+
       {show && <FloatingReminder onClose={() => setShow(false)} />}
-    </div>
+    </Space>
   );
 }
