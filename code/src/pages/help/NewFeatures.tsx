@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.32.0', date: '2026-04-25', items: [
+    '新增 Aix 主入口，把 openclaw 技能生态、Claude Code 专业 Agent 流程和时光序私人数据统一成内置 AI 中枢',
+    '新增 Aix 技能库 / 插件广场雏形，内置成长控制、复习削峰、专注作战、电脑只读扫描、私人便携胶囊和 Provider 调度技能',
+    '新增私人便携胶囊与离线/有 API 双模式，没有 API 仍是全能系统工具，有 API 后升级为有灵魂的黑科技系统'
+  ]},
   { ver: '0.31.0', date: '2026-04-25', items: [
     '超级管理器三期新增只读控制扫描，可枚举自启入口、临时目录采样和端口占用，并加入 PowerShell 只读预设通道',
     'Aix Provider 管理新增健康检查、延迟记录、策略历史和故障转移回退，提升模型调用稳定性',

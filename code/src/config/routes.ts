@@ -2,6 +2,7 @@
 export const ROUTES = {
   HOME: '/home',
   HOME_DASH: '/home/index',                            // 首页工作台
+  AIX: '/home/aix',                                    // Aix 主入口
   TODAY_DAY: '/home/today/myDay',                      // 我的一天
   TODAY_WEEK: '/home/today/myWeek',                    // 我的一周
   TODAY_MONTH: '/home/today/myMonth',                  // 我的一月
@@ -38,6 +39,13 @@ export const ROUTES = {
 };
 
 export const MENU_GROUPS = [                            // 左侧菜单分组
+  {
+    key: 'aix', label: 'Aix 中枢',
+    children: [
+      { key: 'aix', label: 'Aix 主入口', path: ROUTES.AIX, icon: 'thunderbolt' },
+      { key: 'agent', label: 'Agent 中枢', path: ROUTES.AGENT, icon: 'branches' }
+    ]
+  },
   {
     key: 'home', label: '首页',
     children: [
@@ -83,7 +91,6 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
     key: 'tools', label: '工具',
     children: [
       { key: 'functions', label: '实用功能', path: '/home/functions', icon: 'appstore' },
-      { key: 'agent', label: 'Agent 中枢', path: ROUTES.AGENT, icon: 'thunderbolt' },
       { key: 'focus', label: '番茄专注', path: ROUTES.FOCUS, icon: 'fire' },
       { key: 'widget', label: '桌面小部件', path: ROUTES.DESKTOP_WIDGET, icon: 'desktop' },
       { key: 'lock', label: '应用锁', path: ROUTES.APP_LOCK, icon: 'lock' },

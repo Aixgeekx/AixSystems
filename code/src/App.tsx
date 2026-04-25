@@ -33,6 +33,7 @@ const User = lazy(() => import('@/pages/user'));
 const Search = lazy(() => import('@/pages/search'));
 const Help = lazy(() => import('@/pages/help'));
 const Desktop = lazy(() => import('@/pages/desktop'));
+const Aix = lazy(() => import('@/pages/aix'));
 const AppLock = lazy(() => import('@/pages/applicationlock'));
 const Unlock = lazy(() => import('@/pages/applicationlock/Unlock'));
 const Classify = lazy(() => import('@/pages/classify'));
@@ -91,6 +92,7 @@ function AppShell() {                                           // 路由表 + �
           <Route index element={<Navigate to={startPage} replace />} />
           <Route path="home" element={<Navigate to={startPage} replace />} />
           <Route path="home/index" element={<HomePage />} />
+          <Route path="home/aix" element={<Aix />} />
           <Route path="home/today/myDay" element={<MyDay />} />
           <Route path="home/today/myWeek" element={<MyWeek />} />
           <Route path="home/today/myMonth" element={<MyMonth />} />
