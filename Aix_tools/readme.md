@@ -31,6 +31,7 @@
 
 ## 工具脚本
 
+- `openclaw_study.md` — openclaw 学习笔记，结合时光序、Claude Code、cc-switch 和 Aix 内置 AI 要求，沉淀黑科技全能系统路线。
 - `decode_bundle_cn.py` — webpack minified bundle 里 `\uXXXX` 转义的中文字符串批量解码(调研阶段使用)。
 - `gen_icon_v2.py` — 以 `image-cache/.../1.png` 手绘无穷符号为源图,生成**紫红渐变底 + 银白 logo + iOS 圆角**的应用图标,覆盖 `desktop/build/icon.{png,ico}` 和 `code/{public,dist}/icons/icon-{192,512}.png`。改颜色/版式调 `BG_TOP_LEFT`/`BG_BOT_RIGHT`/`LOGO_COLOR`/`CORNER` 常量。**依赖 Pillow** (`pip install pillow`)。
 - `rebuild_bats.py` — 批量生成 `results/` 下的 `.bat` 启动脚本,**强制 GBK 编码 + CRLF 换行 + 末尾 pause 兜底**。任何 bat 的修改都改本脚本再执行 `python Aix_tools/rebuild_bats.py`,严禁直接编辑 .bat(编辑器会把 GBK 另存为 UTF-8 导致 cmd 报 `'ho' 不是内部命令` 系列错)。
