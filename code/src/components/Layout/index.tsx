@@ -1,6 +1,6 @@
 // 应用外壳 Layout - 左侧菜单 + 顶部工作台 + 内容区 (v0.20.0 增强动画)
 import React from 'react';
-import { Layout as AntLayout, Menu, Button, Space, Dropdown, Avatar, Typography, Tag, message } from 'antd';
+import { Layout as AntLayout, Menu, Button, Space, Dropdown, Avatar, Typography, Tag, Drawer, message } from 'antd';
 import * as Icons from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -30,6 +30,7 @@ export default function Layout() {
   const nav = useNavigate();
   const loc = useLocation();
   const { collapsed, setCollapsed, openItemForm, openCommandPalette } = useAppStore();
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const theme = useSettingsStore(s => s.theme);
   const themeMeta = THEMES.find(t => t.key === theme) || THEMES[0];
   const { getPanelStyle } = useThemeVariants();
@@ -103,6 +104,7 @@ export default function Layout() {
   }).filter(group => group.children.length > 0);
 
   const activeKey = loc.pathname;
+  const menuNode = <Menu className="workspace-menu" mode="inline" theme="dark" selectedKeys={[activeKey]} items={menuItems} onClick={({ key }) => { nav(String(key)); setMobileMenuOpen(false); }} style={{ padding: 10, background: 'transparent', borderRight: 'none', color: '#e2e8f0' }} />;
   const activeLabel = MENU_GROUPS.flatMap(group => group.children).find(child => activeKey.startsWith(child.path))?.label || APP_NAME;
   const todayLabel = dayjs().format('YYYY 年 M 月 D 日 · dddd');
 
@@ -199,6 +201,17 @@ export default function Layout() {
         }
         .workspace-shell .workspace-content::-webkit-scrollbar-thumb:hover {
           background: ${isDark ? themeMeta.accent + '55' : 'rgba(148,163,184,0.4)'};
+        }
+        .mobile-menu-button { display: none; }
+        @media (max-width: 820px) {
+          .workspace-shell { display: block !important; padding: 10px; }
+          .workspace-sider { display: none; }
+          .workspace-main { margin: 0 !important; }
+          .workspace-header { padding: 18px !important; border-radius: 24px !important; align-items: flex-start !important; }
+          .workspace-header-actions { width: 100%; }
+          .workspace-header-actions .ant-btn { flex: 1 1 46%; }
+          .workspace-content { padding: 0 2px 18px !important; }
+          .mobile-menu-button { display: inline-flex; }
         }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); filter: blur(4px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
@@ -327,28 +340,14 @@ export default function Layout() {
           )}
         </div>
 
-        {/* 菜单 */}
-        <Menu
-          className="workspace-menu"
-          mode="inline"
-          theme="dark"
-          selectedKeys={[activeKey]}
-          items={menuItems}
-          onClick={({ key }) => nav(String(key))}
-          style={{
-            padding: 10,
-            background: 'transparent',
-            borderRight: 'none',
-            color: '#e2e8f0'
-          }}
-        />
+        {menuNode}
       </Sider>
 
       {/* 右侧内容区 */}
-      <AntLayout style={{ background: 'transparent', margin: '16px 16px 16px 0' }}>
+      <AntLayout className="workspace-main" style={{ background: 'transparent', margin: '16px 16px 16px 0' }}>
         {/* 顶部 Header */}
         <Header
-          className="anim-fade-in-down"
+          className="anim-fade-in-down workspace-header"
           style={{
             height: 'auto',
             marginBottom: 24,
@@ -376,6 +375,9 @@ export default function Layout() {
           }} />
 
           <div style={{ minWidth: 0, position: 'relative', zIndex: 1 }}>
+            <Button className="mobile-menu-button" icon={<Icons.MenuOutlined />} onClick={() => setMobileMenuOpen(true)} style={{ ...shellButtonStyle, marginBottom: 12 }}>
+              手机版菜单
+            </Button>
             <Typography.Text style={{
               display: 'block',
               marginBottom: 6,
@@ -423,7 +425,7 @@ export default function Layout() {
             </Space>
           </div>
 
-          <Space wrap size={10} style={{ position: 'relative', zIndex: 1 }}>
+          <Space className="workspace-header-actions" wrap size={10} style={{ position: 'relative', zIndex: 1 }}>
             <Button
               size="large"
               className="hover-lift"
@@ -571,6 +573,9 @@ export default function Layout() {
       </AntLayout>
 
       <CommandPalette />
+      <Drawer title="AixSystems 手机版导航" placement="left" open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} bodyStyle={{ padding: 0, background: isDark ? '#0b1020' : '#111827' }}>
+        {menuNode}
+      </Drawer>
       <ItemFormDialog />
     </AntLayout>
   );

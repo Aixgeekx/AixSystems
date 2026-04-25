@@ -2,6 +2,7 @@
 const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
+const os = require('node:os');
 
 const DEV = !!process.env.SGX_DEV;                                      // SGX_DEV=1 启用开发模式
 const PORTABLE_MARKERS = ['AixSystems.portable', 'portable.flag'];
@@ -110,6 +111,24 @@ ipcMain.handle('sgx:open-data-dir', async () => {
 // IPC: 返回版本号
 ipcMain.handle('sgx:get-version', () => app.getVersion());
 ipcMain.handle('sgx:get-storage-stats', () => getDiskStats());
+ipcMain.handle('sgx:get-system-snapshot', () => {
+  const disk = getDiskStats();
+  const cpus = os.cpus();
+  return {
+    platform: process.platform,
+    arch: process.arch,
+    hostname: os.hostname(),
+    cpuModel: cpus[0]?.model || 'Unknown CPU',
+    cpuCores: cpus.length,
+    totalMem: os.totalmem(),
+    freeMem: os.freemem(),
+    uptime: os.uptime(),
+    diskRoot: disk.root,
+    diskTotal: disk.total,
+    diskFree: disk.free,
+    diskUsed: disk.used
+  };
+});
 
 Menu.setApplicationMenu(null);
 

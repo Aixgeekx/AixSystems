@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.29.0', date: '2026-04-25', items: [
+    '全局外壳新增手机版导航抽屉和窄屏布局，为后续手机版适配打底',
+    '系统设置新增 Aix 模型 Key 槽，可像 CLI/cc-switch 一样保存并切换多套模型配置',
+    '桌面端新增 Windows 超级管理器雏形，安全只读展示 CPU、内存、磁盘和后续控制模块规划'
+  ]},
   { ver: '0.28.0', date: '2026-04-25', items: [
     '专注页新增 Aix 深度策略，可调用用户配置模型生成个性化专注干预',
     '成长仪表盘新增成长控制任务编排器，把目标、专注、习惯和日记串成今日流程',

@@ -2,6 +2,12 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.29.0
+- 全局外壳新增手机版导航抽屉和窄屏布局，为后续手机版做准备。
+- 系统设置新增 Aix 模型 Key 槽，可保存并切换多套模型供应商配置。
+- 桌面端新增 Windows 超级管理器雏形，安全只读展示 CPU、内存、磁盘状态。
+- 新增 `release_assets.py`，可把 `desktop/dist-installer/` 中所有历史安装包、portable.exe、zip 和 blockmap 上传到对应 GitHub Release。
+
 ## 最新版本 v0.28.0
 - 专注页新增 Aix 深度策略：基于场景、完成率和质量调用模型生成干预。
 - 成长仪表盘新增任务编排器：把目标、专注、习惯、日记串成今日流程。
@@ -23,6 +29,7 @@
 - `decode_bundle_cn.py` — webpack minified bundle 里 `\uXXXX` 转义的中文字符串批量解码(调研阶段使用)。
 - `gen_icon_v2.py` — 以 `image-cache/.../1.png` 手绘无穷符号为源图,生成**紫红渐变底 + 银白 logo + iOS 圆角**的应用图标,覆盖 `desktop/build/icon.{png,ico}` 和 `code/{public,dist}/icons/icon-{192,512}.png`。改颜色/版式调 `BG_TOP_LEFT`/`BG_BOT_RIGHT`/`LOGO_COLOR`/`CORNER` 常量。**依赖 Pillow** (`pip install pillow`)。
 - `rebuild_bats.py` — 批量生成 `results/` 下的 `.bat` 启动脚本,**强制 GBK 编码 + CRLF 换行 + 末尾 pause 兜底**。任何 bat 的修改都改本脚本再执行 `python Aix_tools/rebuild_bats.py`,严禁直接编辑 .bat(编辑器会把 GBK 另存为 UTF-8 导致 cmd 报 `'ho' 不是内部命令` 系列错)。
+- `release_assets.py` — 扫描 `desktop/dist-installer/` 的 `AixSystems-*` 安装包、便携包和 blockmap，按版本自动创建/补齐 GitHub Release 附件；使用前需已有 GitHub token 或 git credential。
 
 ## 脚本编码规则 (Windows 中文环境)
 
@@ -47,7 +54,7 @@ AixSystems 时间管理系统(离线本地版)。基于调研原版 [时光序](
 | **今日行动控制** | MyDay AI 日计划编排 + 自动化执行面板，聚合待办、习惯、复习、专注和日记入口 |
 | **成长风险控制** | 目标风险预警详情 + 目标推进建议器 + 习惯恢复计划 + 未来 30 天复习压力热力图 + 压力摘要 + 削峰建议 |
 | **成长报告分享** | Markdown 报告 + HTML 可视化报告 + 成长控制力分享卡 |
-| **Aix 模型控制** | 系统设置配置 API 地址/API Key/模型名，首页智能控制助手和成长轨迹模拟器输出个人行动建议 |
+| **Aix 模型控制** | 系统设置配置 API 地址/API Key/模型名，并支持本地 Key 槽切换多套模型配置，首页智能控制助手和成长轨迹模拟器输出个人行动建议 |
 | **27 款主题风格** | 赛博系列 7 款 / 极简系列 7 款 / 渐变系列 7 款 / 经典保留 6 款 |
 | **40+ 路由** | 对齐原版 `/home/*` 路径结构 |
 
@@ -125,8 +132,8 @@ AixSystems/
 cd desktop && npm install && npm run dist
 ```
 
-产物: `desktop/dist-installer/AixSystems-0.28.0-Setup.exe` (NSIS 安装包,约 80MB)
+产物: `desktop/dist-installer/AixSystems-0.29.0-Setup.exe` (NSIS 安装包,约 80MB)
 
 目录便携版: `npm run dist:portable` → `desktop/dist-installer/win-unpacked/`
 
-单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.28.0-portable.exe`
+单文件便携版: `npm run dist:portable-exe` → `AixSystems-0.29.0-portable.exe`

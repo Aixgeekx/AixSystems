@@ -27,7 +27,8 @@ export default function SystemPage() {
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
 
-  const { startPage, setKV, customFont, aixApiUrl, aixApiKey, aixModel } = useSettingsStore();
+  const { startPage, setKV, customFont, aixApiUrl, aixApiKey, aixModel, aixProviderProfiles, aixActiveProfile } = useSettingsStore();
+  const [profileName, setProfileName] = useState('');
   const [storageEstimate, setStorageEstimate] = useState<{ usage?: number; quota?: number }>({});
   const [permissionState, setPermissionState] = useState(Notification.permission);
   const electron = isElectron();
@@ -110,6 +111,26 @@ export default function SystemPage() {
   }
 
   const allPages = MENU_GROUPS.flatMap(group => group.children).map(child => ({ value: child.path, label: child.label }));
+  const providerProfiles = JSON.parse(aixProviderProfiles || '[]') as Array<{ name: string; apiUrl: string; model: string; keyHint?: string }>;
+  const activeProfile = providerProfiles.find(profile => profile.name === aixActiveProfile);
+
+  async function saveAixProfile() {
+    const name = profileName.trim() || aixModel || 'Aix 默认模型';
+    const next = [{ name, apiUrl: aixApiUrl, model: aixModel, keyHint: aixApiKey ? `已保存 ${aixApiKey.slice(0, 4)}***` : '无 Key' }, ...providerProfiles.filter(profile => profile.name !== name)].slice(0, 8);
+    await setKV('aixProviderProfiles', JSON.stringify(next));
+    await setKV('aixActiveProfile', name);
+    setProfileName('');
+    message.success('模型配置已保存到本地 Key 槽');
+  }
+
+  async function switchAixProfile(name: string) {
+    const profile = providerProfiles.find(item => item.name === name);
+    if (!profile) return;
+    await setKV('aixApiUrl', profile.apiUrl);
+    await setKV('aixModel', profile.model);
+    await setKV('aixActiveProfile', profile.name);
+    message.success(`已切换到 ${profile.name}`);
+  }
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -231,12 +252,24 @@ export default function SystemPage() {
             <Typography.Text style={{ color: subColor }}>Aix 模型接口</Typography.Text>
             <Typography.Title level={4} style={{ margin: '4px 0 12px', color: titleColor }}>黑科技系统模型</Typography.Title>
             <Typography.Paragraph style={{ color: subColor }}>
-              临时使用 API 接口接入 Aix 模型，用于生成成长控制建议、日计划和复盘内容。API Key 仅保存在本地 IndexedDB。
+              使用 API 接口接入 Aix 模型，用本地 Key 槽管理多套模型配置，方便像 CLI/cc-switch 一样快速切换供应商与模型。API Key 仅保存在本地 IndexedDB。
             </Typography.Paragraph>
             <Space direction="vertical" size={10} style={{ width: '100%' }}>
               <Input value={aixApiUrl} onChange={event => setKV('aixApiUrl', event.target.value)} placeholder="Aix API 地址，例如 http://127.0.0.1:8000/v1/chat/completions" />
               <Input.Password value={aixApiKey} onChange={event => setKV('aixApiKey', event.target.value)} placeholder="API Key（可选）" />
               <Input value={aixModel} onChange={event => setKV('aixModel', event.target.value)} placeholder="模型名，例如 aix-growth-control" />
+              <Input value={profileName} onChange={event => setProfileName(event.target.value)} placeholder="配置槽名称，例如 Claude Code / cc-switch / 本地模型" />
+              <Space wrap>
+                <Button type="primary" onClick={saveAixProfile} style={{ borderRadius: 10 }}>保存为 Key 槽</Button>
+                {activeProfile ? <Tag color="blue">当前槽：{activeProfile.name}</Tag> : <Tag>未选择配置槽</Tag>}
+              </Space>
+              <Space wrap size={[8, 8]}>
+                {providerProfiles.map(profile => (
+                  <Button key={profile.name} size="small" onClick={() => switchAixProfile(profile.name)} style={{ borderRadius: 10 }}>
+                    {profile.name} · {profile.model}
+                  </Button>
+                ))}
+              </Space>
             </Space>
           </Card>
         </Col>

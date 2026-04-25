@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('sgx', {
   pickImport: () => ipcRenderer.invoke('sgx:pick-import'),                // 返回 JSON 字符串或 null
   openDataDir: () => ipcRenderer.invoke('sgx:open-data-dir'),             // 在资源管理器中打开 data/
   getVersion: () => ipcRenderer.invoke('sgx:get-version'),
-  getStorageStats: () => ipcRenderer.invoke('sgx:get-storage-stats')
+  getStorageStats: () => ipcRenderer.invoke('sgx:get-storage-stats'),
+  getSystemSnapshot: () => ipcRenderer.invoke('sgx:get-system-snapshot')
 });

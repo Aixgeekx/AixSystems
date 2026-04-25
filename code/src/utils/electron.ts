@@ -12,6 +12,20 @@ interface SgxBridge {
     free: number;
     used: number;
   }>;
+  getSystemSnapshot: () => Promise<{
+    platform: string;
+    arch: string;
+    hostname: string;
+    cpuModel: string;
+    cpuCores: number;
+    totalMem: number;
+    freeMem: number;
+    uptime: number;
+    diskRoot: string;
+    diskTotal: number;
+    diskFree: number;
+    diskUsed: number;
+  }>;
 }
 
 export function getElectron(): SgxBridge | null {

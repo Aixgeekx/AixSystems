@@ -1,9 +1,10 @@
 // 桌面小部件页 - 工作台风格 (v0.24.0 完善升级)
-import React, { useState } from 'react';
-import { Alert, Card, Col, Row, Space, Switch, Tag, Typography } from 'antd';
-import { DesktopOutlined, BgColorsOutlined, ControlOutlined, EyeOutlined } from '@ant-design/icons';
+import React, { useEffect, useState } from 'react';
+import { Alert, Button, Card, Col, Progress, Row, Space, Switch, Tag, Typography } from 'antd';
+import { DesktopOutlined, BgColorsOutlined, ControlOutlined, EyeOutlined, SafetyCertificateOutlined, SyncOutlined } from '@ant-design/icons';
 import FloatingReminder from '@/components/FloatingReminder';
 import { useThemeVariants } from '@/hooks/useVariants';
+import { getElectron, isElectron } from '@/utils/electron';
 
 const WIDGET_THEMES = [
   { label: '跟随全局', color: 'default', key: 'global' },
@@ -15,14 +16,32 @@ const WIDGET_THEMES = [
   { label: '复古', color: 'gold', key: 'retro' }
 ];
 
+function formatGB(bytes = 0) {
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}
+
 export default function DesktopWidgetPage() {
   const [show, setShow] = useState(false);
+  const [snapshot, setSnapshot] = useState<any>(null);
   const { theme, getPanelStyle } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
   const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
+  const titleColor = isDark ? '#f8fafc' : '#0f172a';
+  const memUsage = snapshot ? Math.round((1 - snapshot.freeMem / snapshot.totalMem) * 100) : 0;
+  const diskUsage = snapshot ? Math.round(snapshot.diskUsed / snapshot.diskTotal * 100) : 0;
+  const electron = isElectron();
+
+  async function refreshSnapshot() {
+    const next = await getElectron()?.getSystemSnapshot?.();
+    if (next) setSnapshot(next);
+  }
+
+  useEffect(() => {
+    refreshSnapshot();
+  }, []);
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -38,11 +57,52 @@ export default function DesktopWidgetPage() {
           <DesktopOutlined /> 小组件
         </Typography.Text>
         <Typography.Title level={2} style={{ margin: '8px 0 10px', color: '#f8fafc' }}>
-          桌面小部件 · 多主题浮动小窗
+          桌面小部件 · 超级管理器中枢
         </Typography.Title>
         <Typography.Paragraph style={{ marginBottom: 0, color: 'rgba(226,232,240,0.84)' }}>
-          浏览器环境下使用浮动小窗替代桌面嵌入，支持 7 种主题风格和透明度调节。
+          逐步扩展电脑配置概览、性能监控、隐私清理和工具大全，先以安全只读方式接入桌面原生能力。
         </Typography.Paragraph>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <SafetyCertificateOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Windows 超级管理器 · 配置概览</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>
+          桌面端通过 Electron 安全桥读取电脑基础状态，后续再扩展自启管理、隐私清理、磁盘保护和文件扫描。
+        </Typography.Paragraph>
+        {electron && snapshot ? (
+          <Row gutter={[16, 16]}>
+            <Col xs={24} lg={8}>
+              <div style={{ padding: 16, borderRadius: 18, background: isDark ? `${accent}12` : `${accent}0d`, border: `1px solid ${accent}22` }}>
+                <Typography.Text style={{ color: subColor }}>处理器</Typography.Text>
+                <Typography.Title level={5} style={{ margin: '6px 0', color: titleColor }}>{snapshot.cpuModel}</Typography.Title>
+                <Tag color="blue">{snapshot.cpuCores} 线程</Tag><Tag>{snapshot.arch}</Tag>
+              </div>
+            </Col>
+            <Col xs={24} lg={8}>
+              <div style={{ padding: 16, borderRadius: 18, background: isDark ? 'rgba(59,130,246,0.12)' : 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                <Typography.Text style={{ color: subColor }}>内存占用</Typography.Text>
+                <Progress percent={memUsage} strokeColor="#3b82f6" trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+                <Typography.Text style={{ color: subColor }}>{formatGB(snapshot.totalMem - snapshot.freeMem)} / {formatGB(snapshot.totalMem)}</Typography.Text>
+              </div>
+            </Col>
+            <Col xs={24} lg={8}>
+              <div style={{ padding: 16, borderRadius: 18, background: isDark ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                <Typography.Text style={{ color: subColor }}>磁盘占用 · {snapshot.diskRoot}</Typography.Text>
+                <Progress percent={diskUsage} strokeColor="#10b981" trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+                <Typography.Text style={{ color: subColor }}>{formatGB(snapshot.diskUsed)} / {formatGB(snapshot.diskTotal)}</Typography.Text>
+              </div>
+            </Col>
+          </Row>
+        ) : (
+          <Alert type="info" showIcon message="浏览器模式仅显示规划。打开桌面版后可读取本机 CPU、内存、磁盘和运行状态。" style={{ borderRadius: 12 }} />
+        )}
+        <Space wrap style={{ marginTop: 14 }}>
+          <Button icon={<SyncOutlined />} onClick={refreshSnapshot} disabled={!electron} style={{ borderRadius: 10 }}>刷新电脑状态</Button>
+          {['配置概览', '自启管理', '隐私清理', '磁盘保护', '文件扫描', '工具大全'].map(item => <Tag key={item} color={item === '配置概览' ? 'blue' : 'default'}>{item}</Tag>)}
+        </Space>
       </Card>
 
       <Row gutter={[16, 16]}>
