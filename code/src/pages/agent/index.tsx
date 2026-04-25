@@ -8,9 +8,9 @@ import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
 
 const AGENT_TEMPLATES = [
-  { title: '成长控制 Agent', desc: '拆解今日目标、习惯和复习压力，生成可恢复的行动分支', risk: '低风险', color: '#10b981' },
-  { title: '电脑管理 Agent', desc: '先只读扫描系统状态，再等待人工授权执行控制动作', risk: '需授权', color: '#2563eb' },
-  { title: '模型调度 Agent', desc: '记录 Provider 健康、故障转移和策略历史，保障 AI 调用稳定', risk: '中风险', color: '#8b5cf6' }
+  { title: '成长控制 Agent', desc: '拆解今日目标、习惯和复习压力，生成可恢复的行动分支', risk: '低风险', color: '#10b981', allow: '读写事项/目标/习惯/复习队列', deny: '禁止删除私人数据或跳过复盘', evidence: '今日数据、里程碑、提醒队列' },
+  { title: '电脑管理 Agent', desc: '先只读扫描系统状态，再等待人工授权执行控制动作', risk: '需授权', color: '#2563eb', allow: '读取系统状态和白名单 PowerShell', deny: '禁止任意命令、删除文件、结束进程', evidence: '系统快照、端口、自启、确认日志' },
+  { title: '模型调度 Agent', desc: '记录 Provider 健康、故障转移和策略历史，保障 AI 调用稳定', risk: '中风险', color: '#8b5cf6', allow: '切换已保存 Provider 和探活', deny: '禁止暴露 API Key 或上传本地数据', evidence: 'Provider 健康、延迟、回退记录' }
 ];
 
 export default function AgentPage() {
@@ -49,7 +49,7 @@ export default function AgentPage() {
         { id: nanoid(), title: '等待人工确认权限', done: false },
         { id: nanoid(), title: '执行后写入恢复日志', done: false }
       ],
-      extra: { agent: true, risk: template.risk, recoverable: true },
+      extra: { agent: true, risk: template.risk, recoverable: true, contract: { allow: template.allow, deny: template.deny, evidence: template.evidence, approval: template.risk === '低风险' ? '自动记录' : '人工确认' } },
       createdAt: now,
       updatedAt: now
     });
@@ -100,6 +100,24 @@ export default function AgentPage() {
               <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>下一步：{item.next}</div>
             </div>
           </Col>) : <Col span={24}><Alert type="info" showIcon message="暂无可恢复 Agent 分支；可先创建 Agent 或在 Aix 中枢生成控制战役。" style={{ borderRadius: 12 }} /></Col>}
+        </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <SafetyCertificateOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Agent 权限合约</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>每个 Agent 都必须带权限范围、禁止动作、证据来源和审批阶段；合约随任务写入 Item.extra，恢复时能看到边界。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {AGENT_TEMPLATES.map(template => <Col xs={24} md={8} key={template.title}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${template.color}12` : `${template.color}08`, border: `1px solid ${template.color}22` }}>
+              <Space wrap><Typography.Text strong style={{ color: titleColor }}>{template.title}</Typography.Text><Tag color={template.risk === '低风险' ? 'green' : 'gold'}>{template.risk}</Tag></Space>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8, marginTop: 8 }}>允许：{template.allow}</div>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>禁止：{template.deny}</div>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>证据：{template.evidence}</div>
+            </div>
+          </Col>)}
         </Row>
       </Card>
 

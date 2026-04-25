@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('sgx', {
   getSystemSnapshot: () => ipcRenderer.invoke('sgx:get-system-snapshot'),
   getSystemManagerPlan: () => ipcRenderer.invoke('sgx:get-system-manager-plan'),
   scanSystemControl: () => ipcRenderer.invoke('sgx:scan-system-control'),
+  getEmergencyToolkit: () => ipcRenderer.invoke('sgx:get-emergency-toolkit'),
   getPowerShellPresets: () => ipcRenderer.invoke('sgx:get-powershell-presets'),
   runPowerShellPreset: (preset) => ipcRenderer.invoke('sgx:run-powershell-preset', preset)
 });

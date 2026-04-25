@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.35.0', date: '2026-04-25', items: [
+    'Aix 自进化路线图新增 7/30/90 天系统进化规划，可按控制力、数据主权、技能和 Provider 状态归档',
+    'Agent 权限合约新增允许范围、禁止动作、证据来源和审批阶段，任务创建时写入本地恢复数据',
+    '桌面应急工具箱新增断网急救、时间校准、Hosts 检查和端口急救，并接入 PowerShell 白名单确认链路'
+  ]},
   { ver: '0.34.0', date: '2026-04-25', items: [
     'Aix 控制战役编排器新增四阶段本地战役，可把今日压力一键写入事项子任务和审计日志',
     'Agent 恢复驾驶舱新增分支队列、权限阶段、恢复进度和下一步动作视图',

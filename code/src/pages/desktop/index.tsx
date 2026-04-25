@@ -34,6 +34,7 @@ export default function DesktopWidgetPage() {
   const [controlScan, setControlScan] = useState<any>(null);
   const [powershellResult, setPowerShellResult] = useState<any>(null);
   const [powerShellPresets, setPowerShellPresets] = useState<any[]>([]);
+  const [emergencyTools, setEmergencyTools] = useState<any[]>([]);
   const [confirmingPreset, setConfirmingPreset] = useState<any>(null);
   const [managerPlan, setManagerPlan] = useState<Record<string, string[]>>({});
   const { theme, getPanelStyle } = useThemeVariants();
@@ -59,13 +60,15 @@ export default function DesktopWidgetPage() {
     const plan = await getElectron()?.getSystemManagerPlan?.();
     const scan = await getElectron()?.scanSystemControl?.();
     const presets = await getElectron()?.getPowerShellPresets?.();
+    const tools = await getElectron()?.getEmergencyToolkit?.();
     if (next) setSnapshot(next);
     if (plan) setManagerPlan(plan);
     if (scan) setControlScan(scan);
     if (presets) setPowerShellPresets(presets);
+    if (tools) setEmergencyTools(tools);
   }
 
-  async function runPowerShell(preset: 'computer' | 'processes' | 'services') {
+  async function runPowerShell(preset: 'computer' | 'processes' | 'services' | 'network' | 'clock' | 'hosts') {
     const result = await getElectron()?.runPowerShellPreset?.(preset);
     if (result) setPowerShellResult(result);
     setConfirmingPreset(null);
@@ -228,6 +231,28 @@ export default function DesktopWidgetPage() {
       <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
         <Space size={8} style={{ marginBottom: 12 }}>
           <ToolOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>桌面应急工具箱</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>内置断网急救、时间校准、Hosts 检查和端口急救，默认只读诊断；需要执行时仍复用 PowerShell 白名单确认链路。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {(emergencyTools.length ? emergencyTools : [
+            { key: 'network', title: '断网急救', desc: '查看网卡、IP 和 DNS 摘要', preset: 'network', risk: 16 },
+            { key: 'clock', title: '时间校准', desc: '检查时区和系统时间服务线索', preset: 'clock', risk: 10 },
+            { key: 'hosts', title: 'Hosts 检查', desc: '只读查看 hosts 前 40 行', preset: 'hosts', risk: 20 },
+            { key: 'ports', title: '端口急救', desc: '复用端口占用扫描定位异常监听', preset: 'services', risk: 22 }
+          ]).map(tool => <Col xs={24} md={12} xl={6} key={tool.key}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? 'rgba(239,68,68,0.10)' : 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.22)' }}>
+              <Space wrap><Typography.Text strong style={{ color: titleColor }}>{tool.title}</Typography.Text><Tag color="gold">风险 {tool.risk}</Tag></Space>
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0' }}>{tool.desc}</Typography.Paragraph>
+              <Button size="small" disabled={!electron} onClick={() => setConfirmingPreset(powerShellPresets.find(item => item.key === tool.preset) || { key: tool.preset, title: tool.title, risk: tool.risk, level: '只读低风险', backup: '执行前记录诊断意图', rollback: '无需回滚' })} style={{ borderRadius: 10 }}>确认后诊断</Button>
+            </div>
+          </Col>)}
+        </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-3" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <ToolOutlined style={{ color: accent }} />
           <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>内置 PowerShell · 安全预设通道</Typography.Title>
         </Space>
         <Typography.Paragraph style={{ color: subColor }}>
@@ -237,7 +262,10 @@ export default function DesktopWidgetPage() {
           {(powerShellPresets.length ? powerShellPresets : [
             { key: 'computer', title: '电脑信息', risk: 12, level: '只读低风险', backup: '桌面版加载后显示', rollback: '无需回滚' },
             { key: 'processes', title: '高占用进程', risk: 18, level: '只读低风险', backup: '桌面版加载后显示', rollback: '无需回滚' },
-            { key: 'services', title: '运行服务', risk: 22, level: '只读低风险', backup: '桌面版加载后显示', rollback: '无需回滚' }
+            { key: 'services', title: '运行服务', risk: 22, level: '只读低风险', backup: '桌面版加载后显示', rollback: '无需回滚' },
+            { key: 'network', title: '网络急救诊断', risk: 16, level: '只读低风险', backup: '桌面版加载后显示', rollback: '无需回滚' },
+            { key: 'clock', title: '时间同步检查', risk: 10, level: '只读低风险', backup: '桌面版加载后显示', rollback: '无需回滚' },
+            { key: 'hosts', title: 'Hosts 安全检查', risk: 20, level: '只读低风险', backup: '桌面版加载后显示', rollback: '无需回滚' }
           ]).map(preset => (
             <Col xs={24} md={8} key={preset.key}>
               <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? 'rgba(59,130,246,0.10)' : 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)' }}>

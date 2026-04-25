@@ -100,6 +100,18 @@ const POWERSHELL_PRESETS = {
   services: {
     title: '运行服务', risk: 22, level: '只读低风险', backup: '记录服务列表，不启动或停止服务', rollback: '无需回滚，保持系统服务原样',
     script: 'Get-Service | Where-Object Status -eq Running | Select-Object -First 12 Name,DisplayName,Status | ConvertTo-Json -Compress'
+  },
+  network: {
+    title: '网络急救诊断', risk: 16, level: '只读低风险', backup: '记录 IP、DNS 和连通性摘要，不修改网络配置', rollback: '无需回滚，仅用于断网排查',
+    script: 'Get-NetIPConfiguration | Select-Object InterfaceAlias,IPv4Address,DNSServer | ConvertTo-Json -Compress'
+  },
+  clock: {
+    title: '时间同步检查', risk: 10, level: '只读低风险', backup: '记录系统时间与时区，不修改时间服务', rollback: '无需回滚，仅提示校准方向',
+    script: 'Get-TimeZone | Select-Object Id,DisplayName,BaseUtcOffset | ConvertTo-Json -Compress'
+  },
+  hosts: {
+    title: 'Hosts 安全检查', risk: 20, level: '只读低风险', backup: '读取 hosts 前 40 行，不写入文件', rollback: '无需回滚，未知条目只提示人工确认',
+    script: 'Get-Content "$env:SystemRoot\\System32\\drivers\\etc\\hosts" -ErrorAction SilentlyContinue | Select-Object -First 40 | ConvertTo-Json -Compress'
   }
 };
 
@@ -207,6 +219,12 @@ ipcMain.handle('sgx:scan-system-control', async () => ({
   ports: await scanPorts(),
   scannedAt: Date.now()
 }));
+ipcMain.handle('sgx:get-emergency-toolkit', () => [
+  { key: 'network', title: '断网急救', desc: '查看网卡、IP 和 DNS 摘要', preset: 'network', risk: 16 },
+  { key: 'clock', title: '时间校准', desc: '检查时区和系统时间服务线索', preset: 'clock', risk: 10 },
+  { key: 'hosts', title: 'Hosts 检查', desc: '只读查看 hosts 前 40 行', preset: 'hosts', risk: 20 },
+  { key: 'ports', title: '端口急救', desc: '复用端口占用扫描定位异常监听', preset: 'services', risk: 22 }
+]);
 ipcMain.handle('sgx:get-powershell-presets', () => Object.entries(POWERSHELL_PRESETS).map(([key, value]) => ({ key, title: value.title, risk: value.risk, level: value.level, backup: value.backup, rollback: value.rollback })));
 ipcMain.handle('sgx:run-powershell-preset', async (_, preset) => runPowerShellPreset(preset));
 
