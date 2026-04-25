@@ -14,14 +14,16 @@
 ## 待完成
 - [x] 运行 Vitest 与前端构建
 - [x] 桌面安装包构建
-- [ ] 提交并推送 `origin main`
-- [ ] 创建并推送 tag：`v0.44.0`
-- [ ] 创建 GitHub Release 并上传安装包
+- [x] 提交并推送 `origin main`
+- [x] 创建并推送 tag：`v0.44.0`
+- [x] 创建 GitHub Release 并上传安装包
 
 ## 验证与发布结果
 - Vitest：6 个测试文件、39 个用例全部通过。
 - 前端构建：`npm --prefix code run build` 通过，保留 MapleMono 字体运行时解析和大 chunk 既有警告；首次因 `desktop/index.tsx` 中 `electron` 声明顺序导致 TS2448/TS2454，已调整到使用前声明后通过。
 - 桌面安装包：`npm --prefix desktop run dist` 通过，生成 `desktop/dist-installer/AixSystems-0.44.0-Setup.exe` 和 blockmap。
+- Git：已提交 `f38a672 feat: AixSystems v0.44.0 - add control mirror coach` 并推送 `origin main`。
+- Tag/Release：已推送 `v0.44.0`，`release_assets.py` 已上传安装包和 blockmap。
 
 ## 新增/修改重点
 - `code/src/pages/aix/index.tsx` — 个人失控预警
