@@ -14,14 +14,16 @@
 ## 待完成
 - [x] 运行 Vitest 与前端构建
 - [x] 桌面安装包构建
-- [ ] 提交并推送 `origin main`
-- [ ] 创建并推送 tag：`v0.42.0`
-- [ ] 创建 GitHub Release 并上传安装包
+- [x] 提交并推送 `origin main`
+- [x] 创建并推送 tag：`v0.42.0`
+- [x] 创建 GitHub Release 并上传安装包
 
 ## 验证与发布结果
 - Vitest：6 个测试文件、39 个用例全部通过。
 - 前端构建：`npm --prefix code run build` 通过，保留 MapleMono 字体运行时解析和大 chunk 既有警告。
 - 桌面安装包：`npm --prefix desktop run dist` 通过，生成 `desktop/dist-installer/AixSystems-0.42.0-Setup.exe` 和 blockmap。
+- Git：已提交 `405b8d8 feat: AixSystems v0.42.0 - add token dispatch and replay radar` 并推送 `origin main`。
+- Tag/Release：已推送 `v0.42.0`，`release_assets.py` 已上传安装包和 blockmap。
 
 ## 新增/修改重点
 - `code/src/pages/aix/index.tsx` — 控制令牌到 openclow 技能调度器
