@@ -14,7 +14,7 @@
 ## 待完成
 - [x] 运行 Vitest 与前端构建
 - [x] 桌面安装包构建
-- [ ] 提交并推送 `origin main`
+- [x] 提交并推送 `origin main`
 - [ ] 创建并推送 tag：`v0.32.0`
 - [ ] 创建 GitHub Release 并上传 `AixSystems-0.32.0-Setup.exe` 与 blockmap
 
