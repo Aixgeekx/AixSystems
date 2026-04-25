@@ -116,6 +116,16 @@ export default function SystemPage() {
   const providerProfiles = JSON.parse(aixProviderProfiles || '[]') as Array<{ name: string; apiUrl: string; model: string; keyHint?: string; provider?: string; protocol?: string; health?: string; official?: boolean; latency?: number; checkedAt?: number }>;
   const providerHistory = JSON.parse(aixProviderHistory || '[]') as Array<{ name: string; ok: boolean; latency: number; checkedAt: number; error?: string }>;
   const activeProfile = providerProfiles.find(profile => profile.name === aixActiveProfile);
+  const trustedRoutes = providerProfiles.map(profile => {
+    const latency = profile.latency || 0;
+    const healthScore = profile.official ? 78 : profile.health?.startsWith('正常') ? 96 : profile.health?.startsWith('异常') ? 32 : 58;
+    const latencyScore = latency ? Math.max(20, 100 - Math.round(latency / 20)) : profile.official ? 86 : 62;
+    const protocolScore = profile.protocol?.includes('claude') || profile.provider?.includes('claude') ? 94 : profile.protocol?.includes('ollama') || profile.provider?.includes('ollama') ? 82 : 88;
+    const activeBonus = profile.name === aixActiveProfile ? 8 : 0;
+    const trust = Math.min(100, Math.round(healthScore * 0.42 + latencyScore * 0.28 + protocolScore * 0.2 + activeBonus));
+    return { ...profile, trust, route: trust >= 86 ? '主路由' : trust >= 62 ? '备用路由' : '隔离观察' };
+  }).sort((a, b) => b.trust - a.trust);
+  const recommendedRoute = trustedRoutes[0];
   const providerPresets = [
     { name: 'Claude Code 官方', apiUrl: '', model: 'claude-opus-4-7', provider: 'official', official: true },
     { name: 'OpenAI 兼容网关', apiUrl: 'http://127.0.0.1:8000/v1/chat/completions', model: 'aix-growth-control', provider: 'openai-compatible' },
@@ -330,6 +340,20 @@ export default function SystemPage() {
                   {providerHistory.slice(0, 3).map(item => (
                     <div key={`${item.name}-${item.checkedAt}`} style={{ color: subColor, fontSize: 12 }}>
                       {item.ok ? '✓' : '!'} {item.name} · {item.latency}ms · {fmtFromNow(item.checkedAt)}{item.error ? ` · ${item.error}` : ''}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {trustedRoutes.length ? (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <Space wrap><Tag color="purple">可信路由</Tag>{recommendedRoute ? <Tag color="green">推荐：{recommendedRoute.name}</Tag> : null}</Space>
+                  {trustedRoutes.slice(0, 4).map(route => (
+                    <div key={route.name} style={{ padding: 10, borderRadius: 12, background: isDark ? `${accent}0d` : `${accent}08`, border: `1px solid ${accent}22` }}>
+                      <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                        <Typography.Text strong style={{ color: titleColor }}>{route.name}</Typography.Text>
+                        <Tag color={route.trust >= 86 ? 'green' : route.trust >= 62 ? 'gold' : 'red'}>{route.route} · {route.trust}</Tag>
+                      </Space>
+                      <div style={{ color: subColor, fontSize: 12, marginTop: 4 }}>{route.protocol || inferAixProtocol(route.apiUrl)} · {route.health || (route.official ? '官方登录回退' : '待检测')} · {route.latency ? `${route.latency}ms` : '无延迟样本'}</div>
                     </div>
                   ))}
                 </div>

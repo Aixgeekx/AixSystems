@@ -202,6 +202,20 @@ export default function GrowthPage() {
       activeGoalsList,
       weekDays,
       radar,
+      controlProjection: [30, 60, 90].map(days => {
+        const focusGain = Math.min(28, Math.round(monthFocus / 600 * 18 + days / 9));
+        const habitGain = habits.length ? Math.min(26, Math.round(habitLogs.filter(l => l.date >= monthStart).length / Math.max(1, habits.length) * 1.8 + days / 12)) : Math.round(days / 10);
+        const goalGain = activeGoals.length ? Math.min(24, Math.round(activeGoalsList.reduce((sum, goal) => sum + goal.progress, 0) / Math.max(1, activeGoalsList.length) * 0.16 + days / 15)) : Math.round(days / 14);
+        const diaryGain = Math.min(16, diaries.filter(d => !d.deletedAt && d.createdAt >= monthStart).length * 2 + Math.round(days / 22));
+        const reviewGain = Math.min(12, completedReviews + Math.round(days / 18));
+        const score = Math.min(100, Math.round(radar.reduce((sum, item) => sum + item.value, 0) / radar.length + focusGain + habitGain + goalGain + diaryGain + reviewGain));
+        return {
+          days,
+          score,
+          level: score >= 82 ? '稳定掌控' : score >= 58 ? '加速恢复' : '先止损',
+          action: days === 30 ? '固定一个核心目标、两段专注和三次复盘' : days === 60 ? '把高分行为固化为周模板，削减低价值事项' : '沉淀个人控制系统，形成可迁移成长协议'
+        };
+      }),
       summary: {
         week: mkPeriod(weekStartTs, weekEndTs),
         lastWeek: mkPeriod(lastWeekStartTs, lastWeekEndTs),
@@ -418,6 +432,23 @@ export default function GrowthPage() {
           <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', color: titleColor, marginBottom: 0 }}>{aixPlan}</Typography.Paragraph>
         </Card>
       ) : null}
+
+      <Card bordered={false} className="anim-fade-in-up hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Text style={{ color: subColor }}>90 天成长控制推演</Typography.Text>
+        <Typography.Title level={4} style={{ margin: '4px 0 14px', color: titleColor }}>从恢复节奏到个人控制协议</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {(dashboard?.controlProjection || []).map((stage: any, index: number) => (
+            <Col xs={24} md={8} key={stage.days}>
+              <div style={{ height: '100%', padding: 16, borderRadius: 18, background: tintedBg(stage.score >= 82 ? '#22c55e' : stage.score >= 58 ? '#f59e0b' : '#ef4444'), border: `1px solid ${(stage.score >= 82 ? '#22c55e' : stage.score >= 58 ? '#f59e0b' : '#ef4444')}33` }}>
+                <Space wrap><Tag color="purple">D+{stage.days}</Tag><Typography.Text strong style={{ color: titleColor }}>{stage.level}</Typography.Text></Space>
+                <Progress percent={stage.score} strokeColor={stage.score >= 82 ? '#22c55e' : stage.score >= 58 ? '#f59e0b' : '#ef4444'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} style={{ margin: '12px 0 8px' }} />
+                <Typography.Paragraph style={{ margin: 0, color: subColor, fontSize: 12 }}>{index + 1}. {stage.action}</Typography.Paragraph>
+              </div>
+            </Col>
+          ))}
+        </Row>
+        <Typography.Paragraph style={{ color: subColor, margin: '12px 0 0', fontSize: 12 }}>推演只使用事项、专注、习惯、目标、日记频率和复习统计，不读取日记正文。</Typography.Paragraph>
+      </Card>
 
       <Card bordered={false} className="anim-fade-in-up hover-lift" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
         <Typography.Text style={{ color: subColor }}>成长控制任务编排器</Typography.Text>

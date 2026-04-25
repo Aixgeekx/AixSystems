@@ -13,6 +13,8 @@ const AGENT_TEMPLATES = [
   { title: '模型调度 Agent', desc: '记录 Provider 健康、故障转移和策略历史，保障 AI 调用稳定', risk: '中风险', color: '#8b5cf6', allow: '切换已保存 Provider 和探活', deny: '禁止暴露 API Key 或上传本地数据', evidence: 'Provider 健康、延迟、回退记录' }
 ];
 
+const RISK_WEIGHT: Record<string, number> = { '低风险': 18, '中风险': 42, '需授权': 68 };
+
 export default function AgentPage() {
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
@@ -30,6 +32,23 @@ export default function AgentPage() {
     const next = subtasks.find(item => !item.done)?.title || '等待复盘归档';
     return { task, done, total: subtasks.length, percent, phase, next };
   }).sort((a, b) => b.task.updatedAt - a.task.updatedAt).slice(0, 6);
+  const autonomyQueue = agentTasks.map(task => {
+    const subtasks = task.subtasks || [];
+    const done = subtasks.filter(item => item.done).length;
+    const percent = subtasks.length ? Math.round(done / subtasks.length * 100) : 0;
+    const risk = String(task.extra?.risk || (task.extra?.aixCampaign ? '中风险' : '低风险'));
+    const needsApproval = risk !== '低风险' && percent < 67;
+    const urgency = Math.min(100, (RISK_WEIGHT[risk] || 30) + (100 - percent) * 0.46 + (Date.now() - task.updatedAt > 86_400_000 ? 14 : 0));
+    return {
+      task,
+      percent,
+      urgency: Math.round(urgency),
+      phase: needsApproval ? '等待授权' : percent === 100 ? '归档复盘' : task.extra?.aixCampaign ? '战役续跑' : '自动推进',
+      next: subtasks.find(item => !item.done)?.title || '归档执行证据',
+      color: needsApproval ? '#f59e0b' : percent === 100 ? '#22c55e' : '#38bdf8'
+    };
+  }).sort((a, b) => b.urgency - a.urgency).slice(0, 5);
+  const autonomyScore = autonomyQueue.length ? Math.max(0, Math.round(100 - autonomyQueue.reduce((sum, item) => sum + item.urgency, 0) / autonomyQueue.length * 0.58)) : 100;
 
   async function createAgentTask(template: typeof AGENT_TEMPLATES[number]) {
     const now = Date.now();
@@ -84,6 +103,36 @@ export default function AgentPage() {
           </Col>
         ))}
       </Row>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <ThunderboltOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Agent 自治队列</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>按风险、权限阶段、恢复进度和停滞时间自动排序，让 Aix 知道哪个 Agent 分支该先续跑、授权或归档。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          <Col xs={24} md={8}>
+            <div style={{ height: '100%', padding: 16, borderRadius: 18, background: isDark ? `${accent}12` : `${accent}08`, border: `1px solid ${accent}22` }}>
+              <Typography.Text style={{ color: subColor }}>自治健康分</Typography.Text>
+              <div style={{ marginTop: 10 }}><Progress type="circle" percent={autonomyScore} strokeColor={autonomyScore >= 75 ? '#22c55e' : autonomyScore >= 48 ? '#f59e0b' : '#ef4444'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} /></div>
+            </div>
+          </Col>
+          <Col xs={24} md={16}>
+            <Space direction="vertical" size={10} style={{ width: '100%' }}>
+              {autonomyQueue.length ? autonomyQueue.map((item, index) => (
+                <div key={item.task.id} style={{ padding: 12, borderRadius: 16, background: isDark ? `${item.color}12` : `${item.color}08`, border: `1px solid ${item.color}28` }}>
+                  <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Space wrap><Tag color={index === 0 ? 'red' : 'blue'}>#{index + 1}</Tag><Typography.Text strong style={{ color: titleColor }}>{item.task.title}</Typography.Text><Tag color={item.phase === '等待授权' ? 'gold' : item.phase === '归档复盘' ? 'green' : 'blue'}>{item.phase}</Tag></Space>
+                    <Tag color={item.urgency >= 72 ? 'red' : item.urgency >= 46 ? 'gold' : 'green'}>优先级 {item.urgency}</Tag>
+                  </Space>
+                  <Progress percent={item.percent} size="small" strokeColor={item.color} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+                  <Typography.Text style={{ color: subColor, fontSize: 12 }}>下一步：{item.next}</Typography.Text>
+                </div>
+              )) : <Alert type="success" showIcon message="当前没有待续跑 Agent，自治队列健康。" style={{ borderRadius: 12 }} />}
+            </Space>
+          </Col>
+        </Row>
+      </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>
         <Space size={8} style={{ marginBottom: 12 }}>
