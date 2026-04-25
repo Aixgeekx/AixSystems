@@ -39,7 +39,8 @@ interface SgxBridge {
     ports: { protocol: string; local: string; state: string; pid: string }[];
     scannedAt: number;
   }>;
-  runPowerShellPreset: (preset: 'computer' | 'processes' | 'services') => Promise<{ preset: string; output: string; error?: string }>;
+  getPowerShellPresets: () => Promise<{ key: 'computer' | 'processes' | 'services'; title: string; risk: number; level: string; backup: string; rollback: string }[]>;
+  runPowerShellPreset: (preset: 'computer' | 'processes' | 'services') => Promise<{ preset: string; title?: string; risk?: number; level?: string; backup?: string; rollback?: string; output: string; error?: string }>;
 }
 
 export function getElectron(): SgxBridge | null {

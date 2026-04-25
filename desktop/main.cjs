@@ -88,15 +88,26 @@ async function scanPorts() {
   });
 }
 
+const POWERSHELL_PRESETS = {
+  computer: {
+    title: '电脑信息', risk: 12, level: '只读低风险', backup: '记录当前系统摘要与 Aix eventLog，不修改系统状态', rollback: '无需回滚，仅保留输出审计',
+    script: 'Get-ComputerInfo | Select-Object CsName,WindowsProductName,OsArchitecture,OsBuildNumber | ConvertTo-Json -Compress'
+  },
+  processes: {
+    title: '高占用进程', risk: 18, level: '只读低风险', backup: '记录进程快照，不结束进程', rollback: '无需回滚，关闭结果面板即可',
+    script: 'Get-Process | Sort-Object CPU -Descending | Select-Object -First 8 ProcessName,Id,CPU,WorkingSet64 | ConvertTo-Json -Compress'
+  },
+  services: {
+    title: '运行服务', risk: 22, level: '只读低风险', backup: '记录服务列表，不启动或停止服务', rollback: '无需回滚，保持系统服务原样',
+    script: 'Get-Service | Where-Object Status -eq Running | Select-Object -First 12 Name,DisplayName,Status | ConvertTo-Json -Compress'
+  }
+};
+
 async function runPowerShellPreset(preset) {
-  const scripts = {
-    computer: 'Get-ComputerInfo | Select-Object CsName,WindowsProductName,OsArchitecture,OsBuildNumber | ConvertTo-Json -Compress',
-    processes: 'Get-Process | Sort-Object CPU -Descending | Select-Object -First 8 ProcessName,Id,CPU,WorkingSet64 | ConvertTo-Json -Compress',
-    services: 'Get-Service | Where-Object Status -eq Running | Select-Object -First 12 Name,DisplayName,Status | ConvertTo-Json -Compress'
-  };
-  if (!scripts[preset]) return { preset, output: '', error: '未知 PowerShell 预设' };
-  const output = await runCommand('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', scripts[preset]]);
-  return { preset, output: output.slice(0, 12000), error: output ? '' : 'PowerShell 无输出或执行失败' };
+  const item = POWERSHELL_PRESETS[preset];
+  if (!item) return { preset, output: '', error: '未知 PowerShell 预设' };
+  const output = await runCommand('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', item.script]);
+  return { preset, ...item, output: output.slice(0, 12000), error: output ? '' : 'PowerShell 无输出或执行失败' };
 }
 
 function createWindow() {
@@ -196,6 +207,7 @@ ipcMain.handle('sgx:scan-system-control', async () => ({
   ports: await scanPorts(),
   scannedAt: Date.now()
 }));
+ipcMain.handle('sgx:get-powershell-presets', () => Object.entries(POWERSHELL_PRESETS).map(([key, value]) => ({ key, title: value.title, risk: value.risk, level: value.level, backup: value.backup, rollback: value.rollback })));
 ipcMain.handle('sgx:run-powershell-preset', async (_, preset) => runPowerShellPreset(preset));
 
 Menu.setApplicationMenu(null);

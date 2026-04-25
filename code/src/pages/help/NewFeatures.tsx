@@ -6,6 +6,11 @@ import { useThemeVariants } from '@/hooks/useVariants';
 const { Title, Paragraph } = Typography;
 
 const UPDATES = [
+  { ver: '0.33.0', date: '2026-04-25', items: [
+    '插件广场二期新增技能详情、输入输出 Schema、版本归档和本地插件包导入雏形',
+    'PowerShell 白名单工作流新增预设风险评分、执行前确认、备份说明和回滚说明',
+    'Aix 本地代理中心新增 OpenAI / Claude / Ollama 协议能力卡、Provider 探活和故障转移提示'
+  ]},
   { ver: '0.32.0', date: '2026-04-25', items: [
     '新增 Aix 主入口，把 openclaw 技能生态、Claude Code 专业 Agent 流程和时光序私人数据统一成内置 AI 中枢',
     '新增 Aix 技能库 / 插件广场雏形，内置成长控制、复习削峰、专注作战、电脑只读扫描、私人便携胶囊和 Provider 调度技能',

@@ -10,7 +10,7 @@ import { db } from '@/db';
 import { requestPerm } from '@/utils/notify';
 import { getElectron, isElectron } from '@/utils/electron';
 import { downloadBackup } from '@/utils/export';
-import { probeAixProvider } from '@/utils/aixModel';
+import { inferAixProtocol, probeAixProvider } from '@/utils/aixModel';
 import { fmtDateTime, fmtFromNow } from '@/utils/time';
 import Empty from '@/components/Empty';
 import { useThemeVariants } from '@/hooks/useVariants';
@@ -113,19 +113,20 @@ export default function SystemPage() {
   }
 
   const allPages = MENU_GROUPS.flatMap(group => group.children).map(child => ({ value: child.path, label: child.label }));
-  const providerProfiles = JSON.parse(aixProviderProfiles || '[]') as Array<{ name: string; apiUrl: string; model: string; keyHint?: string; provider?: string; health?: string; official?: boolean; latency?: number; checkedAt?: number }>;
+  const providerProfiles = JSON.parse(aixProviderProfiles || '[]') as Array<{ name: string; apiUrl: string; model: string; keyHint?: string; provider?: string; protocol?: string; health?: string; official?: boolean; latency?: number; checkedAt?: number }>;
   const providerHistory = JSON.parse(aixProviderHistory || '[]') as Array<{ name: string; ok: boolean; latency: number; checkedAt: number; error?: string }>;
   const activeProfile = providerProfiles.find(profile => profile.name === aixActiveProfile);
   const providerPresets = [
     { name: 'Claude Code 官方', apiUrl: '', model: 'claude-opus-4-7', provider: 'official', official: true },
     { name: 'OpenAI 兼容网关', apiUrl: 'http://127.0.0.1:8000/v1/chat/completions', model: 'aix-growth-control', provider: 'openai-compatible' },
-    { name: '本地代理模型', apiUrl: 'http://127.0.0.1:11434/v1/chat/completions', model: 'local-aix', provider: 'local-proxy' }
+    { name: 'Claude Messages 代理', apiUrl: 'http://127.0.0.1:8001/v1/messages', model: 'claude-opus-4-7', provider: 'claude-proxy' },
+    { name: '本地 Ollama', apiUrl: 'http://127.0.0.1:11434/v1/chat/completions', model: 'local-aix', provider: 'ollama' }
   ];
 
   async function saveAixProfile() {
     const name = profileName.trim() || aixModel || 'Aix 默认模型';
     const previous = providerProfiles.find(profile => profile.name === aixActiveProfile);
-    const nextProfile = { name, apiUrl: aixApiUrl, model: aixModel, provider: aixApiUrl ? 'openai-compatible' : 'official', keyHint: aixApiKey ? `已保存 ${aixApiKey.slice(0, 4)}***` : '无 Key', health: aixApiUrl && aixModel ? '待检测' : '官方登录回退' };
+    const nextProfile = { name, apiUrl: aixApiUrl, model: aixModel, provider: aixApiUrl ? 'openai-compatible' : 'official', protocol: inferAixProtocol(aixApiUrl), keyHint: aixApiKey ? `已保存 ${aixApiKey.slice(0, 4)}***` : '无 Key', health: aixApiUrl && aixModel ? '待检测' : '官方登录回退' };
     const next = [nextProfile, ...providerProfiles.filter(profile => profile.name !== name)].slice(0, 8);
     await setKV('aixProviderProfiles', JSON.stringify(next));
     await setKV('aixActiveProfile', name);
@@ -157,7 +158,7 @@ export default function SystemPage() {
       return;
     }
     setProbingProvider(profile.name);
-    const result = await probeAixProvider({ apiUrl: profile.apiUrl, apiKey: aixApiKey, model: profile.model });
+    const result = await probeAixProvider({ apiUrl: profile.apiUrl, apiKey: aixApiKey, model: profile.model, protocol: inferAixProtocol(profile.apiUrl) });
     const health = result.ok ? `正常 ${result.latency}ms` : `异常 ${result.error}`;
     const nextProfiles = providerProfiles.map(item => item.name === profile.name ? { ...item, health, latency: result.latency, checkedAt: result.checkedAt } : item);
     const nextHistory = [{ name: profile.name, ...result }, ...providerHistory].slice(0, 20);
@@ -320,7 +321,7 @@ export default function SystemPage() {
               <Space wrap size={[8, 8]}>
                 {providerProfiles.map(profile => (
                   <Button key={profile.name} size="small" onClick={() => switchAixProfile(profile.name)} style={{ borderRadius: 10 }}>
-                    {profile.name} · {profile.health || profile.model}
+                    {profile.name} · {profile.protocol || inferAixProtocol(profile.apiUrl)} · {profile.health || profile.model}
                   </Button>
                 ))}
               </Space>
@@ -334,7 +335,7 @@ export default function SystemPage() {
                 </div>
               ) : null}
               <div style={{ padding: 12, borderRadius: 12, background: isDark ? `${accent}0d` : `${accent}08`, border: `1px solid ${accent}22`, color: subColor, fontSize: 12, lineHeight: 1.8 }}>
-                Provider 抽象：API 地址、模型、Key 提示、健康状态和故障转移统一管理；切换前会备份旧槽；官方登录可作为无 Key 回退；后续可同步到 Claude Code / 本地代理配置。
+                Provider 抽象：API 地址、模型、Key 提示、OpenAI/Claude/Ollama 协议、健康状态和故障转移统一管理；切换前会备份旧槽；官方登录可作为无 Key 回退；后续可同步到 Claude Code / 本地代理配置。
               </div>
             </Space>
           </Card>

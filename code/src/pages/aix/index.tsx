@@ -1,6 +1,6 @@
 // Aix 主入口 - 私人便携 AI 中枢
 import React, { useMemo, useState } from 'react';
-import { Alert, Button, Card, Col, Progress, Row, Space, Tag, Timeline, Typography, message } from 'antd';
+import { Alert, Button, Card, Col, Input, Modal, Progress, Row, Space, Tag, Timeline, Typography, message } from 'antd';
 import { BranchesOutlined, CheckCircleOutlined, CloudSyncOutlined, ControlOutlined, DatabaseOutlined, RocketOutlined, SafetyCertificateOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -19,7 +19,13 @@ const SKILLS = [
   { key: 'focus-operator', name: '专注作战技能', version: '1.0.0', risk: '低风险', color: '#f59e0b', input: '专注历史 / 今日缺口', output: '下一次专注场景与时长' },
   { key: 'desktop-readonly', name: '电脑只读扫描技能', version: '1.0.0', risk: '需确认', color: '#2563eb', input: 'Electron IPC / PowerShell 预设', output: '电脑健康建议与审计日志' },
   { key: 'portable-capsule', name: '私人便携胶囊技能', version: '1.0.0', risk: '低风险', color: '#14b8a6', input: 'IndexedDB / 备份 / 设置', output: '换机迁移与数据主权清单' },
-  { key: 'provider-dispatch', name: 'Provider 调度技能', version: '1.0.0', risk: '中风险', color: '#ec4899', input: 'API / Key / 健康记录', output: '模型故障转移和策略来源' }
+  { key: 'provider-dispatch', name: 'Provider 调度技能', version: '1.1.0', risk: '中风险', color: '#ec4899', input: 'API / Key / 健康记录', output: '模型故障转移和策略来源' }
+];
+
+const PLUGIN_PROTOCOLS = [
+  { key: 'openai', name: 'OpenAI Compatible', endpoint: '/v1/chat/completions', use: 'OpenAI / cc-switch / LiteLLM 网关' },
+  { key: 'claude', name: 'Claude Messages', endpoint: '/v1/messages', use: 'Claude Code 风格专业 Agent 能力' },
+  { key: 'ollama', name: 'Ollama Local', endpoint: '127.0.0.1:11434', use: '本地模型离线推理与便携部署' }
 ];
 
 export default function AixPage() {
@@ -28,6 +34,8 @@ export default function AixPage() {
   const { aixApiUrl, aixApiKey, aixModel, aixProviderProfiles, aixActiveProfile } = useSettingsStore();
   const [thinking, setThinking] = useState('');
   const [answer, setAnswer] = useState('');
+  const [selectedSkill, setSelectedSkill] = useState<typeof SKILLS[number] | null>(null);
+  const [pluginPackage, setPluginPackage] = useState('');
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
@@ -88,6 +96,16 @@ export default function AixPage() {
     await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 技能执行：${skill.name}`, detail: { scope: 'aix-skill', skill: skill.key, risk: skill.risk, version: skill.version }, createdAt: now });
     message.success('技能执行记录已写入本地日志');
   }
+
+  async function importPluginPackage() {
+    const name = pluginPackage.trim();
+    if (!name) return;
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 本地插件包导入：${name}`, detail: { scope: 'aix-plugin', name, status: 'archived', version: 'local' }, createdAt: Date.now() });
+    setPluginPackage('');
+    message.success('本地插件包已进入版本归档');
+  }
+
+  const failoverTarget = providers.find(provider => provider.name !== aixActiveProfile && provider.health?.startsWith('正常')) || providers.find(provider => provider.official);
 
   async function askAix(intent: 'plan' | 'computer' | 'review') {
     if (!capsule) return;
@@ -179,11 +197,51 @@ export default function AixPage() {
                 <Space wrap><CheckCircleOutlined style={{ color: skill.color }} /><Typography.Text strong style={{ color: titleColor }}>{skill.name}</Typography.Text><Tag>{skill.version}</Tag><Tag color={skill.risk === '低风险' ? 'green' : 'gold'}>{skill.risk}</Tag></Space>
                 <Typography.Text style={{ color: subColor }}>输入：{skill.input}</Typography.Text>
                 <Typography.Text style={{ color: subColor }}>输出：{skill.output}</Typography.Text>
-                <Space wrap><Button size="small" type={enabled ? 'primary' : 'default'} onClick={() => setSkill(skill.key, !enabled)}>{enabled ? '已启用' : '已停用'}</Button><Button size="small" onClick={() => runSkill(skill)} disabled={!enabled}>记录执行</Button></Space>
+                <Space wrap><Button size="small" type={enabled ? 'primary' : 'default'} onClick={() => setSkill(skill.key, !enabled)}>{enabled ? '已启用' : '已停用'}</Button><Button size="small" onClick={() => runSkill(skill)} disabled={!enabled}>记录执行</Button><Button size="small" onClick={() => setSelectedSkill(skill)}>详情 / Schema</Button></Space>
               </Space>
             </Card></Col>;
           })}
         </Row>
+        <Modal open={!!selectedSkill} title="Aix 插件详情 / Schema" footer={null} onCancel={() => setSelectedSkill(null)}>
+          {selectedSkill ? <Space direction="vertical" size={10} style={{ width: '100%' }}>
+            <Alert type="info" showIcon message={`${selectedSkill.name} · ${selectedSkill.version} · ${selectedSkill.risk}`} />
+            <Typography.Text>输入 Schema：{selectedSkill.input}</Typography.Text>
+            <Typography.Text>输出 Schema：{selectedSkill.output}</Typography.Text>
+            <Typography.Text>版本归档：当前 {selectedSkill.version}，本地插件包会按名称、版本、导入时间写入 eventLog。</Typography.Text>
+          </Space> : null}
+        </Modal>
+        <Row gutter={[12, 12]} style={{ marginTop: 14 }}>
+          <Col xs={24} lg={12}>
+            <div style={{ padding: 14, borderRadius: 16, background: isDark ? `${accent}10` : `${accent}08`, border: `1px solid ${accent}22` }}>
+              <Typography.Text strong style={{ color: titleColor }}>本地插件安装包导入</Typography.Text>
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0' }}>当前先归档插件包名称与导入日志，后续可扩展为离线 zip/json 插件安装器。</Typography.Paragraph>
+              <Space.Compact style={{ width: '100%' }}><Input value={pluginPackage} onChange={event => setPluginPackage(event.target.value)} placeholder="例如 aix-review-peak-1.2.0.zip" /><Button type="primary" onClick={importPluginPackage}>导入归档</Button></Space.Compact>
+            </div>
+          </Col>
+          <Col xs={24} lg={12}>
+            <div style={{ padding: 14, borderRadius: 16, background: isDark ? 'rgba(236,72,153,0.10)' : 'rgba(236,72,153,0.06)', border: '1px solid rgba(236,72,153,0.22)' }}>
+              <Typography.Text strong style={{ color: titleColor }}>插件版本归档</Typography.Text>
+              <Typography.Paragraph style={{ color: subColor, margin: '8px 0 0' }}>内置技能采用官方版本号，本地插件包先进入审计日志，不自动执行未知代码，保持离线安全边界。</Typography.Paragraph>
+            </div>
+          </Col>
+        </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}><ThunderboltOutlined style={{ color: accent }} /><Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Aix 本地代理中心</Typography.Title></Space>
+        <Typography.Paragraph style={{ color: subColor }}>统一管理 OpenAI、Claude、Ollama 三类协议能力：无 API 时保留离线工具，有 API 或本地模型时由 Aix 自动探活并给出故障转移目标。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          {PLUGIN_PROTOCOLS.map(protocol => <Col xs={24} md={8} key={protocol.key}><div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? 'rgba(20,184,166,0.10)' : 'rgba(20,184,166,0.06)', border: '1px solid rgba(20,184,166,0.22)' }}>
+            <Typography.Text strong style={{ color: titleColor }}>{protocol.name}</Typography.Text>
+            <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>端点：{protocol.endpoint}</div>
+            <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>用途：{protocol.use}</div>
+          </div></Col>)}
+        </Row>
+        <Space wrap style={{ marginTop: 12 }}>
+          <Tag color={aixApiUrl ? 'green' : 'gold'}>{aixApiUrl ? '当前 Provider 可探活' : '当前离线模式'}</Tag>
+          <Tag color={failoverTarget ? 'blue' : 'default'}>故障转移目标：{failoverTarget?.name || '待配置'}</Tag>
+          <Button onClick={() => nav(ROUTES.SYSTEM)} style={{ borderRadius: 12 }}>进入 Provider 管理</Button>
+        </Space>
       </Card>
 
       <Row gutter={[16, 16]}>

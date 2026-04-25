@@ -1,6 +1,6 @@
 // 桌面小部件页 - 工作台风格 (v0.24.0 完善升级)
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Card, Col, Progress, Row, Space, Switch, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Col, Modal, Progress, Row, Space, Switch, Tag, Typography } from 'antd';
 import { DesktopOutlined, BgColorsOutlined, ControlOutlined, EyeOutlined, SafetyCertificateOutlined, SyncOutlined, RocketOutlined, ClearOutlined, HddOutlined, FileSearchOutlined, ToolOutlined } from '@ant-design/icons';
 import FloatingReminder from '@/components/FloatingReminder';
 import { useThemeVariants } from '@/hooks/useVariants';
@@ -33,6 +33,8 @@ export default function DesktopWidgetPage() {
   const [snapshot, setSnapshot] = useState<any>(null);
   const [controlScan, setControlScan] = useState<any>(null);
   const [powershellResult, setPowerShellResult] = useState<any>(null);
+  const [powerShellPresets, setPowerShellPresets] = useState<any[]>([]);
+  const [confirmingPreset, setConfirmingPreset] = useState<any>(null);
   const [managerPlan, setManagerPlan] = useState<Record<string, string[]>>({});
   const { theme, getPanelStyle } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
@@ -49,14 +51,17 @@ export default function DesktopWidgetPage() {
     const next = await getElectron()?.getSystemSnapshot?.();
     const plan = await getElectron()?.getSystemManagerPlan?.();
     const scan = await getElectron()?.scanSystemControl?.();
+    const presets = await getElectron()?.getPowerShellPresets?.();
     if (next) setSnapshot(next);
     if (plan) setManagerPlan(plan);
     if (scan) setControlScan(scan);
+    if (presets) setPowerShellPresets(presets);
   }
 
   async function runPowerShell(preset: 'computer' | 'processes' | 'services') {
     const result = await getElectron()?.runPowerShellPreset?.(preset);
     if (result) setPowerShellResult(result);
+    setConfirmingPreset(null);
   }
 
   useEffect(() => {
@@ -193,13 +198,32 @@ export default function DesktopWidgetPage() {
           <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>内置 PowerShell · 安全预设通道</Typography.Title>
         </Space>
         <Typography.Paragraph style={{ color: subColor }}>
-          先开放只读 PowerShell 预设，用于读取电脑信息、进程和服务；暂不提供任意命令输入，避免误操作。
+          只允许白名单 PowerShell 预设，每个预设都有风险分、执行前确认、备份说明和回滚说明；暂不提供任意命令输入，避免误操作。
         </Typography.Paragraph>
-        <Space wrap style={{ marginBottom: 12 }}>
-          <Button onClick={() => runPowerShell('computer')} disabled={!electron} style={{ borderRadius: 10 }}>电脑信息</Button>
-          <Button onClick={() => runPowerShell('processes')} disabled={!electron} style={{ borderRadius: 10 }}>高占用进程</Button>
-          <Button onClick={() => runPowerShell('services')} disabled={!electron} style={{ borderRadius: 10 }}>运行服务</Button>
-        </Space>
+        <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+          {(powerShellPresets.length ? powerShellPresets : [
+            { key: 'computer', title: '电脑信息', risk: 12, level: '只读低风险', backup: '桌面版加载后显示', rollback: '无需回滚' },
+            { key: 'processes', title: '高占用进程', risk: 18, level: '只读低风险', backup: '桌面版加载后显示', rollback: '无需回滚' },
+            { key: 'services', title: '运行服务', risk: 22, level: '只读低风险', backup: '桌面版加载后显示', rollback: '无需回滚' }
+          ]).map(preset => (
+            <Col xs={24} md={8} key={preset.key}>
+              <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? 'rgba(59,130,246,0.10)' : 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                <Space wrap><Typography.Text strong style={{ color: titleColor }}>{preset.title}</Typography.Text><Tag color="green">{preset.level}</Tag><Tag color="gold">风险 {preset.risk}</Tag></Space>
+                <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8, marginTop: 8 }}>备份：{preset.backup}</div>
+                <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>回滚：{preset.rollback}</div>
+                <Button size="small" onClick={() => setConfirmingPreset(preset)} disabled={!electron} style={{ marginTop: 10, borderRadius: 10 }}>确认后执行</Button>
+              </div>
+            </Col>
+          ))}
+        </Row>
+        <Modal open={!!confirmingPreset} title="确认执行 PowerShell 白名单预设" okText="确认执行" cancelText="取消" onCancel={() => setConfirmingPreset(null)} onOk={() => confirmingPreset && runPowerShell(confirmingPreset.key)}>
+          <Space direction="vertical" size={8} style={{ width: '100%' }}>
+            <Alert type="info" showIcon message={`${confirmingPreset?.title || ''} · ${confirmingPreset?.level || ''} · 风险 ${confirmingPreset?.risk || 0}`} />
+            <Typography.Text>备份计划：{confirmingPreset?.backup}</Typography.Text>
+            <Typography.Text>回滚计划：{confirmingPreset?.rollback}</Typography.Text>
+            <Typography.Text type="secondary">AixSystems 只执行内置只读脚本，不接收任意 PowerShell 命令。</Typography.Text>
+          </Space>
+        </Modal>
         {powershellResult ? (
           <pre style={{ maxHeight: 220, overflow: 'auto', margin: 0, padding: 12, borderRadius: 14, color: titleColor, background: isDark ? 'rgba(0,0,0,0.28)' : 'rgba(15,23,42,0.04)', whiteSpace: 'pre-wrap' }}>
             {powershellResult.error || powershellResult.output}
