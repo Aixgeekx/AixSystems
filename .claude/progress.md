@@ -12,10 +12,10 @@
 - [x] README、code/README、results/使用说明、Aix_tools/readme 已同步 v0.27.0
 - [x] 测试通过：39/39 Vitest
 - [x] 构建通过：tsc + Vite 成功
-- [ ] Git 提交：待创建
-- [ ] 推送 `origin main`：待执行
-- [ ] 创建并推送 tag：`v0.27.0` 待执行
-- [ ] GitHub Release：待创建
+- [x] Git 提交：`5d424ec feat: AixSystems v0.27.0 - add growth control chains`
+- [x] 已推送 `origin main`
+- [x] 已创建并推送 tag：`v0.27.0`
+- [x] GitHub Release 已创建：`https://github.com/Aixgeekx/AixSystems/releases/tag/v0.27.0`
 
 ## 新增/修改重点
 - `code/src/pages/focus/index.tsx` — 专注智能场景识别卡片
