@@ -1,6 +1,6 @@
 // 我的一天 - 当日事项聚合 + 日期跳转 + 总览卡片 (v0.20.0 增强动画)
 import React, { useState } from 'react';
-import { Button, Card, Col, DatePicker, Divider, List, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { Button, Card, Col, DatePicker, Divider, List, Progress, Row, Segmented, Space, Statistic, Tag, Typography } from 'antd';
 import { BookOutlined, CalendarOutlined, FireOutlined, FlagOutlined, LeftOutlined, PlusOutlined, ReadOutlined, RightOutlined, RiseOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useItems } from '@/hooks/useItems';
@@ -108,6 +108,16 @@ export default function MyDayPage() {
             </Typography.Paragraph>
 
             <Space wrap size={10}>
+              <Segmented
+                value="day"
+                options={[
+                  { label: '我的一天', value: 'day' },
+                  { label: '周', value: 'week' },
+                  { label: '月', value: 'month' }
+                ]}
+                onChange={value => value === 'week' ? nav(ROUTES.TODAY_WEEK) : value === 'month' ? nav(ROUTES.TODAY_MONTH) : undefined}
+                style={{ borderRadius: 12 }}
+              />
               <Button
                 icon={<LeftOutlined />}
                 onClick={() => setDate(date.subtract(1, 'day'))}
@@ -355,6 +365,7 @@ export default function MyDayPage() {
           </Card>
         </Col>
       </Row>
+      <Button type="primary" shape="circle" size="large" icon={<PlusOutlined />} onClick={() => openItemForm(undefined, 'schedule')} style={{ position: 'fixed', right: 28, bottom: 28, zIndex: 12, boxShadow: `0 14px 30px ${accent}55` }} />
     </Space>
   );
 }

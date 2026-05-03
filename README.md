@@ -39,6 +39,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 
 ## 最近更新
 
+- `v0.45.0`：新增每日先知天气万年历、健康作息模板页和用户中心升级
 - `v0.44.0`：新增个人失控预警、Agent 自律教练和桌面控制力镜像
 - `v0.43.0`：新增本地控制战役自动编排器、CLI 续跑证据链打包和 PowerShell 7 自愈预检沙盒
 - `v0.42.0`：新增控制令牌到 openclow 技能调度器、Claude Code CLI 续跑雷达和 PowerShell 7 控制回放黑匣子

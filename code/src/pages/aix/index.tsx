@@ -223,6 +223,21 @@ export default function AixPage() {
       { title: '复习压力堆积', level: (capsule?.reviewPressure || 0) >= 12 ? '红色' : (capsule?.reviewPressure || 0) >= 7 ? '黄色' : '绿色', value: capsule?.reviewPressure || 0, action: '提前拆分未来 7 天复习节点，保持 openclow dry-run 不自动写入。', color: '#8b5cf6' }
     ];
   }, [capsule]);
+  const controlDebtBreaker = useMemo(() => {
+    const debt = (capsule?.overdue || 0) * 14 + (capsule?.pending || 0) * 7 + (capsule?.brokenHabits || 0) * 12 + (capsule?.goalRisk || 0) * 16 + Math.max(0, (capsule?.reviewPressure || 0) - 6) * 5;
+    const level = debt >= 90 ? '红色熔断' : debt >= 56 ? '黄色限流' : '绿色通行';
+    return {
+      debt: Math.min(100, Math.round(debt)),
+      level,
+      token: capsule?.controlToken.id || 'AIX-CORE',
+      intake: level === '红色熔断' ? '暂停新增非必要事项，只保留 1 个恢复动作。' : level === '黄色限流' ? '新任务必须绑定目标、截止和最小闭环。' : '允许正常推进，保持每日封存证据。',
+      actions: [
+        { title: '入口降载', value: Math.min(100, (capsule?.pending || 0) * 10 + (capsule?.overdue || 0) * 18), action: '先清最短事项债务，不开启新的 openclow 执行。', color: '#ef4444' },
+        { title: '成长保底', value: Math.min(100, (capsule?.brokenHabits || 0) * 22 + (capsule?.goalRisk || 0) * 28), action: '只恢复一个习惯和一个目标里程碑，避免多线失控。', color: '#f59e0b' },
+        { title: '复习缓冲', value: Math.min(100, (capsule?.reviewPressure || 0) * 8), action: '把高压复习拆为预热节点，保持 dry-run 草案。', color: '#8b5cf6' }
+      ]
+    };
+  }, [capsule]);
 
   async function setSkill(key: string, enabled: boolean) {
     const next = { ...(skillState || {}), [key]: enabled };

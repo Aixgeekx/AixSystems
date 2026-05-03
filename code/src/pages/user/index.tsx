@@ -1,13 +1,16 @@
 // 用户中心 - 工作台风格 (v0.24.0 完善升级)
 import React, { useEffect, useState } from 'react';
-import { Avatar, Button, Card, Col, Form, Input, Radio, Row, Space, Statistic, Tag, Typography, Upload, message, Divider } from 'antd';
-import { UserOutlined, EditOutlined, CameraOutlined, SafetyCertificateOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { Avatar, Button, Card, Col, Form, Input, Radio, Row, Space, Statistic, Tag, Typography, Upload, message, Divider, List } from 'antd';
+import { UserOutlined, EditOutlined, CameraOutlined, SafetyCertificateOutlined, DatabaseOutlined, AppstoreOutlined, DesktopOutlined, GiftOutlined, MessageOutlined, SettingOutlined, ShareAltOutlined, QrcodeOutlined, CrownOutlined, HeartOutlined, CustomerServiceOutlined, MobileOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { db } from '@/db';
+import { ROUTES } from '@/config/routes';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useThemeVariants } from '@/hooks/useVariants';
 
 export default function UserPage() {
   const { theme } = useThemeVariants();
+  const nav = useNavigate();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
@@ -43,6 +46,22 @@ export default function UserPage() {
     return false;
   }
 
+  const profileActions = [
+    { label: '自定义APP', icon: <AppstoreOutlined />, path: '/home/menusort', color: '#38bdf8' },
+    { label: '应用管理', icon: <SettingOutlined />, path: ROUTES.SYSTEM, color: '#22c55e' },
+    { label: '高级功能', icon: <CrownOutlined />, path: '/home/functions', color: '#f59e0b' },
+    { label: '桌面小组', icon: <DesktopOutlined />, path: ROUTES.DESKTOP_WIDGET, color: '#8b5cf6' }
+  ];
+  const centerEntries = [
+    { label: '活动中心', desc: '查看本地功能活动与版本权益', icon: <GiftOutlined />, path: '/newFeatures/index' },
+    { label: '我的消息', desc: '提醒、反馈和本地事件入口', icon: <MessageOutlined />, path: ROUTES.FEEDBACK },
+    { label: '我的设备', desc: '桌面端与浏览器存储状态', icon: <MobileOutlined />, path: ROUTES.DATAIO },
+    { label: '让时光序更好', desc: '记录建议、打赏与反馈', icon: <HeartOutlined />, path: ROUTES.FEEDBACK },
+    { label: '邀请好友', desc: '复制离线版体验说明', icon: <ShareAltOutlined />, path: ROUTES.HELP },
+    { label: '帮助中心', desc: '新手引导和常见功能说明', icon: <CustomerServiceOutlined />, path: ROUTES.HELP },
+    { label: '设置', desc: '主题、数据、安全和模型配置', icon: <SettingOutlined />, path: ROUTES.SYSTEM }
+  ];
+
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
       <Card bordered={false} className="anim-fade-in-up" style={{
@@ -66,13 +85,18 @@ export default function UserPage() {
           </Col>
           <Col xs={24} lg={18}>
             <Typography.Text style={{ color: isDark ? `${accent}aa` : 'rgba(224,242,254,0.85)' }}>
-              <UserOutlined /> 个人中心
+              <UserOutlined /> 我的中心 · ID AIX-LOCAL-001
             </Typography.Text>
             <Typography.Title level={2} style={{ margin: '8px 0 10px', color: '#f8fafc' }}>
-              个人资料 · 本地用户档案
+              {form.getFieldValue('nickname') || 'AixSystems 用户'}
             </Typography.Title>
-            <Typography.Paragraph style={{ marginBottom: 0, color: 'rgba(226,232,240,0.84)' }}>
-              所有资料完全离线保存在本地，不会上传到任何服务器。
+            <Space wrap size={8}>
+              <Tag color="gold" icon={<CrownOutlined />} style={{ borderRadius: 999 }}>VIP · 本地全功能</Tag>
+              <Tag color="blue" icon={<QrcodeOutlined />} style={{ borderRadius: 999 }}>扫码入口</Tag>
+              <Tag color="green" style={{ borderRadius: 999 }}>数据只保存在本机</Tag>
+            </Space>
+            <Typography.Paragraph style={{ margin: '12px 0 0', color: 'rgba(226,232,240,0.84)' }}>
+              {form.getFieldValue('signature') || '一句签名，把今天变成可控的一天。'}
             </Typography.Paragraph>
           </Col>
         </Row>
@@ -94,6 +118,33 @@ export default function UserPage() {
           </Col>
         ))}
       </Row>
+
+      <Row gutter={[12, 12]}>
+        {profileActions.map(action => (
+          <Col xs={12} md={6} key={action.label}>
+            <button type="button" onClick={() => nav(action.path)} className="hover-lift" style={{ width: '100%', minHeight: 96, border: cardBorder, borderRadius: 22, background: isDark ? `${action.color}18` : '#fff', cursor: 'pointer', color: titleColor }}>
+              <div style={{ color: action.color, fontSize: 26 }}>{action.icon}</div>
+              <div style={{ marginTop: 8, fontWeight: 800 }}>{action.label}</div>
+            </button>
+          </Col>
+        ))}
+      </Row>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <List
+          itemLayout="horizontal"
+          dataSource={centerEntries}
+          renderItem={entry => (
+            <List.Item onClick={() => nav(entry.path)} style={{ cursor: 'pointer', paddingInline: 4 }}>
+              <List.Item.Meta
+                avatar={<Avatar style={{ background: isDark ? `${accent}33` : '#eff6ff', color: accent }}>{entry.icon}</Avatar>}
+                title={<span style={{ color: titleColor, fontWeight: 800 }}>{entry.label}</span>}
+                description={<span style={{ color: subColor }}>{entry.desc}</span>}
+              />
+            </List.Item>
+          )}
+        />
+      </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ borderRadius: 24, background: cardBg, border: cardBorder, maxWidth: 680 }}>
         <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>编辑资料</Typography.Title>

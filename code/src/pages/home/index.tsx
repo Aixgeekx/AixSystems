@@ -346,7 +346,7 @@ export default function HomePage() {
   const routeGo = (path: string) => () => nav(path);
   const createType = (type: ItemType) => () => openItemForm(undefined, type);
   const compactApps: CompactApp[] = [
-    { key: 'today', title: '每日先知', desc: `${dashboard?.todayItems.length || 0} 个今日事项`, icon: <Icons.BulbOutlined />, color: '#ff4d6d', group: 'agenda', onClick: routeGo(ROUTES.TODAY_DAY) },
+    { key: 'today', title: '每日先知', desc: '15℃ 晴 · 天心区', icon: <Icons.BulbOutlined />, color: '#ff4d6d', group: 'agenda', onClick: routeGo(ROUTES.DAILY_ORACLE) },
     { key: 'week', title: '本周规划', desc: '一周事项节奏总览', icon: <Icons.CalendarOutlined />, color: '#0ea5e9', group: 'agenda', onClick: routeGo(ROUTES.TODAY_WEEK) },
     { key: 'month', title: '本月规划', desc: '月度事项与安排', icon: <Icons.ScheduleOutlined />, color: '#6366f1', group: 'agenda', onClick: routeGo(ROUTES.TODAY_MONTH) },
     { key: 'year', title: '年度规划', desc: '全年计划视图', icon: <Icons.BarChartOutlined />, color: '#14b8a6', group: 'agenda', onClick: routeGo(ROUTES.TODAY_YEAR) },
@@ -365,7 +365,7 @@ export default function HomePage() {
     { key: 'repay', title: '还款提醒', desc: '信用卡 / 贷款提醒', icon: <Icons.CreditCardOutlined />, color: '#7c3aed', group: 'agenda', onClick: createType('bill') },
     { key: 'loan', title: '贷款', desc: `${countType('loan')} 条贷款事项`, icon: <Icons.BankOutlined />, color: '#0ea5e9', group: 'agenda', onClick: routeGo('/home/loan') },
     { key: 'book', title: '读书笔记', desc: `${countType('book')} 本书在书架`, icon: <Icons.BookOutlined />, color: '#22c55e', group: 'records', onClick: createType('book') },
-    { key: 'medicine', title: '喝水吃药', desc: `${countType('medicine')} 条健康提醒`, icon: <Icons.MedicineBoxOutlined />, color: '#38bdf8', group: 'tools', onClick: createType('medicine') },
+    { key: 'medicine', title: '喝水', desc: `${countType('medicine')} 条健康提醒 · 0/1900ml`, icon: <Icons.MedicineBoxOutlined />, color: '#38bdf8', group: 'tools', onClick: createType('medicine') },
     { key: 'run', title: '跑步健康', desc: `${countType('run')} 条跑步记录`, icon: <Icons.ThunderboltOutlined />, color: '#10b981', group: 'tools', onClick: createType('run') },
     { key: 'aunt', title: '生理期', desc: `${countType('aunt')} 条周期记录`, icon: <Icons.PlusCircleOutlined />, color: '#f472b6', group: 'tools', onClick: routeGo('/home/aunt') },
     { key: 'sleep', title: '睡眠', desc: `${countType('clock_sleep')} 条睡眠闹钟`, icon: <Icons.MoonOutlined />, color: '#6478f8', group: 'agenda', onClick: createType('clock_sleep') },
@@ -375,7 +375,7 @@ export default function HomePage() {
     { key: 'anniversary', title: '纪念日', desc: `${countType('anniversary')} 个纪念日`, icon: <Icons.HeartOutlined />, color: '#ec4899', group: 'agenda', onClick: createType('anniversary') },
     { key: 'festival', title: '节日', desc: `${countType('festival')} 个节日提醒`, icon: <Icons.FlagOutlined />, color: '#f97316', group: 'agenda', onClick: createType('festival') },
     { key: 'dress', title: '穿衣搭配', desc: `${countType('dress')} 条搭配记录`, icon: <Icons.SkinOutlined />, color: '#f472b6', group: 'tools', onClick: createType('dress') },
-    { key: 'workrest', title: '作息表', desc: `${countType('clock_workrest')} 条作息规则`, icon: <Icons.ClockCircleOutlined />, color: '#14b8a6', group: 'agenda', onClick: createType('clock_workrest') },
+    { key: 'workrest', title: '作息表', desc: '哲学嘉假期作息表', icon: <Icons.ClockCircleOutlined />, color: '#14b8a6', group: 'agenda', onClick: routeGo(ROUTES.WORKREST) },
     { key: 'checklist', title: '清单', desc: `${countType('checklist')} 个清单事项`, icon: <Icons.CheckSquareOutlined />, color: '#10b981', group: 'agenda', onClick: routeGo(ROUTES.MATTER_CHECKLIST) },
     { key: 'importance', title: '四象限', desc: '重要紧急矩阵', icon: <Icons.AppstoreOutlined />, color: '#ef4444', group: 'agenda', onClick: routeGo(ROUTES.MATTER_IMPORTANCE) },
     { key: 'repeat', title: '重复事项', desc: `${dashboard?.activeItems.filter(item => !!item.repeatRule).length || 0} 个重复规则`, icon: <Icons.ReloadOutlined />, color: '#8b5cf6', group: 'agenda', onClick: routeGo(ROUTES.MATTER_REPEAT) },

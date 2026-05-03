@@ -1,13 +1,16 @@
 // 四象限 - 工作台风格 (v0.24.0 完善升级)
 import React from 'react';
-import { Card, Col, Row, Space, Statistic, Tag, Typography, Divider } from 'antd';
-import { AppstoreOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Card, Col, Row, Space, Statistic, Tag, Typography, Divider, Button, Select } from 'antd';
+import { AppstoreOutlined, CheckCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { DndContext, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { useItems } from '@/hooks/useItems';
 import { db } from '@/db';
 import { IMPORTANCE_LABELS, IMPORTANCE_COLORS } from '@/config/constants';
 import Empty from '@/components/Empty';
 import { useThemeVariants } from '@/hooks/useVariants';
+import { useAppStore } from '@/stores/appStore';
+import { ROUTES } from '@/config/routes';
 
 function DraggableItem({ item, isDark, accent }: { item: any; isDark: boolean; accent: string }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: item.id });
@@ -30,7 +33,7 @@ function DraggableItem({ item, isDark, accent }: { item: any; isDark: boolean; a
   );
 }
 
-function Quadrant({ index, items, isDark, accent }: { index: number; items: any[]; isDark: boolean; accent: string }) {
+function Quadrant({ index, items, isDark, accent, onAdd }: { index: number; items: any[]; isDark: boolean; accent: string; onAdd: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: `q-${index}` });
   const done = items.filter(i => i.completeStatus === 'done').length;
   return (
@@ -40,6 +43,7 @@ function Quadrant({ index, items, isDark, accent }: { index: number; items: any[
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: IMPORTANCE_COLORS[index] }} />
           <span style={{ color: isDark ? '#f8fafc' : '#0f172a', fontWeight: 600 }}>{IMPORTANCE_LABELS[index]}</span>
           <Tag style={{ borderRadius: 6, marginInlineEnd: 0 }}>{items.length}</Tag>
+          <Button size="small" type="text" icon={<PlusOutlined />} onClick={onAdd} />
         </Space>
       }
       style={{
@@ -65,6 +69,8 @@ function Quadrant({ index, items, isDark, accent }: { index: number; items: any[
 
 export default function ImportancePage() {
   const items = useItems() || [];
+  const nav = useNavigate();
+  const openItemForm = useAppStore(s => s.openItemForm);
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
@@ -100,9 +106,10 @@ export default function ImportancePage() {
             <Typography.Title level={2} style={{ margin: '8px 0 10px', color: '#f8fafc' }}>
               四象限 · 拖拽排列优先级
             </Typography.Title>
-            <Typography.Paragraph style={{ marginBottom: 0, color: 'rgba(226,232,240,0.84)' }}>
+            <Typography.Paragraph style={{ marginBottom: 12, color: 'rgba(226,232,240,0.84)' }}>
               基于艾森豪威尔矩阵，拖拽事项到对应象限即可快速调整优先级。
             </Typography.Paragraph>
+            <Select value="importance" style={{ width: 168 }} onChange={value => value === 'calendar' ? nav(ROUTES.MATTER_SCHEDULE) : value === 'all' ? nav(ROUTES.MATTER_ALL) : undefined} options={[{ label: '四象限视图', value: 'importance' }, { label: '日历视图', value: 'calendar' }, { label: '全部事项', value: 'all' }]} />
           </Col>
           <Col xs={24} lg={10}>
             <Row gutter={[12, 12]}>
@@ -127,7 +134,7 @@ export default function ImportancePage() {
           {[0, 1, 2, 3].map(i => (
             <Col key={i} xs={24} md={12}>
               <div className="anim-fade-in-up" style={{ animationDelay: `${0.08 + i * 0.05}s` }}>
-                <Quadrant index={i} items={quadrants[i]} isDark={isDark} accent={accent} />
+                <Quadrant index={i} items={quadrants[i]} isDark={isDark} accent={accent} onAdd={() => openItemForm(undefined, 'schedule')} />
               </div>
             </Col>
           ))}
