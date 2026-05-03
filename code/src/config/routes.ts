@@ -59,6 +59,7 @@ export const ROUTES = {
   ITEM_STATS: '/home/itemStats',                       // 事项统计
   FOCUS_MODE_COMPARE: '/home/focusModeCompare',        // 专注模式对比
   GROWTH_MONTHLY: '/home/growthMonthly',               // 成长月报
+  DATA_OVERVIEW: '/home/dataOverview',                 // 数据总览
   AGENT: '/home/agent',                                // Agent 中枢
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
@@ -140,6 +141,7 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
       { key: 'migration', label: '数据迁移', path: ROUTES.MIGRATION, icon: 'mobile' },
       { key: 'sysinfo', label: '系统信息', path: ROUTES.SYSINFO, icon: 'info-circle' },
       { key: 'statistics', label: '数据统计', path: ROUTES.STATISTICS, icon: 'bar-chart' },
+      { key: 'dataOverview', label: '数据总览', path: ROUTES.DATA_OVERVIEW, icon: 'dashboard' },
       { key: 'quickactions', label: '快捷操作', path: ROUTES.QUICKACTIONS, icon: 'flag' },
       { key: 'focus', label: '番茄专注', path: ROUTES.FOCUS, icon: 'fire' },
       { key: 'widget', label: '桌面小部件', path: ROUTES.DESKTOP_WIDGET, icon: 'desktop' },

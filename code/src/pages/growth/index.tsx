@@ -845,7 +845,8 @@ export default function GrowthPage() {
             { label: '专注趋势', icon: <LineChartOutlined />, color: '#3b82f6', path: ROUTES.FOCUS_TRENDS },
             { label: '事项统计', icon: <UnorderedListOutlined />, color: '#22c55e', path: ROUTES.ITEM_STATS },
             { label: '专注模式对比', icon: <BarChartOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_MODE_COMPARE },
-            { label: '成长月报', icon: <CalendarOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY }
+            { label: '成长月报', icon: <CalendarOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY },
+            { label: '数据总览', icon: <BarChartOutlined />, color: '#3b82f6', path: ROUTES.DATA_OVERVIEW }
           ].map(item => (
             <Col xs={12} sm={6} key={item.label}>
               <div onClick={() => nav(item.path)} style={{
