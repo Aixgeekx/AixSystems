@@ -74,6 +74,8 @@ const DiaryMoodTrends = lazy(() => import('@/pages/diaryMoodTrends'));
 const WeeklyReview = lazy(() => import('@/pages/weeklyReview'));
 const FocusTrends = lazy(() => import('@/pages/focusTrends'));
 const ItemStats = lazy(() => import('@/pages/itemStats'));
+const FocusModeCompare = lazy(() => import('@/pages/focusModeCompare'));
+const GrowthMonthly = lazy(() => import('@/pages/growthMonthly'));
 const Agent = lazy(() => import('@/pages/agent'));
 
 function PageFallback() {
@@ -170,6 +172,8 @@ function AppShell() {                                           // 路由表 + �
           <Route path="home/weeklyReview" element={<WeeklyReview />} />
           <Route path="home/focusTrends" element={<FocusTrends />} />
           <Route path="home/itemStats" element={<ItemStats />} />
+          <Route path="home/focusModeCompare" element={<FocusModeCompare />} />
+          <Route path="home/growthMonthly" element={<GrowthMonthly />} />
           <Route path="home/agent" element={<Agent />} />
           <Route path="search/index" element={<Search />} />
           <Route path="dataio" element={<DataIO />} />

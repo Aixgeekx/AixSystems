@@ -843,7 +843,9 @@ export default function GrowthPage() {
             { label: '心情日历', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.MOOD_CALENDAR },
             { label: '周复盘', icon: <CalendarOutlined />, color: '#8b5cf6', path: ROUTES.WEEKLY_REVIEW },
             { label: '专注趋势', icon: <LineChartOutlined />, color: '#3b82f6', path: ROUTES.FOCUS_TRENDS },
-            { label: '事项统计', icon: <UnorderedListOutlined />, color: '#22c55e', path: ROUTES.ITEM_STATS }
+            { label: '事项统计', icon: <UnorderedListOutlined />, color: '#22c55e', path: ROUTES.ITEM_STATS },
+            { label: '专注模式对比', icon: <BarChartOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_MODE_COMPARE },
+            { label: '成长月报', icon: <CalendarOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY }
           ].map(item => (
             <Col xs={12} sm={6} key={item.label}>
               <div onClick={() => nav(item.path)} style={{
