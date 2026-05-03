@@ -55,6 +55,8 @@ const DailyOracle = lazy(() => import('@/pages/dailyOracle'));
 const Workrest = lazy(() => import('@/pages/workrest'));
 const Backup = lazy(() => import('@/pages/backup'));
 const Diagnostics = lazy(() => import('@/pages/diagnostics'));
+const Migration = lazy(() => import('@/pages/migration'));
+const SysInfo = lazy(() => import('@/pages/sysinfo'));
 const Agent = lazy(() => import('@/pages/agent'));
 
 function PageFallback() {
@@ -132,6 +134,8 @@ function AppShell() {                                           // 路由表 + �
           <Route path="home/workrest" element={<Workrest />} />
           <Route path="home/backup" element={<Backup />} />
           <Route path="home/diagnostics" element={<Diagnostics />} />
+          <Route path="home/migration" element={<Migration />} />
+          <Route path="home/sysinfo" element={<SysInfo />} />
           <Route path="home/agent" element={<Agent />} />
           <Route path="search/index" element={<Search />} />
           <Route path="dataio" element={<DataIO />} />

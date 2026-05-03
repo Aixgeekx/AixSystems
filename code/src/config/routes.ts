@@ -38,6 +38,8 @@ export const ROUTES = {
   WORKREST: '/home/workrest',                            // 健康作息
   BACKUP: '/home/backup',                              // 数据备份中心
   DIAGNOSTICS: '/home/diagnostics',                    // 系统诊断
+  MIGRATION: '/home/migration',                        // 数据迁移
+  SYSINFO: '/home/sysinfo',                            // 系统信息
   AGENT: '/home/agent',                                // Agent 中枢
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
@@ -99,6 +101,8 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
       { key: 'workrest', label: '健康作息', path: ROUTES.WORKREST, icon: 'clock-circle' },
       { key: 'backup', label: '数据备份', path: ROUTES.BACKUP, icon: 'cloud-download' },
       { key: 'diagnostics', label: '系统诊断', path: ROUTES.DIAGNOSTICS, icon: 'bug' },
+      { key: 'migration', label: '数据迁移', path: ROUTES.MIGRATION, icon: 'mobile' },
+      { key: 'sysinfo', label: '系统信息', path: ROUTES.SYSINFO, icon: 'info-circle' },
       { key: 'focus', label: '番茄专注', path: ROUTES.FOCUS, icon: 'fire' },
       { key: 'widget', label: '桌面小部件', path: ROUTES.DESKTOP_WIDGET, icon: 'desktop' },
       { key: 'lock', label: '应用锁', path: ROUTES.APP_LOCK, icon: 'lock' },
