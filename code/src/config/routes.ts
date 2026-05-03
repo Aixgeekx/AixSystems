@@ -42,6 +42,8 @@ export const ROUTES = {
   SYSINFO: '/home/sysinfo',                            // 系统信息
   STATISTICS: '/home/statistics',                      // 数据统计
   QUICKACTIONS: '/home/quickactions',                  // 快捷操作
+  ACHIEVEMENTS: '/home/achievements',                  // 成就中心
+  REPORTS: '/home/reports',                            // 报告中心
   AGENT: '/home/agent',                                // Agent 中枢
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
@@ -85,7 +87,9 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
       { key: 'growth', label: '成长仪表盘', path: ROUTES.GROWTH, icon: 'dashboard' },
       { key: 'habit', label: '习惯追踪', path: ROUTES.HABIT, icon: 'check-circle' },
       { key: 'goal', label: '目标管理', path: ROUTES.GOAL, icon: 'trophy' },
-      { key: 'review', label: '复习中心', path: ROUTES.REVIEW, icon: 'book' }
+      { key: 'review', label: '复习中心', path: ROUTES.REVIEW, icon: 'book' },
+      { key: 'achievements', label: '成就中心', path: ROUTES.ACHIEVEMENTS, icon: 'crown' },
+      { key: 'reports', label: '报告中心', path: ROUTES.REPORTS, icon: 'file-search' }
     ]
   },
   {
