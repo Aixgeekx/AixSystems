@@ -1,10 +1,12 @@
 // 事项时间线 - 事项完成时间轴
 import React, { useMemo, useState } from 'react';
-import { Card, Col, Empty, Select, Space, Tag, Timeline, Typography } from 'antd';
-import { ClockCircleOutlined, CarryOutOutlined, FilterOutlined } from '@ant-design/icons';
+import { Card, Col, Empty, Row, Select, Space, Tag, Timeline, Typography } from 'antd';
+import { ClockCircleOutlined, CarryOutOutlined, FilterOutlined, CrownOutlined, BarChartOutlined, AimOutlined, HeartOutlined, CalendarOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
+import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
 import { ITEM_TYPES } from '@/config/itemTypes';
 
@@ -15,6 +17,7 @@ const STATUS_COLORS: Record<string, string> = { done: '#22c55e', pending: '#f59e
 const STATUS_LABELS: Record<string, string> = { done: '已完成', pending: '待处理', overdue: '已逾期', failed: '已失败', postponed: '已推迟' };
 
 export default function ItemTimelinePage() {
+  const nav = useNavigate();
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
@@ -125,6 +128,30 @@ export default function ItemTimelinePage() {
         ) : (
           <Empty description="暂无事项记录" />
         )}
+      </Card>
+
+      {/* 深度分析导航 */}
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>深度分析</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {[
+            { label: '专注排行榜', icon: <CrownOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_RANKING },
+            { label: '习惯热力图', icon: <CalendarOutlined />, color: '#14b8a6', path: ROUTES.HABIT_HEATMAP },
+            { label: '目标时间线', icon: <AimOutlined />, color: '#3b82f6', path: ROUTES.GOAL_TIMELINE },
+            { label: '情绪趋势', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.DIARY_MOOD_TRENDS }
+          ].map(item => (
+            <Col xs={12} sm={6} key={item.label}>
+              <div onClick={() => nav(item.path)} style={{
+                borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer',
+                background: isDark ? `${item.color}14` : `${item.color}0f`,
+                border: `1px solid ${item.color}22`, transition: 'all 0.2s'
+              }}>
+                <div style={{ fontSize: 24, color: item.color, marginBottom: 6 }}>{item.icon}</div>
+                <Typography.Text style={{ color: titleColor, fontWeight: 600, fontSize: 13 }}>{item.label}</Typography.Text>
+              </div>
+            </Col>
+          ))}
+        </Row>
       </Card>
     </Space>
   );

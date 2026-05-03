@@ -71,6 +71,7 @@ const GoalTimeline = lazy(() => import('@/pages/goalTimeline'));
 const HabitStats = lazy(() => import('@/pages/habitStats'));
 const FocusRanking = lazy(() => import('@/pages/focusRanking'));
 const DiaryMoodTrends = lazy(() => import('@/pages/diaryMoodTrends'));
+const WeeklyReview = lazy(() => import('@/pages/weeklyReview'));
 const Agent = lazy(() => import('@/pages/agent'));
 
 function PageFallback() {
@@ -164,6 +165,7 @@ function AppShell() {                                           // 路由表 + �
           <Route path="home/habitStats" element={<HabitStats />} />
           <Route path="home/focusRanking" element={<FocusRanking />} />
           <Route path="home/diaryMoodTrends" element={<DiaryMoodTrends />} />
+          <Route path="home/weeklyReview" element={<WeeklyReview />} />
           <Route path="home/agent" element={<Agent />} />
           <Route path="search/index" element={<Search />} />
           <Route path="dataio" element={<DataIO />} />
