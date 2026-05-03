@@ -1,15 +1,18 @@
-// 成就中心 - 本地成就徽章展示
+// 成就中心 - 本地成就徽章展示 + 快捷导航
 import React from 'react';
 import { Card, Col, Progress, Row, Space, Tag, Typography } from 'antd';
-import { CrownOutlined, FireOutlined, StarOutlined, TrophyOutlined } from '@ant-design/icons';
+import { CrownOutlined, FireOutlined, StarOutlined, TrophyOutlined, BarChartOutlined, LineChartOutlined, AimOutlined, HeartOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
+import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
 import { useAchievements } from '@/hooks/useAchievements';
 import { useGameLevel } from '@/hooks/useGameLevel';
 
 export default function AchievementsPage() {
+  const nav = useNavigate();
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
@@ -101,6 +104,31 @@ export default function AchievementsPage() {
                 <Typography.Text style={{ display: 'block', color: titleColor, fontWeight: 600, fontSize: 13 }}>{a.name}</Typography.Text>
                 <Typography.Text style={{ color: subColor, fontSize: 11 }}>{a.desc}</Typography.Text>
                 {a.unlocked && <Tag color="success" style={{ marginTop: 8, borderRadius: 999, fontSize: 11 }}>已解锁</Tag>}
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </Card>
+
+      {/* 快捷导航 */}
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>深度分析</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {[
+            { label: '专注统计详情', icon: <BarChartOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_STATS },
+            { label: '习惯统计', icon: <LineChartOutlined />, color: '#22c55e', path: ROUTES.HABIT_STATS },
+            { label: '目标时间线', icon: <AimOutlined />, color: '#3b82f6', path: ROUTES.GOAL_TIMELINE },
+            { label: '情绪趋势', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.DIARY_MOOD_TRENDS }
+          ].map(item => (
+            <Col xs={12} sm={6} key={item.label}>
+              <div onClick={() => nav(item.path)} style={{
+                borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer',
+                background: isDark ? `${item.color}14` : `${item.color}0f`,
+                border: `1px solid ${item.color}22`,
+                transition: 'all 0.2s'
+              }}>
+                <div style={{ fontSize: 24, color: item.color, marginBottom: 6 }}>{item.icon}</div>
+                <Typography.Text style={{ color: titleColor, fontWeight: 600, fontSize: 13 }}>{item.label}</Typography.Text>
               </div>
             </Col>
           ))}

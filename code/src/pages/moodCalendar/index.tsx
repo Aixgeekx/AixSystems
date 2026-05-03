@@ -1,10 +1,12 @@
 // 心情日历 - 日记情绪可视化日历
 import React, { useMemo, useState } from 'react';
 import { Card, Col, Row, Select, Space, Tag, Typography } from 'antd';
-import { HeartOutlined, CalendarOutlined, SmileOutlined, FrownOutlined, MehOutlined } from '@ant-design/icons';
+import { HeartOutlined, CalendarOutlined, SmileOutlined, FrownOutlined, MehOutlined, CrownOutlined, BarChartOutlined, AimOutlined, LineChartOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
+import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
 
 const MOOD_META: Record<string, { label: string; color: string; emoji: string }> = {
@@ -29,6 +31,7 @@ function buildCalendarDays(year: number, month: number) {
 }
 
 export default function MoodCalendarPage() {
+  const nav = useNavigate();
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
@@ -180,6 +183,30 @@ export default function MoodCalendarPage() {
             </Tag>
           ))}
         </div>
+      </Card>
+
+      {/* 深度分析导航 */}
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>深度分析</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {[
+            { label: '专注排行榜', icon: <CrownOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_RANKING },
+            { label: '习惯热力图', icon: <CalendarOutlined />, color: '#14b8a6', path: ROUTES.HABIT_HEATMAP },
+            { label: '目标时间线', icon: <AimOutlined />, color: '#3b82f6', path: ROUTES.GOAL_TIMELINE },
+            { label: '专注统计详情', icon: <BarChartOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_STATS }
+          ].map(item => (
+            <Col xs={12} sm={6} key={item.label}>
+              <div onClick={() => nav(item.path)} style={{
+                borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer',
+                background: isDark ? `${item.color}14` : `${item.color}0f`,
+                border: `1px solid ${item.color}22`, transition: 'all 0.2s'
+              }}>
+                <div style={{ fontSize: 24, color: item.color, marginBottom: 6 }}>{item.icon}</div>
+                <Typography.Text style={{ color: titleColor, fontWeight: 600, fontSize: 13 }}>{item.label}</Typography.Text>
+              </div>
+            </Col>
+          ))}
+        </Row>
       </Card>
     </Space>
   );

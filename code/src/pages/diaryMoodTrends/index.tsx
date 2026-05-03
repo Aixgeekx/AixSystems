@@ -1,11 +1,13 @@
 // 日记情绪趋势 - 情绪变化趋势分析
 import React, { useMemo } from 'react';
 import { Card, Col, Row, Space, Tag, Typography } from 'antd';
-import { HeartOutlined, LineChartOutlined, SmileOutlined, RiseOutlined } from '@ant-design/icons';
+import { HeartOutlined, LineChartOutlined, SmileOutlined, RiseOutlined, BarChartOutlined, CrownOutlined, AimOutlined, CalendarOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
+import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
 
 const MOOD_SCORE: Record<string, number> = { happy: 5, excited: 5, grateful: 4, calm: 3, tired: 2, sad: 1, anxious: 1, angry: 0 };
@@ -13,6 +15,7 @@ const MOOD_LABELS: Record<string, string> = { happy: '开心', calm: '平静', e
 const MOOD_COLORS: Record<string, string> = { happy: '#22c55e', calm: '#3b82f6', excited: '#f59e0b', sad: '#6366f1', anxious: '#ef4444', angry: '#dc2626', tired: '#8b5cf6', grateful: '#14b8a6' };
 
 export default function DiaryMoodTrendsPage() {
+  const nav = useNavigate();
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
@@ -173,6 +176,30 @@ export default function DiaryMoodTrendsPage() {
           ))}
           {moodDistribution.length === 0 && <span style={{ color: subColor }}>暂无情绪标签</span>}
         </div>
+      </Card>
+
+      {/* 深度分析导航 */}
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>深度分析</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {[
+            { label: '专注排行榜', icon: <CrownOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_RANKING },
+            { label: '习惯热力图', icon: <CalendarOutlined />, color: '#14b8a6', path: ROUTES.HABIT_HEATMAP },
+            { label: '心情日历', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.MOOD_CALENDAR },
+            { label: '目标时间线', icon: <AimOutlined />, color: '#3b82f6', path: ROUTES.GOAL_TIMELINE }
+          ].map(item => (
+            <Col xs={12} sm={6} key={item.label}>
+              <div onClick={() => nav(item.path)} style={{
+                borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer',
+                background: isDark ? `${item.color}14` : `${item.color}0f`,
+                border: `1px solid ${item.color}22`, transition: 'all 0.2s'
+              }}>
+                <div style={{ fontSize: 24, color: item.color, marginBottom: 6 }}>{item.icon}</div>
+                <Typography.Text style={{ color: titleColor, fontWeight: 600, fontSize: 13 }}>{item.label}</Typography.Text>
+              </div>
+            </Col>
+          ))}
+        </Row>
       </Card>
     </Space>
   );

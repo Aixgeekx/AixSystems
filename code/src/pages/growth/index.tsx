@@ -15,12 +15,18 @@ import {
   DownloadOutlined,
   ThunderboltOutlined,
   SmileOutlined,
-  BulbOutlined
+  BulbOutlined,
+  BarChartOutlined,
+  LineChartOutlined,
+  AimOutlined,
+  HeartOutlined,
+  CrownOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
+import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { callAixModel } from '@/utils/aixModel';
@@ -819,6 +825,35 @@ export default function GrowthPage() {
         ) : (
           <div style={{ color: subColor }}>分析中...</div>
         )}
+      </Card>
+
+      {/* 深度分析导航 */}
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>深度分析</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {[
+            { label: '专注统计详情', icon: <BarChartOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_STATS },
+            { label: '习惯统计', icon: <LineChartOutlined />, color: '#22c55e', path: ROUTES.HABIT_STATS },
+            { label: '目标时间线', icon: <AimOutlined />, color: '#3b82f6', path: ROUTES.GOAL_TIMELINE },
+            { label: '情绪趋势', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.DIARY_MOOD_TRENDS },
+            { label: '专注排行榜', icon: <CrownOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_RANKING },
+            { label: '日记统计', icon: <BookOutlined />, color: '#8b5cf6', path: ROUTES.DIARY_STATS },
+            { label: '习惯热力图', icon: <CalendarOutlined />, color: '#14b8a6', path: ROUTES.HABIT_HEATMAP },
+            { label: '心情日历', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.MOOD_CALENDAR }
+          ].map(item => (
+            <Col xs={12} sm={6} key={item.label}>
+              <div onClick={() => nav(item.path)} style={{
+                borderRadius: 16, padding: 14, textAlign: 'center', cursor: 'pointer',
+                background: isDark ? `${item.color}14` : `${item.color}0f`,
+                border: `1px solid ${item.color}22`,
+                transition: 'all 0.2s'
+              }}>
+                <div style={{ fontSize: 22, color: item.color, marginBottom: 4 }}>{item.icon}</div>
+                <Typography.Text style={{ color: titleColor, fontWeight: 600, fontSize: 12 }}>{item.label}</Typography.Text>
+              </div>
+            </Col>
+          ))}
+        </Row>
       </Card>
     </Space>
   );
