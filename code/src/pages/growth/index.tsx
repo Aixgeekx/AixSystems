@@ -20,7 +20,8 @@ import {
   LineChartOutlined,
   AimOutlined,
   HeartOutlined,
-  CrownOutlined
+  CrownOutlined,
+  UnorderedListOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -839,7 +840,10 @@ export default function GrowthPage() {
             { label: '专注排行榜', icon: <CrownOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_RANKING },
             { label: '日记统计', icon: <BookOutlined />, color: '#8b5cf6', path: ROUTES.DIARY_STATS },
             { label: '习惯热力图', icon: <CalendarOutlined />, color: '#14b8a6', path: ROUTES.HABIT_HEATMAP },
-            { label: '心情日历', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.MOOD_CALENDAR }
+            { label: '心情日历', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.MOOD_CALENDAR },
+            { label: '周复盘', icon: <CalendarOutlined />, color: '#8b5cf6', path: ROUTES.WEEKLY_REVIEW },
+            { label: '专注趋势', icon: <LineChartOutlined />, color: '#3b82f6', path: ROUTES.FOCUS_TRENDS },
+            { label: '事项统计', icon: <UnorderedListOutlined />, color: '#22c55e', path: ROUTES.ITEM_STATS }
           ].map(item => (
             <Col xs={12} sm={6} key={item.label}>
               <div onClick={() => nav(item.path)} style={{

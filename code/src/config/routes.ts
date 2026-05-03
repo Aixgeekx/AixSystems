@@ -55,6 +55,8 @@ export const ROUTES = {
   FOCUS_RANKING: '/home/focusRanking',                 // 专注排行榜
   DIARY_MOOD_TRENDS: '/home/diaryMoodTrends',          // 日记情绪趋势
   WEEKLY_REVIEW: '/home/weeklyReview',                 // 周复盘
+  FOCUS_TRENDS: '/home/focusTrends',                   // 专注趋势
+  ITEM_STATS: '/home/itemStats',                       // 事项统计
   AGENT: '/home/agent',                                // Agent 中枢
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
@@ -111,7 +113,9 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
       { key: 'habitStats', label: '习惯统计', path: ROUTES.HABIT_STATS, icon: 'check-circle' },
       { key: 'focusRanking', label: '专注排行榜', path: ROUTES.FOCUS_RANKING, icon: 'crown' },
       { key: 'diaryMoodTrends', label: '情绪趋势', path: ROUTES.DIARY_MOOD_TRENDS, icon: 'heart' },
-      { key: 'weeklyReview', label: '周复盘', path: ROUTES.WEEKLY_REVIEW, icon: 'calendar' }
+      { key: 'weeklyReview', label: '周复盘', path: ROUTES.WEEKLY_REVIEW, icon: 'calendar' },
+      { key: 'focusTrends', label: '专注趋势', path: ROUTES.FOCUS_TRENDS, icon: 'line-chart' },
+      { key: 'itemStats', label: '事项统计', path: ROUTES.ITEM_STATS, icon: 'ordered-list' }
     ]
   },
   {
