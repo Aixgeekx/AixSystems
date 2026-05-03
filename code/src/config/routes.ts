@@ -40,6 +40,8 @@ export const ROUTES = {
   DIAGNOSTICS: '/home/diagnostics',                    // 系统诊断
   MIGRATION: '/home/migration',                        // 数据迁移
   SYSINFO: '/home/sysinfo',                            // 系统信息
+  STATISTICS: '/home/statistics',                      // 数据统计
+  QUICKACTIONS: '/home/quickactions',                  // 快捷操作
   AGENT: '/home/agent',                                // Agent 中枢
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
@@ -103,6 +105,8 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
       { key: 'diagnostics', label: '系统诊断', path: ROUTES.DIAGNOSTICS, icon: 'bug' },
       { key: 'migration', label: '数据迁移', path: ROUTES.MIGRATION, icon: 'mobile' },
       { key: 'sysinfo', label: '系统信息', path: ROUTES.SYSINFO, icon: 'info-circle' },
+      { key: 'statistics', label: '数据统计', path: ROUTES.STATISTICS, icon: 'bar-chart' },
+      { key: 'quickactions', label: '快捷操作', path: ROUTES.QUICKACTIONS, icon: 'flag' },
       { key: 'focus', label: '番茄专注', path: ROUTES.FOCUS, icon: 'fire' },
       { key: 'widget', label: '桌面小部件', path: ROUTES.DESKTOP_WIDGET, icon: 'desktop' },
       { key: 'lock', label: '应用锁', path: ROUTES.APP_LOCK, icon: 'lock' },

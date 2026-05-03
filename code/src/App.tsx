@@ -57,6 +57,8 @@ const Backup = lazy(() => import('@/pages/backup'));
 const Diagnostics = lazy(() => import('@/pages/diagnostics'));
 const Migration = lazy(() => import('@/pages/migration'));
 const SysInfo = lazy(() => import('@/pages/sysinfo'));
+const Statistics = lazy(() => import('@/pages/statistics'));
+const QuickActions = lazy(() => import('@/pages/quickactions'));
 const Agent = lazy(() => import('@/pages/agent'));
 
 function PageFallback() {
@@ -136,6 +138,8 @@ function AppShell() {                                           // 路由表 + �
           <Route path="home/diagnostics" element={<Diagnostics />} />
           <Route path="home/migration" element={<Migration />} />
           <Route path="home/sysinfo" element={<SysInfo />} />
+          <Route path="home/statistics" element={<Statistics />} />
+          <Route path="home/quickactions" element={<QuickActions />} />
           <Route path="home/agent" element={<Agent />} />
           <Route path="search/index" element={<Search />} />
           <Route path="dataio" element={<DataIO />} />
