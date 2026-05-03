@@ -48,6 +48,8 @@ export const ROUTES = {
   HABIT_HEATMAP: '/home/habitHeatmap',                 // 习惯热力图
   MOOD_CALENDAR: '/home/moodCalendar',                 // 心情日历
   ITEM_TIMELINE: '/home/itemTimeline',                  // 事项时间线
+  FOCUS_STATS: '/home/focusStats',                     // 专注统计详情
+  DIARY_STATS: '/home/diaryStats',                     // 日记统计
   AGENT: '/home/agent',                                // Agent 中枢
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
@@ -97,7 +99,9 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
       { key: 'focusHistory', label: '专注历史', path: ROUTES.FOCUS_HISTORY, icon: 'history' },
       { key: 'habitHeatmap', label: '习惯热力图', path: ROUTES.HABIT_HEATMAP, icon: 'heat-map' },
       { key: 'moodCalendar', label: '心情日历', path: ROUTES.MOOD_CALENDAR, icon: 'heart' },
-      { key: 'itemTimeline', label: '事项时间线', path: ROUTES.ITEM_TIMELINE, icon: 'clock-circle' }
+      { key: 'itemTimeline', label: '事项时间线', path: ROUTES.ITEM_TIMELINE, icon: 'clock-circle' },
+      { key: 'focusStats', label: '专注统计详情', path: ROUTES.FOCUS_STATS, icon: 'bar-chart' },
+      { key: 'diaryStats', label: '日记统计', path: ROUTES.DIARY_STATS, icon: 'line-chart' }
     ]
   },
   {
