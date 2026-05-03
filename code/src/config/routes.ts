@@ -44,6 +44,8 @@ export const ROUTES = {
   QUICKACTIONS: '/home/quickactions',                  // 快捷操作
   ACHIEVEMENTS: '/home/achievements',                  // 成就中心
   REPORTS: '/home/reports',                            // 报告中心
+  FOCUS_HISTORY: '/home/focusHistory',                 // 专注历史
+  HABIT_HEATMAP: '/home/habitHeatmap',                 // 习惯热力图
   AGENT: '/home/agent',                                // Agent 中枢
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
@@ -89,7 +91,9 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
       { key: 'goal', label: '目标管理', path: ROUTES.GOAL, icon: 'trophy' },
       { key: 'review', label: '复习中心', path: ROUTES.REVIEW, icon: 'book' },
       { key: 'achievements', label: '成就中心', path: ROUTES.ACHIEVEMENTS, icon: 'crown' },
-      { key: 'reports', label: '报告中心', path: ROUTES.REPORTS, icon: 'file-search' }
+      { key: 'reports', label: '报告中心', path: ROUTES.REPORTS, icon: 'file-search' },
+      { key: 'focusHistory', label: '专注历史', path: ROUTES.FOCUS_HISTORY, icon: 'history' },
+      { key: 'habitHeatmap', label: '习惯热力图', path: ROUTES.HABIT_HEATMAP, icon: 'heat-map' }
     ]
   },
   {
