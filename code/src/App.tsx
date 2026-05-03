@@ -63,6 +63,8 @@ const Achievements = lazy(() => import('@/pages/achievements'));
 const Reports = lazy(() => import('@/pages/reports'));
 const FocusHistory = lazy(() => import('@/pages/focusHistory'));
 const HabitHeatmap = lazy(() => import('@/pages/habitHeatmap'));
+const MoodCalendar = lazy(() => import('@/pages/moodCalendar'));
+const ItemTimeline = lazy(() => import('@/pages/itemTimeline'));
 const Agent = lazy(() => import('@/pages/agent'));
 
 function PageFallback() {
@@ -148,6 +150,8 @@ function AppShell() {                                           // 路由表 + �
           <Route path="home/reports" element={<Reports />} />
           <Route path="home/focusHistory" element={<FocusHistory />} />
           <Route path="home/habitHeatmap" element={<HabitHeatmap />} />
+          <Route path="home/moodCalendar" element={<MoodCalendar />} />
+          <Route path="home/itemTimeline" element={<ItemTimeline />} />
           <Route path="home/agent" element={<Agent />} />
           <Route path="search/index" element={<Search />} />
           <Route path="dataio" element={<DataIO />} />
