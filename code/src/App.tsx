@@ -67,6 +67,8 @@ const MoodCalendar = lazy(() => import('@/pages/moodCalendar'));
 const ItemTimeline = lazy(() => import('@/pages/itemTimeline'));
 const FocusStats = lazy(() => import('@/pages/focusStats'));
 const DiaryStats = lazy(() => import('@/pages/diaryStats'));
+const GoalTimeline = lazy(() => import('@/pages/goalTimeline'));
+const HabitStats = lazy(() => import('@/pages/habitStats'));
 const Agent = lazy(() => import('@/pages/agent'));
 
 function PageFallback() {
@@ -156,6 +158,8 @@ function AppShell() {                                           // 路由表 + �
           <Route path="home/itemTimeline" element={<ItemTimeline />} />
           <Route path="home/focusStats" element={<FocusStats />} />
           <Route path="home/diaryStats" element={<DiaryStats />} />
+          <Route path="home/goalTimeline" element={<GoalTimeline />} />
+          <Route path="home/habitStats" element={<HabitStats />} />
           <Route path="home/agent" element={<Agent />} />
           <Route path="search/index" element={<Search />} />
           <Route path="dataio" element={<DataIO />} />

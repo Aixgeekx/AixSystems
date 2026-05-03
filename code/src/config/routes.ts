@@ -50,6 +50,8 @@ export const ROUTES = {
   ITEM_TIMELINE: '/home/itemTimeline',                  // 事项时间线
   FOCUS_STATS: '/home/focusStats',                     // 专注统计详情
   DIARY_STATS: '/home/diaryStats',                     // 日记统计
+  GOAL_TIMELINE: '/home/goalTimeline',                 // 目标时间线
+  HABIT_STATS: '/home/habitStats',                     // 习惯统计
   AGENT: '/home/agent',                                // Agent 中枢
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
@@ -101,7 +103,9 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
       { key: 'moodCalendar', label: '心情日历', path: ROUTES.MOOD_CALENDAR, icon: 'heart' },
       { key: 'itemTimeline', label: '事项时间线', path: ROUTES.ITEM_TIMELINE, icon: 'clock-circle' },
       { key: 'focusStats', label: '专注统计详情', path: ROUTES.FOCUS_STATS, icon: 'bar-chart' },
-      { key: 'diaryStats', label: '日记统计', path: ROUTES.DIARY_STATS, icon: 'line-chart' }
+      { key: 'diaryStats', label: '日记统计', path: ROUTES.DIARY_STATS, icon: 'line-chart' },
+      { key: 'goalTimeline', label: '目标时间线', path: ROUTES.GOAL_TIMELINE, icon: 'aim' },
+      { key: 'habitStats', label: '习惯统计', path: ROUTES.HABIT_STATS, icon: 'check-circle' }
     ]
   },
   {
