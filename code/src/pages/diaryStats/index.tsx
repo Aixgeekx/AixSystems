@@ -1,7 +1,7 @@
 // 日记统计 - 日记写作数据分析
 import React, { useMemo } from 'react';
 import { Card, Col, Progress, Row, Space, Tag, Typography } from 'antd';
-import { BookOutlined, CalendarOutlined, EditOutlined, HeartOutlined, StarOutlined, TrophyOutlined, CrownOutlined, BarChartOutlined, AimOutlined, LineChartOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
+import { BookOutlined, CalendarOutlined, EditOutlined, HeartOutlined, StarOutlined, TrophyOutlined, CrownOutlined, BarChartOutlined, AimOutlined, LineChartOutlined, DashboardOutlined, GoldOutlined, SwapOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -94,6 +94,13 @@ export default function DiaryStatsPage() {
     return data;
   }, [diaries]);
 
+  // 写作时段分布
+  const hourDistribution = useMemo(() => {
+    const hourMap = Array(24).fill(0);
+    (diaries || []).forEach(d => hourMap[dayjs(d.createdAt).hour()]++);
+    return Array.from({ length: 24 }, (_, i) => ({ hour: `${i}时`, count: hourMap[i] }));
+  }, [diaries]);
+
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
   const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
@@ -130,6 +137,14 @@ export default function DiaryStatsPage() {
     xAxis: { type: 'category' as const, data: stats.intensityTrend.map(d => d.date), axisLabel: { color: subColor, fontSize: 11 } },
     yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
     series: [{ type: 'line', data: stats.intensityTrend.map(d => d.avg), smooth: true, areaStyle: { color: '#ec489922' }, lineStyle: { color: '#ec4899', width: 2 }, itemStyle: { color: '#ec4899' }, showSymbol: false }]
+  };
+
+  const hourOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: hourDistribution.map(d => d.hour), axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'bar', data: hourDistribution.map(d => d.count), itemStyle: { color: accent, borderRadius: [4, 4, 0, 0] }, barWidth: '60%' }]
   };
 
   return (
@@ -203,6 +218,33 @@ export default function DiaryStatsPage() {
           <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
             <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 30 天情绪强度趋势</Typography.Title>
             <ReactECharts option={intensityOption} style={{ height: 220 }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={14}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}><ClockCircleOutlined /> 写作时段分布</Typography.Title>
+            <ReactECharts option={hourOption} style={{ height: 240 }} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={10}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder, height: '100%' }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}><StarOutlined /> 日记属性</Typography.Title>
+            <Space direction="vertical" size={14} style={{ width: '100%' }}>
+              {[
+                { label: '加密日记', value: stats.encrypted, color: '#8b5cf6' },
+                { label: '置顶日记', value: stats.pinned, color: '#f59e0b' },
+                { label: '有情绪记录', value: Object.keys(stats.moods).length, color: '#ec4899' },
+                { label: '本周写作', value: stats.thisWeek, color: '#3b82f6' }
+              ].map(item => (
+                <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', padding: 12, borderRadius: 14, background: isDark ? `${item.color}14` : `${item.color}0f`, border: `1px solid ${item.color}22` }}>
+                  <Typography.Text style={{ color: titleColor }}>{item.label}</Typography.Text>
+                  <Tag color={item.color} style={{ borderRadius: 999 }}>{item.value}</Tag>
+                </div>
+              ))}
+            </Space>
           </Card>
         </Col>
       </Row>

@@ -2,7 +2,7 @@ import zipfile, os
 from pathlib import Path
 
 src = Path('E:/Desktop/Aix_ai/AixApp')
-dst = src / 'results' / 'AixSystems-0.71.0-project.zip'
+dst = src / 'results' / 'AixSystems-0.72.0-project.zip'
 exclude_dirs = {'node_modules', 'dist', 'dist-installer', '.git', '.vite', '__pycache__', '.claude'}
 exclude_exts = {'.tmp', '.bak', '.exe', '.zip'}
 include_dirs = ['code', 'desktop', 'Aix_tools', 'title', 'data', 'results']

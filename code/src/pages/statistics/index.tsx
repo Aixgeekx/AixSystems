@@ -1,16 +1,19 @@
 // 数据统计中心 - 本地数据可视化分析
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useMemo } from 'react';
 import { Card, Col, Row, Space, Statistic, Tag, Typography } from 'antd';
-import { BarChartOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, FileTextOutlined, FireOutlined, TrophyOutlined } from '@ant-design/icons';
+import { BarChartOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, FileTextOutlined, FireOutlined, TrophyOutlined, CrownOutlined, LineChartOutlined, AimOutlined, HeartOutlined, DashboardOutlined, GoldOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
+import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
 import Empty from '@/components/Empty';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
 
 export default function StatisticsPage() {
+  const nav = useNavigate();
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
@@ -36,6 +39,28 @@ export default function StatisticsPage() {
     const totalCheckins = habitLogs.length;
     const activeGoals = goals.filter(g => !g.deletedAt && g.status === 'active');
     const completedGoals = goals.filter(g => g.status === 'completed');
+
+    // 30天活跃趋势
+    const daily30Map: Record<string, number> = {};
+    const add = (t: number) => { const k = dayjs(t).format('MM/DD'); daily30Map[k] = (daily30Map[k] || 0) + 1; };
+    activeItems.forEach(i => add(i.createdAt));
+    sessions.forEach(s => add(s.startTime));
+    habitLogs.forEach(l => add(l.date));
+    diaries.filter(d => !d.deletedAt).forEach(d => add(d.date));
+    goals.filter(g => !g.deletedAt).forEach(g => add(g.createdAt));
+    memos.filter(m => !m.deletedAt).forEach(m => add(m.createdAt));
+    const daily30Keys = Object.keys(daily30Map).sort().slice(-30);
+    const daily30 = { dates: daily30Keys, values: daily30Keys.map(k => daily30Map[k]) };
+
+    // 模块占比
+    const modulePie = [
+      { name: '事项', value: activeItems.length, itemStyle: { color: '#3b82f6' } },
+      { name: '专注', value: sessions.length, itemStyle: { color: '#f59e0b' } },
+      { name: '习惯', value: habitLogs.length, itemStyle: { color: '#22c55e' } },
+      { name: '日记', value: diaries.filter(d => !d.deletedAt).length, itemStyle: { color: '#ec4899' } },
+      { name: '目标', value: goals.filter(g => !g.deletedAt).length, itemStyle: { color: '#8b5cf6' } },
+      { name: '备忘', value: memos.filter(m => !m.deletedAt).length, itemStyle: { color: '#14b8a6' } }
+    ].filter(m => m.value > 0);
 
     // 7天趋势
     const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -64,7 +89,9 @@ export default function StatisticsPage() {
       activeGoals: activeGoals.length,
       completedGoals: completedGoals.length,
       completionRate: activeItems.length ? Math.round(doneItems.length / activeItems.length * 100) : 0,
-      last7Days
+      last7Days,
+      daily30,
+      modulePie
     };
   });
 
@@ -82,6 +109,19 @@ export default function StatisticsPage() {
       { name: '专注(分)', type: 'line', data: stats?.last7Days.map(d => d.focus) || [], smooth: true, itemStyle: { color: '#f59e0b' } }
     ],
     grid: { left: 40, right: 20, top: 40, bottom: 30 }
+  };
+
+  const daily30Option = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: stats?.daily30?.dates || [], axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'line', data: stats?.daily30?.values || [], smooth: true, areaStyle: { color: `${accent}22` }, lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent }, showSymbol: false }]
+  };
+
+  const moduleOption = {
+    tooltip: { trigger: 'item' as const },
+    series: [{ type: 'pie' as const, radius: ['40%', '70%'], data: stats?.modulePie || [], label: { color: subColor, fontSize: 12 } }]
   };
 
   const summaryCards = [
@@ -158,6 +198,50 @@ export default function StatisticsPage() {
           </Card>
         </Col>
       </Row>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={14}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>近 30 天活跃趋势</Typography.Title>
+            <Suspense fallback={<div style={{ height: 260, display: 'grid', placeItems: 'center', color: subColor }}>加载图表...</div>}>
+              <ReactECharts option={daily30Option} style={{ height: 260 }} />
+            </Suspense>
+          </Card>
+        </Col>
+        <Col xs={24} lg={10}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder, height: '100%' }}>
+            <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>模块占比</Typography.Title>
+            <Suspense fallback={<div style={{ height: 260, display: 'grid', placeItems: 'center', color: subColor }}>加载图表...</div>}>
+              <ReactECharts option={moduleOption} style={{ height: 260 }} />
+            </Suspense>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 深度分析导航 */}
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>深度分析</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {[
+            { label: '专注排行榜', icon: <CrownOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_RANKING },
+            { label: '习惯统计', icon: <LineChartOutlined />, color: '#22c55e', path: ROUTES.HABIT_STATS },
+            { label: '目标时间线', icon: <AimOutlined />, color: '#3b82f6', path: ROUTES.GOAL_TIMELINE },
+            { label: '情绪趋势', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.DIARY_MOOD_TRENDS },
+            { label: '数据总览', icon: <DashboardOutlined />, color: '#3b82f6', path: ROUTES.DATA_OVERVIEW },
+            { label: '成长月报', icon: <GoldOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY },
+          ].map(item => (
+            <Col xs={12} sm={4} key={item.label}>
+              <div onClick={() => nav(item.path)} style={{
+                borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer',
+                background: isDark ? `${item.color}14` : `${item.color}0f`,
+                border: `1px solid ${item.color}22`, transition: 'all 0.2s'
+              }}>
+                <div style={{ fontSize: 24, color: item.color, marginBottom: 6 }}>{item.icon}</div>
+                <Typography.Text style={{ color: titleColor, fontWeight: 600, fontSize: 13 }}>{item.label}</Typography.Text>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </Card>
       </>
       )}
     </Space>

@@ -1,7 +1,7 @@
 // 成就中心 - 本地成就徽章展示 + 快捷导航
 import React, { useMemo } from 'react';
 import { Card, Col, Progress, Row, Space, Tag, Typography } from 'antd';
-import { CrownOutlined, FireOutlined, StarOutlined, TrophyOutlined, BarChartOutlined, LineChartOutlined, AimOutlined, HeartOutlined, DashboardOutlined, GoldOutlined, PieChartOutlined } from '@ant-design/icons';
+import { CrownOutlined, FireOutlined, StarOutlined, TrophyOutlined, BarChartOutlined, LineChartOutlined, AimOutlined, HeartOutlined, DashboardOutlined, GoldOutlined, PieChartOutlined, SwapOutlined, CalendarOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -64,7 +64,32 @@ export default function AchievementsPage() {
     return Object.entries(map);
   }, [achievementList]);
 
-  // 成就分类分布
+  // 待解锁进度
+  const lockProgress = useMemo(() => {
+    return achievementList.filter(a => !a.unlocked).slice(0, 6).map(a => {
+      let pct = 0;
+      const done = stats?.doneItems || 0;
+      const ses = stats?.sessions || 0;
+      const chk = stats?.checkins || 0;
+      const di = stats?.diaries || 0;
+      const cg = stats?.completedGoals || 0;
+      const tr = (stats?.doneItems || 0) + ses + chk + di + cg + (stats?.habits || 0);
+      if (a.id === 'streak_7') pct = Math.min(100, Math.round((chk / 7) * 100));
+      else if (a.id === 'streak_30') pct = Math.min(100, Math.round((chk / 30) * 100));
+      else if (a.id === 'streak_60') pct = Math.min(100, Math.round((chk / 60) * 100));
+      else if (a.id === 'streak_100') pct = Math.min(100, Math.round((chk / 100) * 100));
+      else if (a.id === 'focus_10h') pct = Math.min(100, Math.round((ses / 600) * 100));
+      else if (a.id === 'focus_100h') pct = Math.min(100, Math.round((ses / 3600) * 100));
+      else if (a.id === 'focus_1000h') pct = Math.min(100, Math.round(((ses * 10 / 60) / 1000) * 100));
+      else if (a.id === 'diary_30') pct = Math.min(100, Math.round((di / 30) * 100));
+      else if (a.id === 'diary_100') pct = Math.min(100, Math.round((di / 100) * 100));
+      else if (a.id === 'goal_5') pct = Math.min(100, Math.round((cg / 5) * 100));
+      else if (a.id === 'goal_10') pct = Math.min(100, Math.round((cg / 10) * 100));
+      else if (a.id === 'records_100') pct = Math.min(100, Math.round((tr / 100) * 100));
+      else if (a.id === 'records_1000') pct = Math.min(100, Math.round((tr / 1000) * 100));
+      return { ...a, progress: pct };
+    });
+  }, [achievementList, stats]);
   const categoryPie = useMemo(() => {
     const cats: Record<string, { name: string; color: string; value: number }> = {
       habit: { name: '习惯', color: '#22c55e', value: 0 },
@@ -166,6 +191,29 @@ export default function AchievementsPage() {
           </Card>
         </Col>
       </Row>
+
+      {/* 待解锁进度 */}
+      {lockProgress.length > 0 && (
+        <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+          <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}><SwapOutlined /> 待解锁进度</Typography.Title>
+          <Row gutter={[12, 12]}>
+            {lockProgress.map(a => (
+              <Col xs={24} sm={12} md={8} key={a.id}>
+                <div style={{ borderRadius: 14, padding: 14, background: isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 20, opacity: 0.5 }}>{a.icon}</span>
+                    <div>
+                      <Typography.Text style={{ display: 'block', color: titleColor, fontWeight: 600, fontSize: 13 }}>{a.name}</Typography.Text>
+                      <Typography.Text style={{ color: subColor, fontSize: 11 }}>{a.desc}</Typography.Text>
+                    </div>
+                  </div>
+                  <Progress percent={a.progress} strokeColor={a.color} showInfo size="small" />
+                </div>
+              </Col>
+            ))}
+          </Row>
+        </Card>
+      )}
 
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
         <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}><FireOutlined /> 徽章墙</Typography.Title>
