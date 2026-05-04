@@ -60,7 +60,16 @@ export default function DiaryStatsPage() {
     const intensities = all.filter(d => d.moodIntensity).map(d => d.moodIntensity!);
     const avgIntensity = intensities.length ? (intensities.reduce((s, v) => s + v, 0) / intensities.length).toFixed(1) : '-';
 
-    return { total, thisMonth: thisMonth.length, thisWeek: thisWeek.length, encrypted, pinned, moods, topMood, uniqueDays, streak, monthGrowth, avgIntensity };
+    // 近30天情绪强度趋势
+    const intensityTrend: { date: string; avg: number; count: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = now.subtract(i, 'day');
+      const dayDiaries = all.filter(di => dayjs(di.date).isSame(d, 'day') && di.moodIntensity != null);
+      const avg = dayDiaries.length ? dayDiaries.reduce((s, di) => s + (di.moodIntensity || 0), 0) / dayDiaries.length : 0;
+      intensityTrend.push({ date: d.format('MM/DD'), avg: Number(avg.toFixed(1)), count: dayDiaries.length });
+    }
+
+    return { total, thisMonth: thisMonth.length, thisWeek: thisWeek.length, encrypted, pinned, moods, topMood, uniqueDays, streak, monthGrowth, avgIntensity, intensityTrend };
   }, [diaries]);
 
   // 近7天日记数
@@ -113,6 +122,14 @@ export default function DiaryStatsPage() {
       data: Object.entries(stats.moods).map(([k, v]) => ({ name: MOOD_LABELS[k] || k, value: v, itemStyle: { color: MOOD_COLORS[k] || accent } })),
       label: { color: subColor, fontSize: 12 }
     }]
+  };
+
+  const intensityOption = {
+    tooltip: { trigger: 'axis' as const, formatter: (p: any) => `${p[0].axisValue}: 强度 ${p[0].value}` },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: stats.intensityTrend.map(d => d.date), axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'line', data: stats.intensityTrend.map(d => d.avg), smooth: true, areaStyle: { color: '#ec489922' }, lineStyle: { color: '#ec4899', width: 2 }, itemStyle: { color: '#ec4899' }, showSymbol: false }]
   };
 
   return (
@@ -184,6 +201,13 @@ export default function DiaryStatsPage() {
         </Col>
         <Col xs={24} lg={12}>
           <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 30 天情绪强度趋势</Typography.Title>
+            <ReactECharts option={intensityOption} style={{ height: 220 }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
             <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>情绪标签</Typography.Title>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {Object.entries(stats.moods).sort((a, b) => b[1] - a[1]).map(([mood, count]) => (
@@ -202,8 +226,6 @@ export default function DiaryStatsPage() {
               ) : <span style={{ color: subColor }}>暂无</span>}
             </div>
           </Card>
-        </Col>
-      </Row>
 
       {/* 深度分析导航 */}
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

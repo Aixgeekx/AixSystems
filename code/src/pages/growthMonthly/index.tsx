@@ -1,7 +1,7 @@
 // 成长月报 - 月度综合成长报告
 import React, { useMemo } from 'react';
-import { Card, Col, Progress, Row, Space, Typography } from 'antd';
-import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, FireOutlined, TrophyOutlined, BookOutlined, AimOutlined, HeartOutlined, BarChartOutlined, RiseOutlined, CrownOutlined, BulbOutlined, LineChartOutlined, UnorderedListOutlined, ThunderboltOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
+import { Button, Card, Col, Progress, Row, Space, Typography } from 'antd';
+import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, FireOutlined, TrophyOutlined, BookOutlined, AimOutlined, HeartOutlined, BarChartOutlined, RiseOutlined, CrownOutlined, BulbOutlined, LineChartOutlined, UnorderedListOutlined, ThunderboltOutlined, DashboardOutlined, GoldOutlined, SwapOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -103,6 +103,53 @@ export default function GrowthMonthlyPage() {
   const changeColor = (v: number) => v > 0 ? '#22c55e' : v < 0 ? '#ef4444' : subColor;
   const changeText = (v: number) => v > 0 ? `↑${v}%` : v < 0 ? `↓${Math.abs(v)}%` : '持平';
 
+  const handleExportMarkdown = () => {
+    const lines = [
+      `# AixSystems ${now.format('YYYY年M月')} 成长月报`,
+      '',
+      `> 生成时间: ${dayjs().format('YYYY-MM-DD HH:mm')}`,
+      '',
+      '## 综合得分',
+      `- 本月成长得分: ${stats.totalScore}/100`,
+      `  - 事项完成: ${stats.itemScore}/30`,
+      `  - 专注时长: ${stats.focusScore}/30`,
+      `  - 习惯打卡: ${stats.habitScore}/25`,
+      `  - 日记写作: ${stats.diaryScore}/15`,
+      '',
+      '## 核心指标',
+      `- 完成事项: ${stats.doneThisMonth} (环比 ${changeText(stats.itemChange).replace(/[↑↓]/, m => m === '↑' ? '+' : '-')})`,
+      `- 专注时长: ${stats.focusMinThis} 分钟 (环比 ${changeText(stats.focusChange).replace(/[↑↓]/, m => m === '↑' ? '+' : '-')})`,
+      `- 习惯完成率: ${stats.habitRate}% (环比 ${changeText(stats.habitChange).replace(/[↑↓]/, m => m === '↑' ? '+' : '-')})`,
+      `- 日记篇数: ${stats.diaryThis} (环比 ${changeText(stats.diaryChange).replace(/[↑↓]/, m => m === '↑' ? '+' : '-')})`,
+      `- 逾期事项: ${stats.overdueThisMonth}`,
+      '',
+      '## 目标进度',
+      `- 进行中目标: ${stats.activeGoals}`,
+      `- 本月完成目标: ${stats.completedGoals}`,
+      `- 里程碑进度: ${stats.goalMilestonesDone}/${stats.goalMilestonesTotal}`,
+      '',
+      '## 本月亮点',
+    ];
+    const badges = [
+      stats.focusDays >= 20 && `专注达人: 本月已专注 ${stats.focusDays} 天`,
+      stats.doneThisMonth >= 30 && `事项达人: 本月完成 ${stats.doneThisMonth} 项`,
+      stats.habitRate >= 80 && `习惯之星: 习惯完成率 ${stats.habitRate}%`,
+      stats.diaryThis >= 20 && `日记达人: 本月写了 ${stats.diaryThis} 篇`,
+      stats.focusMinThis >= 1000 && `千分专注: 累计 ${stats.focusMinThis} 分钟`,
+      stats.totalScore >= 80 && `全能学霸: 综合得分 ${stats.totalScore}`,
+    ].filter(Boolean);
+    if (badges.length) lines.push(...badges.map(b => `- ${b}`), '');
+    else lines.push('- 继续努力，各项成就正在解锁中...', '');
+    lines.push('---', '由 AixSystems 自动生成');
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `AixSystems-${now.format('YYYY-MM')}-成长月报.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // 每日专注柱状图
   const dailyOption = {
     tooltip: { trigger: 'axis' as const },
@@ -136,9 +183,14 @@ export default function GrowthMonthlyPage() {
         border: isDark ? `1px solid ${accent}33` : 'none',
         boxShadow: `0 28px 60px ${accent}20`
       }} bodyStyle={{ padding: 22 }}>
-        <Typography.Text style={{ color: 'rgba(226,232,240,0.86)' }}><CalendarOutlined /> 成长月报</Typography.Text>
-        <Typography.Title level={2} style={{ margin: '8px 0 0', color: '#fff' }}>{now.format('YYYY年M月')} 成长报告</Typography.Title>
-        <Typography.Text style={{ color: 'rgba(226,232,240,0.6)', fontSize: 13 }}>截至今日第 {stats.daysInMonth} 天</Typography.Text>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <Typography.Text style={{ color: 'rgba(226,232,240,0.86)' }}><CalendarOutlined /> 成长月报</Typography.Text>
+            <Typography.Title level={2} style={{ margin: '8px 0 0', color: '#fff' }}>{now.format('YYYY年M月')} 成长报告</Typography.Title>
+            <Typography.Text style={{ color: 'rgba(226,232,240,0.6)', fontSize: 13 }}>截至今日第 {stats.daysInMonth} 天</Typography.Text>
+          </div>
+          <Button type="primary" icon={<DownloadOutlined />} onClick={handleExportMarkdown} style={{ borderRadius: 12, background: '#fff', color: '#0f172a', border: 'none' }}>导出 Markdown</Button>
+        </div>
       </Card>
 
       {(!items?.length && !sessions?.length && !habits?.length && !diaries?.length) && (

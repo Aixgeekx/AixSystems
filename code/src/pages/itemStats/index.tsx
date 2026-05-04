@@ -97,6 +97,18 @@ export default function ItemStatsPage() {
     series: [{ type: 'line', data: stats.monthTrend.map(d => d[1]), smooth: true, areaStyle: { color: `${accent}22` }, lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent } }]
   };
 
+  const typePie = {
+    tooltip: { trigger: 'item' as const, formatter: (p: any) => `${p.name}: ${p.value} (${p.percent}%)` },
+    series: [{
+      type: 'pie', radius: ['42%', '70%'],
+      data: Object.entries(stats.typeMap).map(([type, count]) => {
+        const meta = TYPE_MAP[type];
+        return { name: meta?.label || type, value: count, itemStyle: { color: meta?.color || accent } };
+      }),
+      label: { color: subColor, fontSize: 12 }
+    }]
+  };
+
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
       <Card bordered={false} className="anim-fade-in-up" style={{
@@ -152,34 +164,21 @@ export default function ItemStatsPage() {
         </Col>
       </Row>
 
-      {/* 月完成趋势 */}
-      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
-        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>月完成趋势</Typography.Title>
-        <ReactECharts option={monthOption} style={{ height: 220 }} />
-      </Card>
-
-      {/* 类型分布 */}
-      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
-        <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>类型分布</Typography.Title>
-        <Row gutter={[12, 12]}>
-          {Object.entries(stats.typeMap).sort((a, b) => b[1] - a[1]).map(([type, count]) => {
-            const meta = TYPE_MAP[type];
-            return (
-              <Col xs={12} sm={8} md={6} key={type}>
-                <div style={{
-                  borderRadius: 16, padding: 14, textAlign: 'center',
-                  background: isDark ? `${meta?.color || accent}14` : `${meta?.color || accent}0f`,
-                  border: `1px solid ${meta?.color || accent}22`
-                }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: meta?.color || accent }}>{count}</div>
-                  <div style={{ color: subColor, fontSize: 12, marginTop: 4 }}>{meta?.label || type}</div>
-                </div>
-              </Col>
-            );
-          })}
-          {Object.keys(stats.typeMap).length === 0 && <Col span={24}><div style={{ textAlign: 'center', color: subColor, padding: 30 }}>暂无事项数据</div></Col>}
-        </Row>
-      </Card>
+      {/* 月完成趋势 + 类型分布 */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>月完成趋势</Typography.Title>
+            <ReactECharts option={monthOption} style={{ height: 240 }} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>类型分布</Typography.Title>
+            <ReactECharts option={typePie} style={{ height: 240 }} />
+          </Card>
+        </Col>
+      </Row>
 
       {/* 子任务统计 */}
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

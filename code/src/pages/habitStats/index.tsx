@@ -68,7 +68,16 @@ export default function HabitStatsPage() {
       return { name: habit.name, color: habit.color, rate: Math.min(100, Math.round(habitLogCount / expected * 100)) };
     });
 
-    return { total, totalCheckins, thisWeek, thisMonth, streaks, bestStreak, dailyData, completionRates };
+    // 本月打卡热力图数据
+    const daysInMonth = now.daysInMonth();
+    const monthHeatmap: [string, number][] = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+      const d = now.date(i).startOf('day');
+      const count = logs.filter(l => dayjs(l.date).isSame(d, 'day')).length;
+      monthHeatmap.push([d.format('YYYY-MM-DD'), count]);
+    }
+
+    return { total, totalCheckins, thisWeek, thisMonth, streaks, bestStreak, dailyData, completionRates, monthHeatmap };
   }, [habits, habitLogs, weekStart, monthStart]);
 
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
@@ -90,6 +99,13 @@ export default function HabitStatsPage() {
     xAxis: { type: 'category' as const, data: stats.streaks.map(s => s.name), axisLabel: { color: subColor, fontSize: 10, rotate: 30 } },
     yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
     series: [{ type: 'bar', data: stats.streaks.map(s => ({ value: s.streak, itemStyle: { color: s.color } })), barWidth: '50%' }]
+  };
+
+  const heatmapOption = {
+    tooltip: { trigger: 'item' as const, formatter: (p: any) => `${p.data[0]}: ${p.data[1]} 次打卡` },
+    visualMap: { min: 0, max: Math.max(1, ...stats.monthHeatmap.map(d => d[1])), show: false, inRange: { color: [isDark ? '#1e293b' : '#e2e8f0', '#22c55e'] } },
+    calendar: { top: 20, left: 40, cellSize: ['auto', 20], range: now.format('YYYY-MM'), dayLabel: { color: subColor, fontSize: 10 }, monthLabel: { show: false }, itemStyle: { borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } },
+    series: [{ type: 'heatmap', coordinateSystem: 'calendar', data: stats.monthHeatmap, itemStyle: { borderRadius: 3 } }]
   };
 
   return (
@@ -159,6 +175,11 @@ export default function HabitStatsPage() {
           ))}
           {stats.completionRates.length === 0 && <Col span={24}><div style={{ textAlign: 'center', color: subColor, padding: 30 }}>暂无习惯数据</div></Col>}
         </Row>
+      </Card>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>本月打卡热力图</Typography.Title>
+        <ReactECharts option={heatmapOption} style={{ height: 200 }} />
       </Card>
 
       {/* 深度分析导航 */}
