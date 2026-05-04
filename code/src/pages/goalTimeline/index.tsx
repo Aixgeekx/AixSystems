@@ -1,7 +1,7 @@
 // 目标时间线 - 目标与里程碑可视化时间轴
 import React, { useMemo } from 'react';
 import { Card, Col, Progress, Row, Space, Tag, Timeline, Typography } from 'antd';
-import { AimOutlined, CheckCircleOutlined, ClockCircleOutlined, FlagOutlined, TrophyOutlined, CrownOutlined, BarChartOutlined, HeartOutlined, CalendarOutlined } from '@ant-design/icons';
+import { AimOutlined, CheckCircleOutlined, ClockCircleOutlined, FlagOutlined, TrophyOutlined, CrownOutlined, BarChartOutlined, HeartOutlined, CalendarOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -151,9 +151,11 @@ export default function GoalTimelinePage() {
             { label: '专注排行榜', icon: <CrownOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_RANKING },
             { label: '习惯热力图', icon: <CalendarOutlined />, color: '#14b8a6', path: ROUTES.HABIT_HEATMAP },
             { label: '心情日历', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.MOOD_CALENDAR },
-            { label: '专注统计详情', icon: <BarChartOutlined />, color: '#3b82f6', path: ROUTES.FOCUS_STATS }
+            { label: '专注统计详情', icon: <BarChartOutlined />, color: '#3b82f6', path: ROUTES.FOCUS_STATS },
+            { label: '数据总览', icon: <DashboardOutlined />, color: '#3b82f6', path: ROUTES.DATA_OVERVIEW },
+            { label: '成长月报', icon: <GoldOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY },
           ].map(item => (
-            <Col xs={12} sm={6} key={item.label}>
+            <Col xs={12} sm={4} key={item.label}>
               <div onClick={() => nav(item.path)} style={{
                 borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer',
                 background: isDark ? `${item.color}14` : `${item.color}0f`,

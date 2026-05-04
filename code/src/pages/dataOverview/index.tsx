@@ -1,7 +1,7 @@
 // 数据总览 - 聚合所有模块核心指标的单页概览
 import React, { useMemo } from 'react';
 import { Card, Col, Progress, Row, Space, Typography } from 'antd';
-import { BarChartOutlined, CheckCircleOutlined, ClockCircleOutlined, FireOutlined, TrophyOutlined, BookOutlined, AimOutlined, HeartOutlined, RiseOutlined, CrownOutlined, CalendarOutlined, UnorderedListOutlined, LineChartOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { BarChartOutlined, CheckCircleOutlined, ClockCircleOutlined, FireOutlined, TrophyOutlined, BookOutlined, AimOutlined, HeartOutlined, RiseOutlined, CrownOutlined, CalendarOutlined, UnorderedListOutlined, LineChartOutlined, ThunderboltOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -245,8 +245,10 @@ export default function DataOverviewPage() {
             { label: '报告中心', icon: <BarChartOutlined />, color: '#3b82f6', path: ROUTES.REPORTS },
             { label: '成就中心', icon: <TrophyOutlined />, color: '#f59e0b', path: ROUTES.ACHIEVEMENTS },
             { label: '数据统计', icon: <LineChartOutlined />, color: '#22c55e', path: ROUTES.STATISTICS },
+            { label: '成长月报', icon: <GoldOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY },
+            { label: '专注模式对比', icon: <SwapOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_MODE_COMPARE },
           ].map(item => (
-            <Col xs={12} sm={6} key={item.label}>
+            <Col xs={12} sm={4} key={item.label}>
               <div onClick={() => nav(item.path)} style={{ borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer', background: isDark ? `${item.color}14` : `${item.color}0f`, border: `1px solid ${item.color}22`, transition: 'all 0.2s' }}>
                 <div style={{ fontSize: 24, color: item.color, marginBottom: 6 }}>{item.icon}</div>
                 <Typography.Text style={{ color: titleColor, fontWeight: 600, fontSize: 13 }}>{item.label}</Typography.Text>

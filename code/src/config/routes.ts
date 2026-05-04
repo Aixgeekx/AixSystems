@@ -60,6 +60,8 @@ export const ROUTES = {
   FOCUS_MODE_COMPARE: '/home/focusModeCompare',        // 专注模式对比
   GROWTH_MONTHLY: '/home/growthMonthly',               // 成长月报
   DATA_OVERVIEW: '/home/dataOverview',                 // 数据总览
+  ANNUAL_REVIEW: '/home/annualReview',                   // 年度回顾
+  REVIEW_STATS: '/home/reviewStats',                     // 复习统计
   AGENT: '/home/agent',                                // Agent 中枢
   UNLOCK: '/unlock'                                    // 应用锁解锁页
 };
@@ -120,7 +122,9 @@ export const MENU_GROUPS = [                            // 左侧菜单分组
       { key: 'focusTrends', label: '专注趋势', path: ROUTES.FOCUS_TRENDS, icon: 'line-chart' },
       { key: 'itemStats', label: '事项统计', path: ROUTES.ITEM_STATS, icon: 'ordered-list' },
       { key: 'focusModeCompare', label: '专注模式对比', path: ROUTES.FOCUS_MODE_COMPARE, icon: 'bar-chart' },
-      { key: 'growthMonthly', label: '成长月报', path: ROUTES.GROWTH_MONTHLY, icon: 'calendar' }
+      { key: 'growthMonthly', label: '成长月报', path: ROUTES.GROWTH_MONTHLY, icon: 'calendar' },
+      { key: 'annualReview', label: '年度回顾', path: ROUTES.ANNUAL_REVIEW, icon: 'year' },
+      { key: 'reviewStats', label: '复习统计', path: ROUTES.REVIEW_STATS, icon: 'book' }
     ]
   },
   {

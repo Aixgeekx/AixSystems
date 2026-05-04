@@ -1,7 +1,7 @@
 // 成长月报 - 月度综合成长报告
 import React, { useMemo } from 'react';
 import { Card, Col, Progress, Row, Space, Typography } from 'antd';
-import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, FireOutlined, TrophyOutlined, BookOutlined, AimOutlined, HeartOutlined, BarChartOutlined, RiseOutlined, CrownOutlined, BulbOutlined, LineChartOutlined, UnorderedListOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, FireOutlined, TrophyOutlined, BookOutlined, AimOutlined, HeartOutlined, BarChartOutlined, RiseOutlined, CrownOutlined, BulbOutlined, LineChartOutlined, UnorderedListOutlined, ThunderboltOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -247,8 +247,10 @@ export default function GrowthMonthlyPage() {
             { label: '报告中心', icon: <BarChartOutlined />, color: '#3b82f6', path: ROUTES.REPORTS },
             { label: '成就中心', icon: <TrophyOutlined />, color: '#f59e0b', path: ROUTES.ACHIEVEMENTS },
             { label: '周复盘', icon: <CalendarOutlined />, color: '#22c55e', path: ROUTES.WEEKLY_REVIEW },
+            { label: '数据总览', icon: <DashboardOutlined />, color: '#3b82f6', path: ROUTES.DATA_OVERVIEW },
+            { label: '专注模式对比', icon: <SwapOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_MODE_COMPARE },
           ].map(item => (
-            <Col xs={12} sm={6} key={item.label}>
+            <Col xs={12} sm={4} key={item.label}>
               <div onClick={() => nav(item.path)} style={{ borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer', background: isDark ? `${item.color}14` : `${item.color}0f`, border: `1px solid ${item.color}22`, transition: 'all 0.2s' }}>
                 <div style={{ fontSize: 24, color: item.color, marginBottom: 6 }}>{item.icon}</div>
                 <Typography.Text style={{ color: titleColor, fontWeight: 600, fontSize: 13 }}>{item.label}</Typography.Text>

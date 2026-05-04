@@ -1,7 +1,7 @@
 // 周复盘 - 自动周度数据汇总与趋势对比
 import React, { useMemo } from 'react';
 import { Card, Col, Progress, Row, Space, Tag, Typography } from 'antd';
-import { CalendarOutlined, CheckCircleOutlined, FireOutlined, TrophyOutlined, RiseOutlined, ClockCircleOutlined, BookOutlined, AimOutlined, CrownOutlined, BarChartOutlined, HeartOutlined, LineChartOutlined } from '@ant-design/icons';
+import { CalendarOutlined, CheckCircleOutlined, FireOutlined, TrophyOutlined, RiseOutlined, ClockCircleOutlined, BookOutlined, AimOutlined, CrownOutlined, BarChartOutlined, HeartOutlined, LineChartOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -188,9 +188,11 @@ export default function WeeklyReviewPage() {
             { label: '专注统计详情', icon: <BarChartOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_STATS },
             { label: '习惯统计', icon: <LineChartOutlined />, color: '#22c55e', path: ROUTES.HABIT_STATS },
             { label: '日记统计', icon: <BookOutlined />, color: '#8b5cf6', path: ROUTES.DIARY_STATS },
-            { label: '心情日历', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.MOOD_CALENDAR }
+            { label: '心情日历', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.MOOD_CALENDAR },
+            { label: '数据总览', icon: <DashboardOutlined />, color: '#3b82f6', path: ROUTES.DATA_OVERVIEW },
+            { label: '成长月报', icon: <GoldOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY },
           ].map(item => (
-            <Col xs={12} sm={6} key={item.label}>
+            <Col xs={12} sm={4} key={item.label}>
               <div onClick={() => nav(item.path)} style={{
                 borderRadius: 16, padding: 14, textAlign: 'center', cursor: 'pointer',
                 background: isDark ? `${item.color}14` : `${item.color}0f`,

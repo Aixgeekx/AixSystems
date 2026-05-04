@@ -1,7 +1,7 @@
 // 事项统计 - 事项完成数据分析
 import React, { useMemo } from 'react';
 import { Card, Col, Progress, Row, Space, Tag, Typography } from 'antd';
-import { CheckCircleOutlined, ClockCircleOutlined, UnorderedListOutlined, TrophyOutlined, RiseOutlined, CrownOutlined, BarChartOutlined, AimOutlined, HeartOutlined, CalendarOutlined, FireOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, ClockCircleOutlined, UnorderedListOutlined, TrophyOutlined, RiseOutlined, CrownOutlined, BarChartOutlined, AimOutlined, HeartOutlined, CalendarOutlined, FireOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -194,9 +194,11 @@ export default function ItemStatsPage() {
             { label: '事项时间线', icon: <ClockCircleOutlined />, color: '#3b82f6', path: ROUTES.ITEM_TIMELINE },
             { label: '目标时间线', icon: <AimOutlined />, color: '#22c55e', path: ROUTES.GOAL_TIMELINE },
             { label: '习惯热力图', icon: <CalendarOutlined />, color: '#14b8a6', path: ROUTES.HABIT_HEATMAP },
-            { label: '专注趋势', icon: <FireOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_TRENDS }
+            { label: '专注趋势', icon: <FireOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_TRENDS },
+            { label: '数据总览', icon: <DashboardOutlined />, color: '#3b82f6', path: ROUTES.DATA_OVERVIEW },
+            { label: '成长月报', icon: <GoldOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY },
           ].map(item => (
-            <Col xs={12} sm={6} key={item.label}>
+            <Col xs={12} sm={4} key={item.label}>
               <div onClick={() => nav(item.path)} style={{
                 borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer',
                 background: isDark ? `${item.color}14` : `${item.color}0f`,

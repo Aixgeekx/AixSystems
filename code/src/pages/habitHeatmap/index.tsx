@@ -1,7 +1,7 @@
 // 习惯热力图 - GitHub 风格打卡热力图
 import React, { useMemo, useState } from 'react';
 import { Card, Col, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
-import { CalendarOutlined, CheckCircleOutlined, FireOutlined, HeatMapOutlined, CrownOutlined, BarChartOutlined, AimOutlined, HeartOutlined } from '@ant-design/icons';
+import { CalendarOutlined, CheckCircleOutlined, FireOutlined, HeatMapOutlined, CrownOutlined, BarChartOutlined, AimOutlined, HeartOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -228,9 +228,11 @@ export default function HabitHeatmapPage() {
             { label: '专注排行榜', icon: <CrownOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_RANKING },
             { label: '习惯统计', icon: <BarChartOutlined />, color: '#22c55e', path: ROUTES.HABIT_STATS },
             { label: '目标时间线', icon: <AimOutlined />, color: '#3b82f6', path: ROUTES.GOAL_TIMELINE },
-            { label: '情绪趋势', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.DIARY_MOOD_TRENDS }
+            { label: '情绪趋势', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.DIARY_MOOD_TRENDS },
+            { label: '数据总览', icon: <DashboardOutlined />, color: '#3b82f6', path: ROUTES.DATA_OVERVIEW },
+            { label: '成长月报', icon: <GoldOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY },
           ].map(item => (
-            <Col xs={12} sm={6} key={item.label}>
+            <Col xs={12} sm={4} key={item.label}>
               <div onClick={() => nav(item.path)} style={{
                 borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer',
                 background: isDark ? `${item.color}14` : `${item.color}0f`,
