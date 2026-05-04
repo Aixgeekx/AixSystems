@@ -1,6 +1,6 @@
 // 日记情绪趋势 - 情绪变化趋势分析
-import React, { useMemo } from 'react';
-import { Card, Col, Row, Space, Tag, Typography } from 'antd';
+import React, { useMemo, useState } from 'react';
+import { Card, Col, Row, Select, Space, Tag, Typography } from 'antd';
 import { HeartOutlined, LineChartOutlined, SmileOutlined, RiseOutlined, BarChartOutlined, CrownOutlined, AimOutlined, CalendarOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -23,6 +23,7 @@ export default function DiaryMoodTrendsPage() {
   const diaries = useLiveQuery(() => db.diaries.filter(d => !d.deletedAt).toArray(), []);
 
   const now = dayjs();
+  const [compareYear, setCompareYear] = useState(now.year());
 
   // 近30天情绪趋势
   const trendData = useMemo(() => {
@@ -98,13 +99,77 @@ export default function DiaryMoodTrendsPage() {
     }]
   };
 
-  const intensityOption = {
+  // 年度情绪对比（按月聚合各情绪出现次数）
+  const yearCompareData = useMemo(() => {
+    const months = Array.from({ length: 12 }, (_, i) => i + 1);
+    const series = Object.keys(MOOD_COLORS).map(mood => {
+      const data = months.map(m => {
+        return (diaries || []).filter(d => {
+          const dk = dayjs(d.date);
+          return dk.year() === compareYear && dk.month() + 1 === m && d.mood === mood;
+        }).length;
+      });
+      return { name: MOOD_LABELS[mood] || mood, type: 'bar' as const, stack: 'total' as const, data, itemStyle: { color: MOOD_COLORS[mood] } };
+    });
+    return { months: months.map(m => `${m}月`), series };
+  }, [diaries, compareYear]);
+
+  const yearCompareOption = {
+    tooltip: { trigger: 'axis' as const },
+    legend: { bottom: 0, textStyle: { color: subColor, fontSize: 10 }, itemWidth: 10, itemHeight: 10 },
+    grid: { top: 20, right: 16, bottom: 40, left: 36 },
+    xAxis: { type: 'category' as const, data: yearCompareData.months, axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, axisLabel: { color: subColor, fontSize: 10 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: yearCompareData.series
+  };
+
+  const intensityBarOption = {
     tooltip: { trigger: 'axis' as const },
     grid: { top: 20, right: 16, bottom: 28, left: 36 },
     xAxis: { type: 'category' as const, data: ['很弱', '较弱', '一般', '较强', '很强'], axisLabel: { color: subColor, fontSize: 11 } },
     yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
-    series: [{ type: 'bar', data: intensityData, itemStyle: { color: '#ec4899', borderRadius: [4, 4, 0, 0] }, barWidth: '50%' }]
+    series: [{ type: 'bar', data: intensityData, itemStyle: { color: (p: any) => ['#6366f1', '#3b82f6', '#f59e0b', '#f97316', '#ef4444'][p.dataIndex], borderRadius: [4, 4, 0, 0] }, barWidth: '50%' }]
   };
+
+  // 周平均情绪分趋势（近8周）
+  const weekScoreTrend = useMemo(() => {
+    const weeks: { label: string; score: number; count: number }[] = [];
+    for (let i = 7; i >= 0; i--) {
+      const ws = now.subtract(i, 'week').startOf('week');
+      const we = ws.endOf('week');
+      const logs = (diaries || []).filter(d => d.mood && d.date >= ws.valueOf() && d.date <= we.valueOf());
+      const avg = logs.length ? logs.reduce((s, d) => s + (MOOD_SCORE[d.mood!] ?? 3), 0) / logs.length : 0;
+      weeks.push({ label: ws.format('MM/DD'), score: Number(avg.toFixed(2)), count: logs.length });
+    }
+    return weeks;
+  }, [diaries]);
+
+  // 星期关联分析
+  const weekdayData = useMemo(() => {
+    const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    const data = days.map((_, i) => {
+      const logs = (diaries || []).filter(d => d.mood && dayjs(d.date).day() === i);
+      const avg = logs.length ? logs.reduce((s, d) => s + (MOOD_SCORE[d.mood!] ?? 3), 0) / logs.length : 0;
+      return Number(avg.toFixed(2));
+    });
+    return { labels: days, data };
+  }, [diaries]);
+
+  const weekScoreOption = {
+    tooltip: { trigger: 'axis' as const, formatter: (params: any) => { const p = params[0]; const w = weekScoreTrend[p.dataIndex]; return `${p.name}<br/>周均分：${p.value}<br/>记录：${w.count} 篇`; } },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: weekScoreTrend.map(d => d.label), axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, min: 0, max: 5, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'line', data: weekScoreTrend.map(d => d.score), smooth: true, areaStyle: { color: `${accent}22` }, lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent }, markLine: { data: [{ type: 'average' as const, name: '均值', label: { color: subColor, fontSize: 10 } }], lineStyle: { color: '#f59e0b66', type: 'dashed' as const } } }]
+  };
+
+  const weekdayOption = {
+    tooltip: {},
+    radar: { indicator: weekdayData.labels.map(d => ({ name: d, max: 5 })), axisName: { color: subColor, fontSize: 11 }, splitArea: { areaStyle: { color: isDark ? ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.04)'] : ['#f8fafc', '#f1f5f9'] } } },
+    series: [{ type: 'radar' as const, data: [{ value: weekdayData.data, areaStyle: { color: `${accent}33` }, lineStyle: { color: accent }, itemStyle: { color: accent } }] }]
+  };
+
+  const yearOptions = Array.from({ length: 5 }, (_, i) => ({ value: now.year() - 2 + i, label: `${now.year() - 2 + i}年` }));
 
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
@@ -141,6 +206,14 @@ export default function DiaryMoodTrendsPage() {
         <ReactECharts option={trendOption} style={{ height: 280 }} />
       </Card>
 
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>{compareYear} 年情绪对比</Typography.Title>
+          <Select value={compareYear} onChange={setCompareYear} options={yearOptions} style={{ width: 90 }} />
+        </div>
+        <ReactECharts option={yearCompareOption} style={{ height: 260 }} />
+      </Card>
+
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
@@ -155,7 +228,22 @@ export default function DiaryMoodTrendsPage() {
         <Col xs={24} lg={12}>
           <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
             <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>情绪强度分布</Typography.Title>
-            <ReactECharts option={intensityOption} style={{ height: 240 }} />
+            <ReactECharts option={intensityBarOption} style={{ height: 240 }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={14}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 8 周情绪趋势</Typography.Title>
+            <ReactECharts option={weekScoreOption} style={{ height: 260 }} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={10}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>星期情绪雷达</Typography.Title>
+            <ReactECharts option={weekdayOption} style={{ height: 260 }} />
           </Card>
         </Col>
       </Row>

@@ -70,6 +70,34 @@ export default function GrowthMonthlyPage() {
       dailyFocus.push({ date: d.format('DD'), minutes: mins });
     }
 
+    // 近6个月得分趋势（用已有数据回算）
+    const monthlyTrend: { month: string; score: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const ms = now.subtract(i, 'month').startOf('month');
+      const me = ms.endOf('month');
+      const mItems = (items || []).filter(item => item.updatedAt >= ms.valueOf() && item.updatedAt <= me.valueOf());
+      const mDone = mItems.filter(i => i.completeStatus === 'done').length;
+      const mFocusMin = Math.round((sessions || []).filter(s => s.startTime >= ms.valueOf() && s.startTime <= me.valueOf()).reduce((s, f) => s + (f.actualMs || 0), 0) / 60000);
+      const mLogs = (habitLogs || []).filter(l => l.date >= ms.valueOf() && l.date <= me.valueOf());
+      const mDiaries = (diaries || []).filter(d => d.date >= ms.valueOf() && d.date <= me.valueOf());
+      const mItemScore = mDone > 0 ? Math.min(mDone * 5, 30) : 0;
+      const mFocusScore = Math.min(Math.round(mFocusMin / 10), 30);
+      const mHabitScore = totalHabits > 0 ? Math.min(Math.round(Math.round(mLogs.length / Math.max(1, totalHabits * me.date()) * 100) * 0.25), 25) : 0;
+      const mDiaryScore = Math.min(mDiaries.length * 2, 15);
+      monthlyTrend.push({ month: ms.format('M月'), score: Math.min(mItemScore + mFocusScore + mHabitScore + mDiaryScore, 100) });
+    }
+
+    // 本月习惯每周打卡柱状图
+    const habitWeeks: { week: string; count: number }[] = [];
+    const weekCount = Math.ceil(daysInMonth / 7);
+    for (let w = 0; w < weekCount; w++) {
+      const ws = monthStart.add(w * 7, 'day');
+      const we = ws.add(6, 'day').endOf('day');
+      const realEnd = we.isAfter(now) ? now : we;
+      const count = hLogsThis.filter(l => l.date >= ws.valueOf() && l.date <= realEnd.valueOf()).length;
+      habitWeeks.push({ week: `第${w + 1}周`, count });
+    }
+
     // 综合得分（百分制）
     const itemScore = doneThisMonth > 0 ? Math.min(doneThisMonth * 5, 30) : 0; // 最高30分
     const focusScore = Math.min(Math.round(focusMinThis / 10), 30); // 最高30分
@@ -86,6 +114,8 @@ export default function GrowthMonthlyPage() {
       goalMilestonesTotal, goalMilestonesDone,
       dailyFocus,
       totalScore, itemScore, focusScore, habitScore, diaryScore,
+      monthlyTrend,
+      habitWeeks,
       daysInMonth,
       // 环比
       itemChange: doneLastMonth > 0 ? Math.round((doneThisMonth - doneLastMonth) / doneLastMonth * 100) : (doneThisMonth > 0 ? 100 : 0),
@@ -173,6 +203,24 @@ export default function GrowthMonthlyPage() {
       type: 'radar' as const,
       data: [{ value: [stats.itemScore, stats.focusScore, stats.habitScore, stats.diaryScore], areaStyle: { color: `${accent}33` }, lineStyle: { color: accent }, itemStyle: { color: accent } }]
     }]
+  };
+
+  // 近6个月得分趋势
+  const monthlyTrendOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: stats.monthlyTrend.map(d => d.month), axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'value' as const, max: 100, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'line', data: stats.monthlyTrend.map(d => d.score), smooth: true, areaStyle: { color: `${accent}22` }, lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent } }]
+  };
+
+  // 本月习惯周打卡柱状图
+  const habitWeekOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: stats.habitWeeks.map(d => d.week), axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'bar', data: stats.habitWeeks.map(d => d.count), itemStyle: { color: '#22c55e', borderRadius: [4, 4, 0, 0] }, barWidth: '55%' }]
   };
 
   return (
@@ -270,6 +318,21 @@ export default function GrowthMonthlyPage() {
           </Col>
         </Row>
       </Card>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 6 个月得分趋势</Typography.Title>
+            <ReactECharts option={monthlyTrendOption} style={{ height: 260 }} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>本月习惯每周打卡</Typography.Title>
+            <ReactECharts option={habitWeekOption} style={{ height: 260 }} />
+          </Card>
+        </Col>
+      </Row>
 
       {/* 本月亮点 */}
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

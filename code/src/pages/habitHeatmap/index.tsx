@@ -5,6 +5,7 @@ import { CalendarOutlined, CheckCircleOutlined, FireOutlined, HeatMapOutlined, C
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
+import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
@@ -36,13 +37,14 @@ export default function HabitHeatmapPage() {
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const [selectedHabit, setSelectedHabit] = useState<string>('all');
+  const [viewRange, setViewRange] = useState<'half' | 'year'>('half');
 
   const habits = useLiveQuery(() => db.habits.filter(h => !h.deletedAt).toArray(), []);
   const habitLogs = useLiveQuery(() => db.habitLogs.toArray(), []);
 
   const now = dayjs();
-  const start = now.subtract(6, 'month').startOf('week');
-  const weeks = useMemo(() => getWeeksInRange(start, now), []);
+  const start = useMemo(() => (viewRange === 'year' ? now.startOf('year').startOf('week') : now.subtract(6, 'month').startOf('week')), [viewRange, now]);
+  const weeks = useMemo(() => getWeeksInRange(start, now), [start, now]);
 
   const logMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -92,10 +94,37 @@ export default function HabitHeatmapPage() {
     return max;
   }, [logMap, start, now]);
 
+  // 当前月份每日打卡柱状图
+  const monthDailyBars = useMemo(() => {
+    const data: { date: string; count: number }[] = [];
+    const mStart = now.startOf('month');
+    const mEnd = now.endOf('month');
+    const targetHabit = selectedHabit === 'all' ? null : selectedHabit;
+    let cur = mStart;
+    while (cur.isBefore(mEnd) || cur.isSame(mEnd, 'day')) {
+      const key = cur.format('YYYY-MM-DD');
+      const logs = (habitLogs || []).filter(l => {
+        if (targetHabit && l.habitId !== targetHabit) return false;
+        return dayjs(l.date).format('YYYY-MM-DD') === key;
+      });
+      data.push({ date: cur.format('DD'), count: logs.reduce((s, v) => s + v.count, 0) });
+      cur = cur.add(1, 'day');
+    }
+    return data;
+  }, [habitLogs, selectedHabit, now]);
+
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
   const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
+
+  const monthBarOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 16, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: monthDailyBars.map(d => d.date), axisLabel: { color: subColor, fontSize: 10, interval: 2 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'bar', data: monthDailyBars.map(d => d.count), itemStyle: { color: accent, borderRadius: [4, 4, 0, 0] }, barWidth: '60%' }]
+  };
 
   const months = useMemo(() => {
     const set = new Set<string>();
@@ -116,8 +145,12 @@ export default function HabitHeatmapPage() {
             <Typography.Text style={{ color: 'rgba(226,232,240,0.86)' }}><CalendarOutlined /> 习惯热力图</Typography.Text>
             <Typography.Title level={2} style={{ margin: '8px 0 0', color: '#fff' }}>打卡热力图</Typography.Title>
           </div>
-          <Select value={selectedHabit} onChange={setSelectedHabit} style={{ width: 150 }}
-            options={[{ value: 'all', label: '全部习惯' }, ...(habits || []).map(h => ({ value: h.id, label: h.name }))]} />
+          <Space>
+            <Select value={viewRange} onChange={setViewRange} style={{ width: 120 }}
+              options={[{ value: 'half', label: '近 6 个月' }, { value: 'year', label: '全年' }]} />
+            <Select value={selectedHabit} onChange={setSelectedHabit} style={{ width: 150 }}
+              options={[{ value: 'all', label: '全部习惯' }, ...(habits || []).map(h => ({ value: h.id, label: h.name }))]} />
+          </Space>
         </div>
       </Card>
 
@@ -147,7 +180,7 @@ export default function HabitHeatmapPage() {
       </Row>
 
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
-        <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>近 6 个月打卡热力图</Typography.Title>
+        <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>{viewRange === 'year' ? '全年' : '近 6 个月'}打卡热力图</Typography.Title>
         <div style={{ overflowX: 'auto', padding: '8px 0' }}>
           {/* 月份标签 */}
           <div style={{ display: 'flex', marginLeft: 32, marginBottom: 4 }}>
@@ -191,6 +224,11 @@ export default function HabitHeatmapPage() {
             <span style={{ color: subColor, fontSize: 11 }}>多</span>
           </div>
         </div>
+      </Card>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>本月每日打卡柱状图</Typography.Title>
+        <ReactECharts option={monthBarOption} style={{ height: 220 }} />
       </Card>
 
       {/* 习惯列表 */}

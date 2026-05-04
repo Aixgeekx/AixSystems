@@ -5,6 +5,7 @@ import { HeartOutlined, CalendarOutlined, SmileOutlined, FrownOutlined, MehOutli
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
+import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
@@ -20,6 +21,8 @@ const MOOD_META: Record<string, { label: string; color: string; emoji: string }>
   tired: { label: '疲惫', color: '#8b5cf6', emoji: '😩' },
   grateful: { label: '感恩', color: '#14b8a6', emoji: '🙏' }
 };
+
+const MOOD_SCORE: Record<string, number> = { happy: 5, excited: 5, grateful: 4, calm: 3, tired: 2, sad: 1, anxious: 1, angry: 0 };
 
 function buildCalendarDays(year: number, month: number) {
   const first = dayjs().year(year).month(month).startOf('month');
@@ -39,6 +42,11 @@ export default function MoodCalendarPage() {
   const now = dayjs();
   const [month, setMonth] = useState(now.month());
   const [year, setYear] = useState(now.year());
+
+  const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
+  const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
+  const titleColor = isDark ? '#f8fafc' : '#0f172a';
+  const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
 
   const diaries = useLiveQuery(() => db.diaries.filter(d => !d.deletedAt).toArray(), []);
 
@@ -63,13 +71,77 @@ export default function MoodCalendarPage() {
     return counts;
   }, [diaries, monthKey]);
 
+  // 本月情绪趋势（带分值）
+  const monthMoodTrend = useMemo(() => {
+    const data: { date: string; score: number | null; mood: string }[] = [];
+    const monthDays = dayjs().year(year).month(month).daysInMonth();
+    for (let i = 1; i <= monthDays; i++) {
+      const d = dayjs().year(year).month(month).date(i);
+      const key = d.format('YYYY-MM-DD');
+      const mood = moodMap[key];
+      data.push({ date: `${i}日`, score: mood ? (MOOD_SCORE[mood] ?? 3) : null, mood: mood || '' });
+    }
+    return data;
+  }, [moodMap, year, month]);
+
+  // 情绪连续天数
+  const moodStreak = useMemo(() => {
+    let max = 0, streak = 0;
+    const sortedKeys = Object.keys(moodMap).sort();
+    let check = dayjs().startOf('day');
+    for (const key of sortedKeys) {
+      const dk = dayjs(key);
+      if (dk.isSame(check, 'day') && ['happy', 'excited', 'calm', 'grateful'].includes(moodMap[key])) { streak++; max = Math.max(max, streak); check = check.subtract(1, 'day'); }
+      else if (dk.isSame(check.subtract(1, 'day'), 'day') && ['happy', 'excited', 'calm', 'grateful'].includes(moodMap[key])) { streak++; max = Math.max(max, streak); check = dk; }
+      else break;
+    }
+    return max;
+  }, [moodMap]);
+
   const diaryDays = (diaries || []).filter(d => dayjs(d.date).format('YYYY-MM') === monthKey).length;
   const topMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0];
 
-  const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
-  const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
-  const titleColor = isDark ? '#f8fafc' : '#0f172a';
-  const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
+  // 年度情绪热力图数据
+  const [heatmapYear, setHeatmapYear] = useState(now.year());
+  const yearHeatmap = useMemo(() => {
+    const map: Record<string, { mood: string; score: number }> = {};
+    (diaries || []).forEach(d => {
+      if (!d.mood) return;
+      const dk = dayjs(d.date);
+      if (dk.year() === heatmapYear) {
+        const k = dk.format('YYYY-MM-DD');
+        map[k] = { mood: d.mood, score: d.moodIntensity || MOOD_SCORE[d.mood] || 3 };
+      }
+    });
+    return map;
+  }, [diaries, heatmapYear]);
+
+  const heatmapOption = useMemo(() => {
+    const firstDay = dayjs().year(heatmapYear).startOf('year');
+    const lastDay = dayjs().year(heatmapYear).endOf('year');
+    const data: [string, number][] = [];
+    let cur = firstDay;
+    while (cur.isBefore(lastDay) || cur.isSame(lastDay, 'day')) {
+      const k = cur.format('YYYY-MM-DD');
+      if (yearHeatmap[k]) data.push([k, yearHeatmap[k].score]);
+      cur = cur.add(1, 'day');
+    }
+    return {
+      tooltip: { formatter: (p: any) => { const info = yearHeatmap[p.value[0]]; return `${p.value[0]}<br/>情绪强度: ${p.value[1]}${info ? '<br/>' + (MOOD_META[info.mood]?.emoji || '') + ' ' + (MOOD_META[info.mood]?.label || info.mood) : ''}`; } },
+      visualMap: { min: 1, max: 5, calculable: false, orient: 'horizontal', left: 'center', bottom: 0, inRange: { color: ['#6366f1', '#3b82f6', '#f59e0b', '#f97316', '#ef4444'] }, text: ['高', '低'], textStyle: { color: subColor, fontSize: 10 } },
+      calendar: { top: 30, left: 30, right: 4, cellSize: ['auto', 14], range: String(heatmapYear), itemStyle: { borderWidth: 2, borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' }, splitLine: { show: false }, yearLabel: { show: false }, dayLabel: { color: subColor, fontSize: 10, firstDay: 1 }, monthLabel: { color: subColor, fontSize: 10 } },
+      series: [{ type: 'heatmap', coordinateSystem: 'calendar', data }]
+    };
+  }, [yearHeatmap, heatmapYear, isDark, subColor]);
+
+  // 本月情绪趋势折线图
+  const monthTrendOption = {
+    tooltip: { trigger: 'axis' as const, formatter: (params: any) => { const p = params[0]; const info = monthMoodTrend[p.dataIndex]; return `${p.name}<br/>情绪分: ${p.value ?? '-'}<br/>心情: ${info?.mood ? MOOD_META[info.mood]?.label || info.mood : '无记录'}`; } },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: monthMoodTrend.map(d => d.date), axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, min: 0, max: 5, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'line', data: monthMoodTrend.map(d => d.score), connectNulls: true, smooth: true, areaStyle: { color: `${accent}22` }, lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent } }]
+  };
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => ({ value: i, label: `${i + 1}月` }));
   const yearOptions = Array.from({ length: 5 }, (_, i) => ({ value: now.year() - 2 + i, label: `${now.year() - 2 + i}年` }));
@@ -117,12 +189,27 @@ export default function MoodCalendarPage() {
         </Col>
         <Col xs={8}>
           <Card bordered={false} style={{ borderRadius: 20, background: cardBg, border: cardBorder, textAlign: 'center' }}>
-            <div style={{ fontSize: 28, marginBottom: 4 }}>📊</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: titleColor }}>{Object.keys(moodCounts).length}</div>
-            <div style={{ color: subColor, fontSize: 12 }}>情绪种类</div>
+            <div style={{ fontSize: 28, marginBottom: 4 }}>🔥</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#f59e0b' }}>{moodStreak}</div>
+            <div style={{ color: subColor, fontSize: 12 }}>积极连续(天)</div>
           </Card>
         </Col>
       </Row>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>
+            <CalendarOutlined /> {heatmapYear} 年情绪热力图
+          </Typography.Title>
+          <Select value={heatmapYear} onChange={setHeatmapYear} options={yearOptions} style={{ width: 90 }} />
+        </div>
+        <ReactECharts option={heatmapOption} style={{ height: 260 }} />
+      </Card>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>本月情绪趋势</Typography.Title>
+        <ReactECharts option={monthTrendOption} style={{ height: 240 }} />
+      </Card>
 
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
         <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>

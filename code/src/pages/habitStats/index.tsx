@@ -77,7 +77,32 @@ export default function HabitStatsPage() {
       monthHeatmap.push([d.format('YYYY-MM-DD'), count]);
     }
 
-    return { total, totalCheckins, thisWeek, thisMonth, streaks, bestStreak, dailyData, completionRates, monthHeatmap };
+    // 近7周完成率趋势
+    const weeklyRateTrend: [string, number][] = [];
+    for (let w = 6; w >= 0; w--) {
+      const ws = now.subtract(w, 'week').startOf('week');
+      const we = ws.endOf('week');
+      const weekLogs = logs.filter(l => l.date >= ws.valueOf() && l.date <= we.valueOf());
+      const weekCount = weekLogs.length;
+      const weekExpected = h.reduce((s, habit) => {
+        const daysSince = Math.max(1, ws.diff(dayjs(habit.createdAt), 'day') + 1);
+        return s + (habit.frequency === 'daily' ? 7 : habit.frequency === 'weekly' ? 1 : Math.ceil(7 / 30));
+      }, 0);
+      weeklyRateTrend.push([ws.format('MM/DD'), weekExpected ? Math.min(100, Math.round(weekCount / weekExpected * 100)) : 0]);
+    }
+
+    // 打卡时段分布
+    const hourMap = Array(24).fill(0);
+    logs.forEach(l => hourMap[dayjs(l.date).hour()]++);
+    const hourDistribution = Array.from({ length: 24 }, (_, i) => ({ hour: `${i}时`, count: hourMap[i] }));
+
+    // 习惯本月打卡排名
+    const monthRanking = h.map(habit => {
+      const count = logs.filter(l => l.habitId === habit.id && l.date >= monthStart).length;
+      return { name: habit.name, color: habit.color, count };
+    }).sort((a, b) => b.count - a.count);
+
+    return { total, totalCheckins, thisWeek, thisMonth, streaks, bestStreak, dailyData, completionRates, monthHeatmap, weeklyRateTrend, hourDistribution, monthRanking };
   }, [habits, habitLogs, weekStart, monthStart]);
 
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
@@ -106,6 +131,22 @@ export default function HabitStatsPage() {
     visualMap: { min: 0, max: Math.max(1, ...stats.monthHeatmap.map(d => d[1])), show: false, inRange: { color: [isDark ? '#1e293b' : '#e2e8f0', '#22c55e'] } },
     calendar: { top: 20, left: 40, cellSize: ['auto', 20], range: now.format('YYYY-MM'), dayLabel: { color: subColor, fontSize: 10 }, monthLabel: { show: false }, itemStyle: { borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } },
     series: [{ type: 'heatmap', coordinateSystem: 'calendar', data: stats.monthHeatmap, itemStyle: { borderRadius: 3 } }]
+  };
+
+  const weeklyRateOption = {
+    tooltip: { trigger: 'axis' as const, formatter: (p: any) => `${p[0].name}<br/>完成率: ${p[0].value}%` },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: stats.weeklyRateTrend.map(d => d[0]), axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, max: 100, axisLabel: { color: subColor, fontSize: 10, formatter: '{value}%' }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'line', data: stats.weeklyRateTrend.map(d => d[1]), smooth: true, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#22c55e66' }, { offset: 1, color: '#22c55e11' }] } }, lineStyle: { color: '#22c55e', width: 2 }, itemStyle: { color: '#22c55e' }, symbol: 'circle', symbolSize: 4 }]
+  };
+
+  const hourOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: stats.hourDistribution.map(d => d.hour), axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'bar', data: stats.hourDistribution.map(d => d.count), itemStyle: { color: accent, borderRadius: [4, 4, 0, 0] }, barWidth: '60%' }]
   };
 
   return (
@@ -181,6 +222,41 @@ export default function HabitStatsPage() {
         <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>本月打卡热力图</Typography.Title>
         <ReactECharts option={heatmapOption} style={{ height: 200 }} />
       </Card>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 7 周完成率趋势</Typography.Title>
+        <ReactECharts option={weeklyRateOption} style={{ height: 220 }} />
+      </Card>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={14}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>打卡时段分布</Typography.Title>
+            <ReactECharts option={hourOption} style={{ height: 240 }} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={10}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>本月习惯排名</Typography.Title>
+            <Space direction="vertical" size={10} style={{ width: '100%' }}>
+              {stats.monthRanking.map((h, i) => (
+                <div key={h.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 18, width: 28, textAlign: 'center', fontWeight: 700, color: ['#f59e0b', '#94a3b8', '#cd7f32'][i] || subColor }}>{i + 1}</span>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: h.color }} />
+                  <span style={{ flex: 1, fontSize: 13, color: titleColor, fontWeight: 600 }}>{h.name}</span>
+                  <div style={{ flex: 1, maxWidth: 120 }}>
+                    <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9' }}>
+                      <div style={{ height: '100%', width: `${Math.min(100, h.count / Math.max(1, stats.monthRanking[0].count) * 100)}%`, borderRadius: 3, background: h.color, transition: 'width 0.5s' }} />
+                    </div>
+                  </div>
+                  <span style={{ fontWeight: 700, color: titleColor, fontSize: 13, minWidth: 30, textAlign: 'right' }}>{h.count}</span>
+                </div>
+              ))}
+              {stats.monthRanking.length === 0 && <div style={{ textAlign: 'center', color: subColor, padding: 20 }}>暂无数据</div>}
+            </Space>
+          </Card>
+        </Col>
+      </Row>
 
       {/* 深度分析导航 */}
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

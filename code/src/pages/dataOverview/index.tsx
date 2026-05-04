@@ -97,6 +97,30 @@ export default function DataOverviewPage() {
     const goalHealth = totalMilestones > 0 ? Math.round(doneMilestones / totalMilestones * 100) : (activeGoals.length > 0 ? 30 : 0);
     const overallHealth = Math.round((itemHealth + focusHealth + habitHealth + diaryHealth + goalHealth) / 5);
 
+    // 近7天模块健康分趋势
+    const healthTrend: { date: string; item: number; focus: number; habit: number; diary: number; goal: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = now.subtract(i, 'day').startOf('day');
+      const de = d.endOf('day');
+      const dayItems = allItems.filter(item => item.updatedAt >= d.valueOf() && item.updatedAt <= de.valueOf());
+      const dayDone = dayItems.filter(item => item.completeStatus === 'done').length;
+      const dayTotal = dayItems.length || allItems.length || 1;
+      const dayItemHealth = Math.min(Math.round(dayDone / dayTotal * 100), 100);
+
+      const dayFocusMin = Math.round(allSessions.filter(s => s.startTime >= d.valueOf() && s.startTime <= de.valueOf()).reduce((s, f) => s + (f.actualMs || 0), 0) / 60000);
+      const dayFocusHealth = Math.min(Math.round(dayFocusMin / 10), 100);
+
+      const dayLogs = allLogs.filter(l => l.date >= d.valueOf() && l.date <= de.valueOf());
+      const dayHabitRate = allHabits.length > 0 ? Math.round(dayLogs.length / allHabits.length * 100) : 0;
+
+      const dayDiaries = allDiaries.filter(di => di.date >= d.valueOf() && di.date <= de.valueOf()).length;
+      const dayDiaryHealth = Math.min(dayDiaries * 10, 100);
+
+      const dayGoalHealth = goalHealth;
+
+      healthTrend.push({ date: d.format('MM/DD'), item: dayItemHealth, focus: dayFocusHealth, habit: dayHabitRate, diary: dayDiaryHealth, goal: dayGoalHealth });
+    }
+
     return {
       totalItems, doneItems, overdueItems, todayItems, doneRate,
       totalFocusMin, todayFocusMin, focusDays, totalSessions: allSessions.length,
@@ -105,7 +129,8 @@ export default function DataOverviewPage() {
       activeGoals: activeGoals.length, completedGoals: completedGoals.length, totalMilestones, doneMilestones,
       totalMemos, pinnedMemos,
       dailyData, overallHealth,
-      itemHealth, focusHealth, habitHealth, diaryHealth, goalHealth
+      itemHealth, focusHealth, habitHealth, diaryHealth, goalHealth,
+      healthTrend
     };
   }, [items, sessions, habits, habitLogs, diaries, goals, memos]);
 
@@ -113,6 +138,77 @@ export default function DataOverviewPage() {
   const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
+
+  // 月度活跃趋势（近6个月所有模块总活动量）
+  const monthlyData = useMemo(() => {
+    const map: Record<string, number> = {};
+    const add = (t: number) => { const k = dayjs(t).format('YYYY-MM'); map[k] = (map[k] || 0) + 1; };
+    (items || []).forEach(i => add(i.createdAt));
+    (sessions || []).forEach(s => add(s.startTime));
+    (habitLogs || []).forEach(l => add(l.date));
+    (diaries || []).forEach(d => add(d.date));
+    (goals || []).forEach(g => add(g.createdAt));
+    (memos || []).forEach(m => add(m.createdAt));
+    const keys = Object.keys(map).sort().slice(-6);
+    return { months: keys.map(k => `${k.slice(5)}月`), values: keys.map(k => map[k]) };
+  }, [items, sessions, habitLogs, diaries, goals, memos]);
+
+  const monthlyOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: monthlyData.months, axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'bar', data: monthlyData.values, itemStyle: { color: accent, borderRadius: [4, 4, 0, 0] }, barWidth: '50%' }]
+  };
+
+  // 模块占比
+  const moduleComposition = useMemo(() => {
+    const allItems = (items || []).length;
+    const allSessions = (sessions || []).length;
+    const allLogs = (habitLogs || []).length;
+    const allDiaries = (diaries || []).length;
+    const allGoals = (goals || []).length;
+    const allMemos = (memos || []).length;
+    return [
+      { name: '事项', value: allItems, color: '#3b82f6' },
+      { name: '专注', value: allSessions, color: '#f59e0b' },
+      { name: '习惯', value: allLogs, color: '#22c55e' },
+      { name: '日记', value: allDiaries, color: '#ec4899' },
+      { name: '目标', value: allGoals, color: '#8b5cf6' },
+      { name: '备忘录', value: allMemos, color: '#14b8a6' }
+    ].filter(m => m.value > 0);
+  }, [items, sessions, habitLogs, diaries, goals, memos]);
+
+  const compositionOption = {
+    tooltip: { trigger: 'item' as const },
+    series: [{
+      type: 'pie' as const, radius: ['40%', '70%'],
+      data: moduleComposition.map(m => ({ name: m.name, value: m.value, itemStyle: { color: m.color } })),
+      label: { color: subColor, fontSize: 12 }
+    }]
+  };
+
+  // 30天活跃趋势
+  const daily30Data = useMemo(() => {
+    const map: Record<string, number> = {};
+    const add = (t: number) => { const k = dayjs(t).format('MM/DD'); map[k] = (map[k] || 0) + 1; };
+    (items || []).forEach(i => add(i.createdAt));
+    (sessions || []).forEach(s => add(s.startTime));
+    (habitLogs || []).forEach(l => add(l.date));
+    (diaries || []).forEach(d => add(d.date));
+    (goals || []).forEach(g => add(g.createdAt));
+    (memos || []).forEach(m => add(m.createdAt));
+    const keys = Object.keys(map).sort().slice(-30);
+    return { dates: keys, values: keys.map(k => map[k]) };
+  }, [items, sessions, habitLogs, diaries, goals, memos]);
+
+  const daily30Option = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: daily30Data.dates, axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'line', data: daily30Data.values, smooth: true, areaStyle: { color: `${accent}22` }, lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent } }]
+  };
 
   // 7天趋势双轴图
   const trendOption = {
@@ -147,6 +243,22 @@ export default function DataOverviewPage() {
         areaStyle: { color: `${accent}33` }, lineStyle: { color: accent }, itemStyle: { color: accent }
       }]
     }]
+  };
+
+  // 模块健康得分趋势折线图
+  const healthTrendOption = {
+    tooltip: { trigger: 'axis' as const },
+    legend: { data: ['事项', '专注', '习惯', '日记', '目标'], textStyle: { color: subColor, fontSize: 11 }, top: 0 },
+    grid: { top: 34, right: 16, bottom: 24, left: 36 },
+    xAxis: { type: 'category' as const, data: stats.healthTrend.map(d => d.date), axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'value' as const, max: 100, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [
+      { name: '事项', type: 'line' as const, data: stats.healthTrend.map(d => d.item), smooth: true, lineStyle: { color: '#3b82f6', width: 2 }, itemStyle: { color: '#3b82f6' }, showSymbol: false },
+      { name: '专注', type: 'line' as const, data: stats.healthTrend.map(d => d.focus), smooth: true, lineStyle: { color: '#f59e0b', width: 2 }, itemStyle: { color: '#f59e0b' }, showSymbol: false },
+      { name: '习惯', type: 'line' as const, data: stats.healthTrend.map(d => d.habit), smooth: true, lineStyle: { color: '#22c55e', width: 2 }, itemStyle: { color: '#22c55e' }, showSymbol: false },
+      { name: '日记', type: 'line' as const, data: stats.healthTrend.map(d => d.diary), smooth: true, lineStyle: { color: '#ec4899', width: 2 }, itemStyle: { color: '#ec4899' }, showSymbol: false },
+      { name: '目标', type: 'line' as const, data: stats.healthTrend.map(d => d.goal), smooth: true, lineStyle: { color: '#8b5cf6', width: 2 }, itemStyle: { color: '#8b5cf6' }, showSymbol: false }
+    ]
   };
 
   const modules = [
@@ -261,6 +373,31 @@ export default function DataOverviewPage() {
           <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
             <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>模块健康雷达</Typography.Title>
             <ReactECharts option={radarOption} style={{ height: 280 }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 7 天模块健康得分趋势</Typography.Title>
+        <ReactECharts option={healthTrendOption} style={{ height: 260 }} />
+      </Card>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 6 个月活跃度趋势</Typography.Title>
+        <ReactECharts option={monthlyOption} style={{ height: 240 }} />
+      </Card>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>模块数据占比</Typography.Title>
+            <ReactECharts option={compositionOption} style={{ height: 260 }} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 30 天活跃趋势</Typography.Title>
+            <ReactECharts option={daily30Option} style={{ height: 260 }} />
           </Card>
         </Col>
       </Row>

@@ -1,11 +1,13 @@
 // 专注历史 - 专注记录分析与回顾
 import React, { useMemo, useState } from 'react';
 import { Card, Col, Empty, List, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
-import { BarChartOutlined, ClockCircleOutlined, FireOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { BarChartOutlined, ClockCircleOutlined, FireOutlined, ThunderboltOutlined, CrownOutlined, AimOutlined, HeartOutlined, CalendarOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
+import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
 
 const MODE_MAP: Record<string, string> = { countdown: '倒计时', stopwatch: '正计时', pomodoro: '番茄钟' };
@@ -15,14 +17,20 @@ export default function FocusHistoryPage() {
   const { theme } = useThemeVariants();
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
+  const nav = useNavigate();
   const [range, setRange] = useState<7 | 14 | 30>(14);
+  const [modeFilter, setModeFilter] = useState<string>('all');
 
   const sessions = useLiveQuery(() => db.focusSessions.orderBy('startTime').reverse().toArray(), []);
 
   const now = dayjs();
   const cutoff = now.subtract(range, 'day').startOf('day').valueOf();
 
-  const filtered = useMemo(() => (sessions || []).filter(s => s.startTime >= cutoff), [sessions, cutoff]);
+  const filtered = useMemo(() => {
+    let list = (sessions || []).filter(s => s.startTime >= cutoff);
+    if (modeFilter !== 'all') list = list.filter(s => s.mode === modeFilter);
+    return list;
+  }, [sessions, cutoff, modeFilter]);
   const all = sessions || [];
 
   const totalMin = Math.round(filtered.reduce((s, v) => s + v.actualMs / 60_000, 0));
@@ -96,7 +104,10 @@ export default function FocusHistoryPage() {
             <Typography.Text style={{ color: 'rgba(226,232,240,0.86)' }}><FireOutlined /> 专注历史</Typography.Text>
             <Typography.Title level={2} style={{ margin: '8px 0 0', color: '#fff' }}>专注记录分析</Typography.Title>
           </div>
-          <Select value={range} onChange={setRange} options={[{ value: 7, label: '近 7 天' }, { value: 14, label: '近 14 天' }, { value: 30, label: '近 30 天' }]} style={{ width: 110 }} />
+          <Space>
+            <Select value={modeFilter} onChange={setModeFilter} options={[{ value: 'all', label: '全部模式' }, { value: 'countdown', label: '倒计时' }, { value: 'stopwatch', label: '正计时' }, { value: 'pomodoro', label: '番茄钟' }]} style={{ width: 110 }} />
+            <Select value={range} onChange={setRange} options={[{ value: 7, label: '近 7 天' }, { value: 14, label: '近 14 天' }, { value: 30, label: '近 30 天' }]} style={{ width: 110 }} />
+          </Space>
         </div>
       </Card>
 
@@ -164,6 +175,31 @@ export default function FocusHistoryPage() {
         ) : (
           <Empty description="暂无专注记录" />
         )}
+      </Card>
+      {/* 深度分析导航 */}
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>深度分析</Typography.Title>
+        <Row gutter={[12, 12]}>
+          {[
+            { label: '专注排行榜', icon: <CrownOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_RANKING },
+            { label: '习惯统计', icon: <BarChartOutlined />, color: '#22c55e', path: ROUTES.HABIT_STATS },
+            { label: '情绪趋势', icon: <HeartOutlined />, color: '#ec4899', path: ROUTES.DIARY_MOOD_TRENDS },
+            { label: '目标时间线', icon: <AimOutlined />, color: '#3b82f6', path: ROUTES.GOAL_TIMELINE },
+            { label: '数据总览', icon: <DashboardOutlined />, color: '#3b82f6', path: ROUTES.DATA_OVERVIEW },
+            { label: '成长月报', icon: <GoldOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY },
+          ].map(item => (
+            <Col xs={12} sm={4} key={item.label}>
+              <div onClick={() => nav(item.path)} style={{
+                borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer',
+                background: isDark ? `${item.color}14` : `${item.color}0f`,
+                border: `1px solid ${item.color}22`, transition: 'all 0.2s'
+              }}>
+                <div style={{ fontSize: 24, color: item.color, marginBottom: 6 }}>{item.icon}</div>
+                <Typography.Text style={{ color: titleColor, fontWeight: 600, fontSize: 13 }}>{item.label}</Typography.Text>
+              </div>
+            </Col>
+          ))}
+        </Row>
       </Card>
     </Space>
   );

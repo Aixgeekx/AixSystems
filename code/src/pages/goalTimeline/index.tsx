@@ -1,14 +1,16 @@
 // 目标时间线 - 目标与里程碑可视化时间轴
-import React, { useMemo } from 'react';
-import { Card, Col, Progress, Row, Space, Tag, Timeline, Typography } from 'antd';
-import { AimOutlined, CheckCircleOutlined, ClockCircleOutlined, FlagOutlined, TrophyOutlined, CrownOutlined, BarChartOutlined, HeartOutlined, CalendarOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
+import React, { useMemo, useState } from 'react';
+import { Card, Col, Modal, Progress, Row, Space, Tag, Timeline, Typography } from 'antd';
+import { AimOutlined, CheckCircleOutlined, ClockCircleOutlined, FlagOutlined, TrophyOutlined, CrownOutlined, BarChartOutlined, HeartOutlined, CalendarOutlined, DashboardOutlined, GoldOutlined, SwapOutlined, RiseOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
+import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
 import Empty from '@/components/Empty';
+import type { Goal } from '@/models';
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   active: { label: '进行中', color: '#3b82f6' },
@@ -22,9 +24,66 @@ export default function GoalTimelinePage() {
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalGoal, setModalGoal] = useState<Goal | null>(null);
+  const [modalMilestone, setModalMilestone] = useState<{ title: string; done: boolean; index: number } | null>(null);
+
+  const now = dayjs();
+
   const goals = useLiveQuery(() => db.goals.filter(g => !g.deletedAt).toArray(), []);
 
   const sorted = useMemo(() => (goals || []).sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt)), [goals]);
+
+  // 目标创建时间线（按月份统计创建数）
+  const creationTimeline = useMemo(() => {
+    const map: Record<string, { created: number; completed: number }> = {};
+    (goals || []).forEach(g => {
+      const key = dayjs(g.createdAt).format('YYYY-MM');
+      if (!map[key]) map[key] = { created: 0, completed: 0 };
+      map[key].created++;
+      if (g.status === 'completed') {
+        const ckey = dayjs(g.updatedAt || g.createdAt).format('YYYY-MM');
+        if (!map[ckey]) map[ckey] = { created: 0, completed: 0 };
+        map[ckey].completed++;
+      }
+    });
+    const keys = Object.keys(map).sort();
+    return { months: keys, created: keys.map(k => map[k].created), completed: keys.map(k => map[k].completed) };
+  }, [goals]);
+
+  // 里程碑完成趋势（近8周）
+  const milestoneTrend = useMemo(() => {
+    const weeks: { label: string; done: number; total: number }[] = [];
+    for (let i = 7; i >= 0; i--) {
+      const ws = now.subtract(i, 'week').startOf('week');
+      const we = ws.endOf('week');
+      let done = 0, total = 0;
+      (goals || []).forEach(g => {
+        const ms = g.milestones || [];
+        total += ms.length;
+        if (g.status === 'completed' && g.updatedAt && g.updatedAt >= ws.valueOf() && g.updatedAt <= we.valueOf()) {
+          done += ms.filter(m => m.done).length;
+        }
+      });
+      weeks.push({ label: ws.format('MM/DD'), done, total });
+    }
+    return weeks;
+  }, [goals]);
+
+  // 目标周期分布（完成天数分组）
+  const cycleDistribution = useMemo(() => {
+    const buckets = ['<7天', '7-30天', '1-3月', '3-6月', '>6月'];
+    const counts = [0, 0, 0, 0, 0];
+    (goals || []).filter(g => g.status === 'completed').forEach(g => {
+      const days = dayjs(g.updatedAt || g.createdAt).diff(dayjs(g.createdAt), 'day');
+      if (days < 7) counts[0]++;
+      else if (days < 30) counts[1]++;
+      else if (days < 90) counts[2]++;
+      else if (days < 180) counts[3]++;
+      else counts[4]++;
+    });
+    return buckets.map((b, i) => ({ name: b, value: counts[i], itemStyle: { color: ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444'][i] } }));
+  }, [goals]);
 
   const active = sorted.filter(g => g.status === 'active');
   const completed = sorted.filter(g => g.status === 'completed');
@@ -46,6 +105,34 @@ export default function GoalTimelinePage() {
   const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
+
+  const creationOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: creationTimeline.months, axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [
+      { name: '新建', type: 'bar' as const, data: creationTimeline.created, itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] }, barWidth: '35%' },
+      { name: '完成', type: 'bar' as const, data: creationTimeline.completed, itemStyle: { color: '#22c55e', borderRadius: [4, 4, 0, 0] }, barWidth: '35%' }
+    ]
+  };
+
+  const milestoneOption = {
+    tooltip: { trigger: 'axis' as const, formatter: (p: any) => { const d = p[0]; return `${d.name}<br/>已完成: ${d.dataIndex < milestoneTrend.length ? milestoneTrend[d.dataIndex].done : 0}<br/>累计: ${d.dataIndex < milestoneTrend.length ? milestoneTrend[d.dataIndex].total : 0}`; } },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: milestoneTrend.map(d => d.label), axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'line', data: milestoneTrend.map(d => d.done), smooth: true, areaStyle: { color: `${accent}22` }, lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent }, markLine: { data: [{ type: 'average' as const, name: '均值', label: { color: subColor, fontSize: 10 } }], lineStyle: { color: '#f59e0b66', type: 'dashed' as const } } }]
+  };
+
+  const cycleOption = {
+    tooltip: { trigger: 'item' as const },
+    series: [{
+      type: 'pie' as const, radius: ['40%', '70%'],
+      data: cycleDistribution,
+      label: { color: subColor, fontSize: 12 }
+    }]
+  };
 
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
@@ -83,6 +170,38 @@ export default function GoalTimelinePage() {
             </Card>
           </Col>
         ))}
+      </Row>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}><RiseOutlined /> 目标创建与完成趋势</Typography.Title>
+        {creationTimeline.months.length > 0 ? (
+          <ReactECharts option={creationOption} style={{ height: 240 }} />
+        ) : (
+          <div style={{ textAlign: 'center', color: subColor, padding: 60 }}>暂无数据</div>
+        )}
+      </Card>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={14}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>里程碑完成趋势</Typography.Title>
+            {milestoneTrend.length > 0 ? (
+              <ReactECharts option={milestoneOption} style={{ height: 240 }} />
+            ) : (
+              <div style={{ textAlign: 'center', color: subColor, padding: 60 }}>暂无数据</div>
+            )}
+          </Card>
+        </Col>
+        <Col xs={24} lg={10}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>目标周期分布</Typography.Title>
+            {cycleDistribution.some(d => d.value > 0) ? (
+              <ReactECharts option={cycleOption} style={{ height: 240 }} />
+            ) : (
+              <div style={{ textAlign: 'center', color: subColor, padding: 60 }}>暂无完成的目标</div>
+            )}
+          </Card>
+        </Col>
       </Row>
 
       {/* 即将到期 */}
@@ -132,7 +251,7 @@ export default function GoalTimelinePage() {
                   {ms.length > 0 && (
                     <div style={{ marginTop: 8 }}>
                       {ms.map((m, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, cursor: 'pointer' }} onClick={() => { setModalGoal(g); setModalMilestone({ ...m, index: i }); setModalOpen(true); }}>
                           <CheckCircleOutlined style={{ color: m.done ? '#22c55e' : '#d1d5db', fontSize: 14 }} />
                           <span style={{ color: m.done ? subColor : titleColor, fontSize: 12, textDecoration: m.done ? 'line-through' : 'none' }}>{m.title}</span>
                         </div>
@@ -175,6 +294,30 @@ export default function GoalTimelinePage() {
           ))}
         </Row>
       </Card>
+      {/* 里程碑详情弹窗 */}
+      <Modal open={modalOpen} onCancel={() => setModalOpen(false)} footer={null} title="里程碑详情" width={400}>
+        {modalGoal && modalMilestone && (
+          <Space direction="vertical" size={14} style={{ width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <CheckCircleOutlined style={{ color: modalMilestone.done ? '#22c55e' : '#d1d5db', fontSize: 22 }} />
+              <Typography.Text style={{ fontWeight: 700, fontSize: 16, color: titleColor }}>{modalMilestone.title}</Typography.Text>
+              <Tag style={{ borderRadius: 999, fontSize: 11, background: modalMilestone.done ? '#22c55e18' : '#f59e0b18', border: `1px solid ${modalMilestone.done ? '#22c55e44' : '#f59e0b44'}`, color: modalMilestone.done ? '#22c55e' : '#f59e0b' }}>{modalMilestone.done ? '已完成' : '进行中'}</Tag>
+            </div>
+            <div style={{ color: subColor, fontSize: 13 }}>所属目标：<Typography.Text style={{ fontWeight: 600, color: titleColor }}>{modalGoal.title}</Typography.Text></div>
+            {modalGoal.description && <div style={{ color: subColor, fontSize: 13 }}>{modalGoal.description}</div>}
+            {modalGoal.targetDate && <div style={{ color: subColor, fontSize: 13 }}>目标截止：{dayjs(modalGoal.targetDate).format('YYYY-MM-DD')}</div>}
+            <div style={{ marginTop: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12, color: subColor }}>
+                <span>目标整体进度</span>
+                <span>{Math.round((modalGoal.milestones?.filter(m => m.done).length || 0) / (modalGoal.milestones?.length || 1) * 100)}%</span>
+              </div>
+              <div style={{ height: 8, borderRadius: 4, background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9' }}>
+                <div style={{ height: '100%', width: `${Math.round((modalGoal.milestones?.filter(m => m.done).length || 0) / (modalGoal.milestones?.length || 1) * 100)}%`, borderRadius: 4, background: modalGoal.color || accent, transition: 'width 0.5s' }} />
+              </div>
+            </div>
+          </Space>
+        )}
+      </Modal>
       </>
       )}
     </Space>

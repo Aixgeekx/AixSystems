@@ -1,10 +1,11 @@
 // 成就中心 - 本地成就徽章展示 + 快捷导航
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, Col, Progress, Row, Space, Tag, Typography } from 'antd';
-import { CrownOutlined, FireOutlined, StarOutlined, TrophyOutlined, BarChartOutlined, LineChartOutlined, AimOutlined, HeartOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
+import { CrownOutlined, FireOutlined, StarOutlined, TrophyOutlined, BarChartOutlined, LineChartOutlined, AimOutlined, HeartOutlined, DashboardOutlined, GoldOutlined, PieChartOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
+import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
@@ -46,6 +47,62 @@ export default function AchievementsPage() {
     .filter(a => a.unlocked && a.unlockedAt)
     .sort((a, b) => (b.unlockedAt || 0) - (a.unlockedAt || 0))
     .slice(0, 5);
+
+  // 解锁趋势（近30天）
+  const unlockTrend = useMemo(() => {
+    const map: Record<string, number> = {};
+    const today = dayjs().startOf('day');
+    for (let i = 29; i >= 0; i--) {
+      map[today.subtract(i, 'day').format('MM/DD')] = 0;
+    }
+    achievementList.forEach(a => {
+      if (a.unlocked && a.unlockedAt) {
+        const k = dayjs(a.unlockedAt).format('MM/DD');
+        if (k in map) map[k]++;
+      }
+    });
+    return Object.entries(map);
+  }, [achievementList]);
+
+  // 成就分类分布
+  const categoryPie = useMemo(() => {
+    const cats: Record<string, { name: string; color: string; value: number }> = {
+      habit: { name: '习惯', color: '#22c55e', value: 0 },
+      focus: { name: '专注', color: '#f59e0b', value: 0 },
+      diary: { name: '日记', color: '#8b5cf6', value: 0 },
+      goal: { name: '目标', color: '#3b82f6', value: 0 },
+      milestone: { name: '里程碑', color: '#ec4899', value: 0 },
+    };
+    achievementList.forEach(a => {
+      const cat = a.id.split('_')[0];
+      if (cats[cat]) cats[cat].value++;
+      else cats.milestone.value++;
+    });
+    return Object.values(cats).filter(c => c.value > 0);
+  }, [achievementList]);
+
+  const trendOption = useMemo(() => {
+    return {
+      tooltip: { trigger: 'axis' },
+      grid: { left: 40, right: 16, top: 24, bottom: 24 },
+      xAxis: { type: 'category', data: unlockTrend.map(d => d[0]), axisLine: { lineStyle: { color: isDark ? '#ffffff44' : '#00000033' } }, axisLabel: { color: subColor, fontSize: 10 } },
+      yAxis: { type: 'value', minInterval: 1, axisLine: { show: false }, splitLine: { lineStyle: { color: isDark ? '#ffffff11' : '#0000000d' } }, axisLabel: { color: subColor, fontSize: 10 } },
+      series: [{ data: unlockTrend.map(d => d[1]), type: 'line', smooth: true, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: `${accent}88` }, { offset: 1, color: `${accent}11` }] } }, lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent }, symbol: 'circle', symbolSize: 4 }]
+    };
+  }, [unlockTrend, accent, subColor, isDark]);
+
+  const pieOption = useMemo(() => {
+    return {
+      tooltip: { trigger: 'item' },
+      legend: { bottom: 0, textStyle: { color: subColor, fontSize: 11 }, itemWidth: 10, itemHeight: 10 },
+      series: [{
+        type: 'pie', radius: ['40%', '70%'], center: ['50%', '45%'],
+        label: { show: true, color: titleColor, fontSize: 11, formatter: '{b}\n{c}' },
+        labelLine: { lineStyle: { color: isDark ? '#ffffff44' : '#00000033' } },
+        data: categoryPie.map(c => ({ value: c.value, name: c.name, itemStyle: { color: c.color } }))
+      }]
+    };
+  }, [categoryPie, subColor, titleColor, isDark]);
 
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
@@ -91,6 +148,21 @@ export default function AchievementsPage() {
                 </Col>
               ))}
             </Row>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder, height: '100%' }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}><LineChartOutlined /> 近30天解锁趋势</Typography.Title>
+            <ReactECharts option={trendOption} style={{ height: 220 }} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder, height: '100%' }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}><PieChartOutlined /> 成就分类分布</Typography.Title>
+            <ReactECharts option={pieOption} style={{ height: 220 }} />
           </Card>
         </Col>
       </Row>

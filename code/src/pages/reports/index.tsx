@@ -1,7 +1,7 @@
 // 报告中心 - 周期报告与数据分析
 import React, { useMemo, useState } from 'react';
-import { Card, Col, Progress, Row, Space, Statistic, Tabs, Tag, Typography } from 'antd';
-import { BarChartOutlined, FileTextOutlined, LineChartOutlined, PieChartOutlined, TrophyOutlined, CrownOutlined, AimOutlined, HeartOutlined, CalendarOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
+import { Card, Col, Progress, Row, Space, Statistic, Tabs, Tag, Typography, Button, Table } from 'antd';
+import { BarChartOutlined, FileTextOutlined, LineChartOutlined, PieChartOutlined, TrophyOutlined, CrownOutlined, AimOutlined, HeartOutlined, CalendarOutlined, DashboardOutlined, GoldOutlined, SwapOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -78,6 +78,35 @@ export default function ReportsPage() {
     { label: '日记篇数', icon: <FileTextOutlined />, current: data?.diariesNow || 0, prev: data?.diariesPrev || 0, color: '#ec4899' }
   ], [data]);
 
+  const exportMarkdown = () => {
+    const title = period === 'week' ? `周报告 (${start.format('MM/DD')}-${now.format('MM/DD')})` : `月报告 (${start.format('YYYY年MM月')})`;
+    const lines = [`# ${title}`, '', '## 核心指标', ''];
+    metrics.forEach(m => {
+      const v = pct(m.current, m.prev);
+      lines.push(`- **${m.label}**: ${m.current} (上期 ${m.prev}, ${v > 0 ? '+' : ''}${v}%)`);
+    });
+    lines.push('', '## 目标概览', '');
+    lines.push(`- 进行中目标: ${data?.activeGoals || 0}`);
+    lines.push(`- 已完成目标: ${data?.completedGoals || 0}`);
+    lines.push(`- 平均进度: ${data?.avgProgress || 0}%`);
+    lines.push('', '*由 AixSystems 报告中心导出*');
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `AixSystems-${period}-report-${dayjs().format('YYYYMMDD')}.md`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const tableData = useMemo(() => metrics.map(m => ({ ...m, key: m.label })), [metrics]);
+
+  const tableColumns = [
+    { title: '指标', dataIndex: 'label', key: 'label' },
+    { title: '本期', dataIndex: 'current', key: 'current', align: 'center' as const },
+    { title: '上期', dataIndex: 'prev', key: 'prev', align: 'center' as const },
+    { title: '环比', key: 'pct', align: 'center' as const, render: (_: unknown, r: typeof metrics[0]) => pctTag(r.current, r.prev) }
+  ];
+
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
       <Card bordered={false} className="anim-fade-in-up" style={{
@@ -86,11 +115,16 @@ export default function ReportsPage() {
         border: isDark ? `1px solid ${accent}33` : 'none',
         boxShadow: `0 28px 60px ${accent}20`
       }} bodyStyle={{ padding: 22 }}>
-        <Typography.Text style={{ color: 'rgba(226,232,240,0.86)' }}><BarChartOutlined /> 报告中心</Typography.Text>
-        <Typography.Title level={2} style={{ margin: '8px 0 8px', color: '#fff' }}>周期数据报告</Typography.Title>
-        <Typography.Text style={{ color: 'rgba(226,232,240,0.82)' }}>
-          {period === 'week' ? `本周 (${start.format('MM/DD')} - ${now.format('MM/DD')})` : `本月 (${start.format('YYYY年MM月')})`}
-        </Typography.Text>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <Typography.Text style={{ color: 'rgba(226,232,240,0.86)' }}><BarChartOutlined /> 报告中心</Typography.Text>
+            <Typography.Title level={2} style={{ margin: '8px 0 8px', color: '#fff' }}>周期数据报告</Typography.Title>
+            <Typography.Text style={{ color: 'rgba(226,232,240,0.82)' }}>
+              {period === 'week' ? `本周 (${start.format('MM/DD')} - ${now.format('MM/DD')})` : `本月 (${start.format('YYYY年MM月')})`}
+            </Typography.Text>
+          </div>
+          <Button type="primary" icon={<DownloadOutlined />} onClick={exportMarkdown} style={{ borderRadius: 12 }}>导出 Markdown</Button>
+        </div>
       </Card>
 
       {(!data || (!data.doneNow && !data.donePrev && !data.sessionsNow && !data.sessionsPrev)) && (
@@ -168,6 +202,11 @@ export default function ReportsPage() {
           </Card>
         </Col>
       </Row>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}><SwapOutlined /> 数据对比明细</Typography.Title>
+        <Table columns={tableColumns} dataSource={tableData} pagination={false} size="small" bordered={false} />
+      </Card>
 
       {/* 深度分析导航 */}
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>

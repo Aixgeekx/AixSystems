@@ -95,6 +95,37 @@ export default function FocusStatsPage() {
     return { data, days, yLabels: Array.from({ length: 24 }, (_, i) => `${i}时`), xLabels: Array.from({ length: days }, (_, i) => now.subtract(days - 1 - i, 'day').format('MM/DD')) };
   }, [sessions]);
 
+  // 近6个月专注时长趋势
+  const monthlyFocusData = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (let i = 5; i >= 0; i--) {
+      const m = now.subtract(i, 'month');
+      const start = m.startOf('month').valueOf();
+      const end = m.endOf('month').valueOf();
+      const min = (sessions || []).filter(s => s.startTime >= start && s.startTime <= end).reduce((s, v) => s + v.actualMs / 60_000, 0);
+      map[m.format('YYYY-MM')] = Math.round(min);
+    }
+    return Object.entries(map).map(([k, v]) => ({ month: `${Number(k.slice(5))}月`, value: v }));
+  }, [sessions]);
+
+  // 时段分布环形图
+  const periodData = useMemo(() => {
+    const periods = [
+      { name: '凌晨(0-6)', range: [0, 6], color: '#6366f1' },
+      { name: '上午(6-12)', range: [6, 12], color: '#3b82f6' },
+      { name: '下午(12-18)', range: [12, 18], color: '#f59e0b' },
+      { name: '晚上(18-24)', range: [18, 24], color: '#ec4899' }
+    ];
+    return periods.map(p => ({
+      name: p.name,
+      value: Math.round((sessions || []).filter(s => {
+        const h = dayjs(s.startTime).hour();
+        return h >= p.range[0] && h < p.range[1];
+      }).reduce((s, v) => s + v.actualMs / 60_000, 0)),
+      itemStyle: { color: p.color }
+    }));
+  }, [sessions]);
+
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
   const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
@@ -147,6 +178,23 @@ export default function FocusStatsPage() {
       data: heatmapData.data,
       label: { show: false },
       emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } }
+    }]
+  };
+
+  const monthlyOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 20, right: 16, bottom: 28, left: 40 },
+    xAxis: { type: 'category' as const, data: monthlyFocusData.map(d => d.month), axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'value' as const, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'line', data: monthlyFocusData.map(d => d.value), smooth: true, areaStyle: { color: `${accent}22` }, lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent } }]
+  };
+
+  const periodOption = {
+    tooltip: { trigger: 'item' as const },
+    series: [{
+      type: 'pie' as const, radius: ['40%', '70%'],
+      data: periodData,
+      label: { color: subColor, fontSize: 12 }
     }]
   };
 
@@ -209,6 +257,21 @@ export default function FocusStatsPage() {
         <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>24小时专注热力图</Typography.Title>
         <ReactECharts option={heatmapOption} style={{ height: 320 }} />
       </Card>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={14}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 6 个月专注时长趋势</Typography.Title>
+            <ReactECharts option={monthlyOption} style={{ height: 240 }} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={10}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>时段分布</Typography.Title>
+            <ReactECharts option={periodOption} style={{ height: 240 }} />
+          </Card>
+        </Col>
+      </Row>
 
       <Row gutter={[16, 16]}>
         <Col xs={12}>
