@@ -1,7 +1,7 @@
 // 年度回顾 - 全年多维数据聚合与趋势对比
 import React, { useMemo, useState } from 'react';
-import { Card, Col, Row, Space, Statistic, Typography } from 'antd';
-import { CalendarOutlined, CheckCircleOutlined, FireOutlined, TrophyOutlined, BookOutlined, AimOutlined, CrownOutlined, RiseOutlined, BarChartOutlined, DashboardOutlined, GoldOutlined, SwapOutlined } from '@ant-design/icons';
+import { Button, Card, Col, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { CalendarOutlined, CheckCircleOutlined, FireOutlined, TrophyOutlined, BookOutlined, AimOutlined, CrownOutlined, RiseOutlined, BarChartOutlined, DashboardOutlined, GoldOutlined, SwapOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -9,6 +9,7 @@ import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 export default function AnnualReviewPage() {
   const nav = useNavigate();
@@ -27,11 +28,17 @@ export default function AnnualReviewPage() {
   const stats = useMemo(() => {
     const ys = dayjs().year(year).startOf('year').valueOf();
     const ye = dayjs().year(year).endOf('year').valueOf();
+    const pys = dayjs().year(year - 1).startOf('year').valueOf();
+    const pye = dayjs().year(year - 1).endOf('year').valueOf();
     const allItems = (items || []).filter(i => i.createdAt >= ys && i.createdAt <= ye);
     const allSessions = (sessions || []).filter(s => s.startTime >= ys && s.startTime <= ye);
     const allDiaries = (diaries || []).filter(d => d.date >= ys && d.date <= ye);
     const allLogs = (habitLogs || []).filter(l => l.date >= ys && l.date <= ye);
     const allGoals = (goals || []).filter(g => g.createdAt >= ys && g.createdAt <= ye);
+    const prevItems = (items || []).filter(i => i.createdAt >= pys && i.createdAt <= pye);
+    const prevSessions = (sessions || []).filter(s => s.startTime >= pys && s.startTime <= pye);
+    const prevDiaries = (diaries || []).filter(d => d.date >= pys && d.date <= pye);
+    const prevLogs = (habitLogs || []).filter(l => l.date >= pys && l.date <= pye);
 
     const doneItems = allItems.filter(i => i.completeStatus === 'done').length;
     const overdueItems = allItems.filter(i => i.endTime && dayjs(i.endTime).isBefore(dayjs(), 'day') && i.completeStatus !== 'done').length;
@@ -42,6 +49,11 @@ export default function AnnualReviewPage() {
     const completedGoals = allGoals.filter(g => g.status === 'completed').length;
     const totalMilestones = allGoals.reduce((s, g) => s + (g.milestones?.length || 0), 0);
     const doneMilestones = allGoals.reduce((s, g) => s + (g.milestones?.filter(m => m.done).length || 0), 0);
+
+    const prevDone = prevItems.filter(i => i.completeStatus === 'done').length;
+    const prevFocusMin = Math.round(prevSessions.reduce((s, f) => s + (f.actualMs || 0), 0) / 60000);
+    const prevHabitDays = new Set(prevLogs.map(l => dayjs(l.date).format('YYYYMMDD'))).size;
+    const prevDiariesCount = prevDiaries.length;
 
     const monthly = Array.from({ length: 12 }).map((_, m) => {
       const ms = dayjs().year(year).month(m).startOf('month').valueOf();
@@ -61,7 +73,7 @@ export default function AnnualReviewPage() {
     allDiaries.forEach(d => { if (d.mood) moodMap[d.mood] = (moodMap[d.mood] || 0) + 1; });
     const topMood = Object.entries(moodMap).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
 
-    return { totalItems: allItems.length, doneItems, overdueItems, totalFocusMin, focusDays, habitDays, totalDiaries: allDiaries.length, activeGoals, completedGoals, totalMilestones, doneMilestones, monthly, habitRate, topMood, totalSessions: allSessions.length };
+    return { totalItems: allItems.length, doneItems, overdueItems, totalFocusMin, focusDays, habitDays, totalDiaries: allDiaries.length, activeGoals, completedGoals, totalMilestones, doneMilestones, monthly, habitRate, topMood, totalSessions: allSessions.length, prevDone, prevFocusMin, prevHabitDays, prevDiariesCount };
   }, [items, sessions, habits, habitLogs, diaries, goals, year]);
 
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
@@ -93,6 +105,55 @@ export default function AnnualReviewPage() {
 
   const bestMonth = stats.monthly.reduce((best, m) => m.focus > best.focus ? m : best, stats.monthly[0]);
 
+  const diffPct = (now: number, prev: number) => prev === 0 ? (now > 0 ? 100 : 0) : Math.round((now - prev) / prev * 100);
+  const diffTag = (label: string, now: number, prev: number, unit: string) => {
+    if (year >= dayjs().year()) return null;
+    const pct = diffPct(now, prev);
+    const color = pct > 0 ? '#22c55e' : pct < 0 ? '#ef4444' : '#94a3b8';
+    return <Tag color={color} style={{ marginLeft: 8, fontSize: 11 }}>较上年 {pct > 0 ? '+' : ''}{pct}% {unit}</Tag>;
+  };
+
+  const handleExport = () => {
+    const lines = [
+      `# ${year} 年度数据复盘`,
+      '',
+      `> 导出时间: ${dayjs().format('YYYY-MM-DD HH:mm')}`,
+      '',
+      '## 全年核心指标',
+      '',
+      `- 事项总数: ${stats.totalItems} (完成 ${stats.doneItems})`,
+      `- 专注时长: ${stats.totalFocusMin} 分钟 (${stats.focusDays} 天)`,
+      `- 习惯打卡: ${stats.habitDays} 次 (打卡率 ${stats.habitRate}%)`,
+      `- 日记篇数: ${stats.totalDiaries} (主导情绪: ${stats.topMood})`,
+      `- 目标进度: ${stats.doneMilestones}/${stats.totalMilestones} 里程碑 (${stats.completedGoals} 完成)`,
+      '',
+      '## 月度趋势',
+      '',
+      '| 月份 | 事项 | 完成 | 专注(分) | 习惯 | 日记 | 完成率 |',
+      '|------|------|------|----------|------|------|--------|',
+      ...stats.monthly.map(m =>
+        `| ${m.month} | ${m.items} | ${m.done} | ${m.focus} | ${m.habits} | ${m.diaries} | ${m.items > 0 ? Math.round(m.done / m.items * 100) : 0}% |`
+      ),
+      '',
+      '## 年度总结',
+      '',
+      `最高产月份: ${bestMonth?.month || '-'} (专注 ${bestMonth?.focus || 0} 分钟)`,
+      stats.totalFocusMin > 3000 ? '今年保持了相当高的专注投入，继续保持！' : '专注时长还有提升空间，建议每天固定一段深度专注时间。',
+      '',
+      '---',
+      '由 AixSystems 自动生成',
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `AixSystems-${year}-年度复盘.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const hasData = stats.totalItems > 0 || stats.totalFocusMin > 0 || stats.totalDiaries > 0 || stats.totalMilestones > 0;
+
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
       <Card bordered={false} className="anim-fade-in-up" style={{
@@ -101,8 +162,13 @@ export default function AnnualReviewPage() {
         border: isDark ? `1px solid ${accent}33` : 'none',
         boxShadow: `0 28px 60px ${accent}20`
       }} bodyStyle={{ padding: 22 }}>
-        <Typography.Text style={{ color: 'rgba(226,232,240,0.86)' }}><CalendarOutlined /> 年度回顾</Typography.Text>
-        <Typography.Title level={2} style={{ margin: '8px 0 0', color: '#fff' }}>{year} 年度数据复盘</Typography.Title>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <Typography.Text style={{ color: 'rgba(226,232,240,0.86)' }}><CalendarOutlined /> 年度回顾</Typography.Text>
+            <Typography.Title level={2} style={{ margin: '8px 0 0', color: '#fff' }}>{year} 年度数据复盘</Typography.Title>
+          </div>
+          {hasData && <Button type="primary" icon={<DownloadOutlined />} onClick={handleExport} style={{ background: '#fff', color: '#0f172a', borderRadius: 20 }}>导出 Markdown</Button>}
+        </div>
       </Card>
 
       {/* 年份切换 */}
@@ -118,61 +184,100 @@ export default function AnnualReviewPage() {
         ))}
       </Row>
 
-      {/* 核心指标 */}
-      <Row gutter={[16, 16]}>
-        {[
-          { label: '全年事项', value: stats.totalItems, suffix: `完成 ${stats.doneItems}`, icon: <CheckCircleOutlined />, color: '#3b82f6' },
-          { label: '全年专注', value: `${stats.totalFocusMin}分`, suffix: `${stats.focusDays} 天`, icon: <FireOutlined />, color: '#f59e0b' },
-          { label: '习惯打卡', value: stats.habitDays, suffix: `率 ${stats.habitRate}%`, icon: <TrophyOutlined />, color: '#22c55e' },
-          { label: '日记篇数', value: stats.totalDiaries, suffix: `主导情绪 ${stats.topMood}`, icon: <BookOutlined />, color: '#ec4899' },
-          { label: '目标进度', value: `${stats.doneMilestones}/${stats.totalMilestones}`, suffix: `${stats.completedGoals} 完成`, icon: <AimOutlined />, color: '#8b5cf6' },
-          { label: '最高产月', value: bestMonth?.month || '-', suffix: `${bestMonth?.focus || 0} 分`, icon: <CrownOutlined />, color: '#14b8a6' }
-        ].map(s => (
-          <Col xs={12} lg={8} key={s.label}>
-            <Card bordered={false} style={{ borderRadius: 20, background: cardBg, border: cardBorder }}>
-              <Statistic title={<span style={{ color: subColor, fontSize: 12 }}>{s.label}</span>} value={s.value} suffix={<span style={{ color: subColor, fontSize: 12, marginLeft: 6 }}>{s.suffix}</span>}
-                valueStyle={{ color: s.color, fontSize: 22, fontWeight: 800 }} prefix={<span style={{ color: s.color, marginRight: 6 }}>{s.icon}</span>} />
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={14}>
-          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
-            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>月度趋势</Typography.Title>
-            <ReactECharts option={trendOption} style={{ height: 280 }} />
-          </Card>
-        </Col>
-        <Col xs={24} lg={10}>
-          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
-            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>事项完成率走势</Typography.Title>
-            <ReactECharts option={completionOption} style={{ height: 280 }} />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 深度分析导航 */}
-      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
-        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>深度分析</Typography.Title>
-        <Row gutter={[12, 12]}>
-          {[
-            { label: '成长仪表盘', icon: <RiseOutlined />, color: '#ec4899', path: ROUTES.GROWTH },
-            { label: '数据总览', icon: <DashboardOutlined />, color: '#3b82f6', path: ROUTES.DATA_OVERVIEW },
-            { label: '成长月报', icon: <GoldOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY },
-            { label: '专注模式对比', icon: <SwapOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_MODE_COMPARE },
-            { label: '报告中心', icon: <BarChartOutlined />, color: '#22c55e', path: ROUTES.REPORTS },
-            { label: '成就中心', icon: <CrownOutlined />, color: '#f59e0b', path: ROUTES.ACHIEVEMENTS }
-          ].map(item => (
-            <Col xs={12} sm={4} key={item.label}>
-              <div onClick={() => nav(item.path)} style={{ borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer', background: isDark ? `${item.color}14` : `${item.color}0f`, border: `1px solid ${item.color}22`, transition: 'all 0.2s' }}>
-                <div style={{ fontSize: 24, color: item.color, marginBottom: 6 }}>{item.icon}</div>
-                <Typography.Text style={{ color: titleColor, fontWeight: 600, fontSize: 13 }}>{item.label}</Typography.Text>
-              </div>
+      {!hasData ? (
+        <Empty text="暂无年度数据" subtext="选择其他年份或开始记录吧" />
+      ) : (
+        <>
+          {/* 核心指标 */}
+          <Row gutter={[16, 16]}>
+            <Col xs={12} lg={8}>
+              <Card bordered={false} style={{ borderRadius: 20, background: cardBg, border: cardBorder }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                  <Statistic title={<span style={{ color: subColor, fontSize: 12 }}>全年事项</span>} value={stats.totalItems} suffix={<span style={{ color: subColor, fontSize: 12, marginLeft: 6 }}>完成 {stats.doneItems}</span>}
+                    valueStyle={{ color: '#3b82f6', fontSize: 22, fontWeight: 800 }} prefix={<span style={{ color: '#3b82f6', marginRight: 6 }}><CheckCircleOutlined /></span>} />
+                </div>
+                {diffTag('事项', stats.doneItems, stats.prevDone, '事项完成')}
+              </Card>
             </Col>
-          ))}
-        </Row>
-      </Card>
+            <Col xs={12} lg={8}>
+              <Card bordered={false} style={{ borderRadius: 20, background: cardBg, border: cardBorder }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                  <Statistic title={<span style={{ color: subColor, fontSize: 12 }}>全年专注</span>} value={`${stats.totalFocusMin}分`} suffix={<span style={{ color: subColor, fontSize: 12, marginLeft: 6 }}>{stats.focusDays} 天</span>}
+                    valueStyle={{ color: '#f59e0b', fontSize: 22, fontWeight: 800 }} prefix={<span style={{ color: '#f59e0b', marginRight: 6 }}><FireOutlined /></span>} />
+                </div>
+                {diffTag('专注', stats.totalFocusMin, stats.prevFocusMin, '专注分钟')}
+              </Card>
+            </Col>
+            <Col xs={12} lg={8}>
+              <Card bordered={false} style={{ borderRadius: 20, background: cardBg, border: cardBorder }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                  <Statistic title={<span style={{ color: subColor, fontSize: 12 }}>习惯打卡</span>} value={stats.habitDays} suffix={<span style={{ color: subColor, fontSize: 12, marginLeft: 6 }}>率 {stats.habitRate}%</span>}
+                    valueStyle={{ color: '#22c55e', fontSize: 22, fontWeight: 800 }} prefix={<span style={{ color: '#22c55e', marginRight: 6 }}><TrophyOutlined /></span>} />
+                </div>
+                {diffTag('习惯', stats.habitDays, stats.prevHabitDays, '打卡天数')}
+              </Card>
+            </Col>
+            <Col xs={12} lg={8}>
+              <Card bordered={false} style={{ borderRadius: 20, background: cardBg, border: cardBorder }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                  <Statistic title={<span style={{ color: subColor, fontSize: 12 }}>日记篇数</span>} value={stats.totalDiaries} suffix={<span style={{ color: subColor, fontSize: 12, marginLeft: 6 }}>主导情绪 {stats.topMood}</span>}
+                    valueStyle={{ color: '#ec4899', fontSize: 22, fontWeight: 800 }} prefix={<span style={{ color: '#ec4899', marginRight: 6 }}><BookOutlined /></span>} />
+                </div>
+                {diffTag('日记', stats.totalDiaries, stats.prevDiariesCount, '篇数')}
+              </Card>
+            </Col>
+            <Col xs={12} lg={8}>
+              <Card bordered={false} style={{ borderRadius: 20, background: cardBg, border: cardBorder }}>
+                <Statistic title={<span style={{ color: subColor, fontSize: 12 }}>目标进度</span>} value={`${stats.doneMilestones}/${stats.totalMilestones}`} suffix={<span style={{ color: subColor, fontSize: 12, marginLeft: 6 }}>{stats.completedGoals} 完成</span>}
+                  valueStyle={{ color: '#8b5cf6', fontSize: 22, fontWeight: 800 }} prefix={<span style={{ color: '#8b5cf6', marginRight: 6 }}><AimOutlined /></span>} />
+              </Card>
+            </Col>
+            <Col xs={12} lg={8}>
+              <Card bordered={false} style={{ borderRadius: 20, background: cardBg, border: cardBorder }}>
+                <Statistic title={<span style={{ color: subColor, fontSize: 12 }}>最高产月</span>} value={bestMonth?.month || '-'} suffix={<span style={{ color: subColor, fontSize: 12, marginLeft: 6 }}>{bestMonth?.focus || 0} 分</span>}
+                  valueStyle={{ color: '#14b8a6', fontSize: 22, fontWeight: 800 }} prefix={<span style={{ color: '#14b8a6', marginRight: 6 }}><CrownOutlined /></span>} />
+              </Card>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]}>
+            <Col xs={24} lg={14}>
+              <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+                <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>月度趋势</Typography.Title>
+                <ReactECharts option={trendOption} style={{ height: 280 }} />
+              </Card>
+            </Col>
+            <Col xs={24} lg={10}>
+              <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+                <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>事项完成率走势</Typography.Title>
+                <ReactECharts option={completionOption} style={{ height: 280 }} />
+              </Card>
+            </Col>
+          </Row>
+
+          {/* 深度分析导航 */}
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>深度分析</Typography.Title>
+            <Row gutter={[12, 12]}>
+              {[
+                { label: '成长仪表盘', icon: <RiseOutlined />, color: '#ec4899', path: ROUTES.GROWTH },
+                { label: '数据总览', icon: <DashboardOutlined />, color: '#3b82f6', path: ROUTES.DATA_OVERVIEW },
+                { label: '成长月报', icon: <GoldOutlined />, color: '#8b5cf6', path: ROUTES.GROWTH_MONTHLY },
+                { label: '专注模式对比', icon: <SwapOutlined />, color: '#f59e0b', path: ROUTES.FOCUS_MODE_COMPARE },
+                { label: '报告中心', icon: <BarChartOutlined />, color: '#22c55e', path: ROUTES.REPORTS },
+                { label: '成就中心', icon: <CrownOutlined />, color: '#f59e0b', path: ROUTES.ACHIEVEMENTS }
+              ].map(item => (
+                <Col xs={12} sm={4} key={item.label}>
+                  <div onClick={() => nav(item.path)} style={{ borderRadius: 16, padding: 16, textAlign: 'center', cursor: 'pointer', background: isDark ? `${item.color}14` : `${item.color}0f`, border: `1px solid ${item.color}22`, transition: 'all 0.2s' }}>
+                    <div style={{ fontSize: 24, color: item.color, marginBottom: 6 }}>{item.icon}</div>
+                    <Typography.Text style={{ color: titleColor, fontWeight: 600, fontSize: 13 }}>{item.label}</Typography.Text>
+                  </div>
+                </Col>
+              ))}
+            </Row>
+          </Card>
+        </>
+      )}
     </Space>
   );
 }
