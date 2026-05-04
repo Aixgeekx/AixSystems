@@ -6,6 +6,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
 
@@ -107,6 +108,12 @@ export default function StatisticsPage() {
         <Typography.Text style={{ color: 'rgba(226,232,240,0.82)' }}>基于 IndexedDB 的完全离线数据分析，无需联网。</Typography.Text>
       </Card>
 
+      {(!stats || (stats.totalItems === 0 && stats.totalSessions === 0 && stats.totalDiaries === 0 && stats.totalMemos === 0 && stats.activeHabits === 0 && stats.activeGoals === 0 && stats.completedGoals === 0)) && (
+        <Empty text="暂无统计数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(stats && (stats.totalItems || stats.totalSessions || stats.totalDiaries || stats.totalMemos || stats.activeHabits || stats.activeGoals || stats.completedGoals)) && (
+        <>
       <Row gutter={[12, 12]}>
         {summaryCards.map(card => (
           <Col xs={12} md={6} key={card.label}>
@@ -151,6 +158,8 @@ export default function StatisticsPage() {
           </Card>
         </Col>
       </Row>
+      </>
+      )}
     </Space>
   );
 }

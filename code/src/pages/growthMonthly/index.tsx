@@ -9,6 +9,7 @@ import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 export default function GrowthMonthlyPage() {
   const nav = useNavigate();
@@ -140,6 +141,12 @@ export default function GrowthMonthlyPage() {
         <Typography.Text style={{ color: 'rgba(226,232,240,0.6)', fontSize: 13 }}>截至今日第 {stats.daysInMonth} 天</Typography.Text>
       </Card>
 
+      {(!items?.length && !sessions?.length && !habits?.length && !diaries?.length) && (
+        <Empty text="暂无成长数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(items?.length || sessions?.length || habits?.length || diaries?.length) && (
+        <>
       {/* 综合得分 */}
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder, textAlign: 'center' }}>
         <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>本月成长得分</Typography.Title>
@@ -259,6 +266,8 @@ export default function GrowthMonthlyPage() {
           ))}
         </Row>
       </Card>
+      </>
+      )}
     </Space>
   );
 }

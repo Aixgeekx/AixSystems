@@ -9,6 +9,7 @@ import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 export default function HabitStatsPage() {
   const nav = useNavigate();
@@ -104,6 +105,12 @@ export default function HabitStatsPage() {
         <Typography.Text style={{ color: 'rgba(226,232,240,0.82)' }}>{stats.total} 个习惯 · {stats.totalCheckins} 次打卡</Typography.Text>
       </Card>
 
+      {(!habits || habits.length === 0) && (
+        <Empty text="暂无习惯数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(habits && habits.length > 0) && (
+        <>
       <Row gutter={[16, 16]}>
         {[
           { label: '活跃习惯', value: stats.total, icon: <CheckCircleOutlined />, color: '#22c55e' },
@@ -179,6 +186,8 @@ export default function HabitStatsPage() {
           ))}
         </Row>
       </Card>
+      </>
+      )}
     </Space>
   );
 }

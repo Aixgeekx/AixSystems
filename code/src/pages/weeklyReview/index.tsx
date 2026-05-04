@@ -9,6 +9,7 @@ import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 const MOOD_LABELS: Record<string, string> = { happy: '开心', calm: '平静', excited: '兴奋', sad: '难过', anxious: '焦虑', angry: '生气', tired: '疲惫', grateful: '感恩' };
 
@@ -111,6 +112,12 @@ export default function WeeklyReviewPage() {
         <Typography.Title level={2} style={{ margin: '8px 0 0', color: '#fff' }}>{weekLabel} 周度总结</Typography.Title>
       </Card>
 
+      {(!sessions?.length && !habits?.length && !items?.length && !diaries?.length) && (
+        <Empty text="暂无复盘数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(sessions?.length || habits?.length || items?.length || diaries?.length) && (
+        <>
       {/* 核心指标 */}
       <Row gutter={[16, 16]}>
         {[
@@ -205,6 +212,8 @@ export default function WeeklyReviewPage() {
           ))}
         </Row>
       </Card>
+      </>
+      )}
     </Space>
   );
 }

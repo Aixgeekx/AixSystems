@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   active: { label: '进行中', color: '#3b82f6' },
@@ -59,6 +60,12 @@ export default function GoalTimelinePage() {
         <Typography.Text style={{ color: 'rgba(226,232,240,0.82)' }}>{active.length} 个进行中 · {completed.length} 个已完成</Typography.Text>
       </Card>
 
+      {(!goals || goals.length === 0) && (
+        <Empty text="暂无目标数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(goals && goals.length > 0) && (
+        <>
       <Row gutter={[16, 16]}>
         {[
           { label: '进行中', value: active.length, icon: <AimOutlined />, color: '#3b82f6' },
@@ -168,6 +175,8 @@ export default function GoalTimelinePage() {
           ))}
         </Row>
       </Card>
+      </>
+      )}
     </Space>
   );
 }

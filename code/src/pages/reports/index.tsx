@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 export default function ReportsPage() {
   const nav = useNavigate();
@@ -92,6 +93,12 @@ export default function ReportsPage() {
         </Typography.Text>
       </Card>
 
+      {(!data || (!data.doneNow && !data.donePrev && !data.sessionsNow && !data.sessionsPrev)) && (
+        <Empty text="暂无报告数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(data && (data.doneNow || data.donePrev || data.sessionsNow || data.sessionsPrev)) && (
+        <>
       <Tabs activeKey={period} onChange={k => setPeriod(k as 'week' | 'month')} items={[
         { key: 'week', label: '本周报告' },
         { key: 'month', label: '本月报告' }
@@ -187,6 +194,8 @@ export default function ReportsPage() {
           ))}
         </Row>
       </Card>
+      </>
+      )}
     </Space>
   );
 }

@@ -9,6 +9,7 @@ import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 const MOOD_COLORS: Record<string, string> = {
   happy: '#22c55e', calm: '#3b82f6', excited: '#f59e0b', sad: '#6366f1',
@@ -127,6 +128,12 @@ export default function DiaryStatsPage() {
         <Typography.Text style={{ color: 'rgba(226,232,240,0.82)' }}>累计 {stats.total} 篇日记 · {stats.uniqueDays} 天写作</Typography.Text>
       </Card>
 
+      {(!diaries || diaries.length === 0) && (
+        <Empty text="暂无日记数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(diaries && diaries.length > 0) && (
+        <>
       <Row gutter={[16, 16]}>
         {[
           { label: '总日记数', value: stats.total, icon: <BookOutlined />, color: '#ec4899' },
@@ -223,6 +230,8 @@ export default function DiaryStatsPage() {
           ))}
         </Row>
       </Card>
+      </>
+      )}
     </Space>
   );
 }

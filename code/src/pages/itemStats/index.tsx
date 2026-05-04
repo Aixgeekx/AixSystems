@@ -9,6 +9,7 @@ import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 import { ITEM_TYPES } from '@/config/itemTypes';
 
 const TYPE_MAP: Record<string, { label: string; color: string }> = {};
@@ -108,6 +109,12 @@ export default function ItemStatsPage() {
         <Typography.Title level={2} style={{ margin: '8px 0 0', color: '#fff' }}>事项数据分析</Typography.Title>
       </Card>
 
+      {(!items || items.length === 0) && (
+        <Empty text="暂无事项目数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(items && items.length > 0) && (
+        <>
       {/* 核心指标 */}
       <Row gutter={[16, 16]}>
         {[
@@ -211,6 +218,8 @@ export default function ItemStatsPage() {
           ))}
         </Row>
       </Card>
+      </>
+      )}
     </Space>
   );
 }

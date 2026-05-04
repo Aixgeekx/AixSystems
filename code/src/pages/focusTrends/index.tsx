@@ -9,6 +9,7 @@ import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 const MODE_LABELS: Record<string, string> = { countdown: '倒计时', stopwatch: '正计时', pomodoro: '番茄钟' };
 
@@ -114,6 +115,12 @@ export default function FocusTrendsPage() {
         <Typography.Title level={2} style={{ margin: '8px 0 0', color: '#fff' }}>专注时间趋势分析</Typography.Title>
       </Card>
 
+      {(!sessions || sessions.length === 0) && (
+        <Empty text="暂无专注数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(sessions && sessions.length > 0) && (
+        <>
       <Radio.Group value={range} onChange={e => setRange(e.target.value)} style={{ alignSelf: 'flex-end' }}>
         <Radio.Button value="7">7 天</Radio.Button>
         <Radio.Button value="14">14 天</Radio.Button>
@@ -198,6 +205,8 @@ export default function FocusTrendsPage() {
           ))}
         </Row>
       </Card>
+      </>
+      )}
     </Space>
   );
 }

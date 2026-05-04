@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 const MOOD_META: Record<string, { label: string; color: string; emoji: string }> = {
   happy: { label: '开心', color: '#22c55e', emoji: '😊' },
@@ -93,6 +94,12 @@ export default function MoodCalendarPage() {
         </div>
       </Card>
 
+      {(!diaries || diaries.length === 0) && (
+        <Empty text="暂无日记数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(diaries && diaries.length > 0) && (
+        <>
       <Row gutter={[16, 16]}>
         <Col xs={8}>
           <Card bordered={false} style={{ borderRadius: 20, background: cardBg, border: cardBorder, textAlign: 'center' }}>
@@ -210,6 +217,8 @@ export default function MoodCalendarPage() {
           ))}
         </Row>
       </Card>
+      </>
+      )}
     </Space>
   );
 }

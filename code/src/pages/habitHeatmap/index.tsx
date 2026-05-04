@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 const LEVELS = [0, 1, 2, 3, 4]; // 打卡强度等级
 const LEVEL_COLORS_LIGHT = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'];
@@ -120,6 +121,12 @@ export default function HabitHeatmapPage() {
         </div>
       </Card>
 
+      {(!habits || habits.length === 0) && (
+        <Empty text="暂无习惯数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(habits && habits.length > 0) && (
+        <>
       <Row gutter={[16, 16]}>
         {[
           { label: '总打卡次数', value: totalCheckins, icon: <CheckCircleOutlined />, color: '#22c55e' },
@@ -245,6 +252,8 @@ export default function HabitHeatmapPage() {
           ))}
         </Row>
       </Card>
+      </>
+      )}
     </Space>
   );
 }

@@ -9,6 +9,7 @@ import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 const MODE_LABELS: Record<string, string> = { countdown: '倒计时', stopwatch: '正计时', pomodoro: '番茄钟' };
 const MODE_COLORS: Record<string, string> = { countdown: '#3b82f6', stopwatch: '#22c55e', pomodoro: '#f59e0b' };
@@ -138,6 +139,12 @@ export default function FocusModeComparePage() {
         <Typography.Title level={2} style={{ margin: '8px 0 0', color: '#fff' }}>模式效果分析</Typography.Title>
       </Card>
 
+      {(!sessions || sessions.length === 0) && (
+        <Empty text="暂无专注数据" subtext="开始记录后会自动展示" />
+      )}
+
+      {(sessions && sessions.length > 0) && (
+        <>
       {/* 每模式核心指标 */}
       <Row gutter={[16, 16]}>
         {stats.modeStats.map(m => (
@@ -240,6 +247,8 @@ export default function FocusModeComparePage() {
           ))}
         </Row>
       </Card>
+      </>
+      )}
     </Space>
   );
 }
