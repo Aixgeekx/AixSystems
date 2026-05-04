@@ -9,6 +9,7 @@ import ReactECharts from 'echarts-for-react';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useThemeVariants } from '@/hooks/useVariants';
+import Empty from '@/components/Empty';
 
 export default function DataOverviewPage() {
   const nav = useNavigate();
@@ -185,15 +186,43 @@ export default function DataOverviewPage() {
         <Typography.Title level={2} style={{ margin: '8px 0 0', color: '#fff' }}>全模块核心指标</Typography.Title>
       </Card>
 
-      {/* 综合健康分 */}
-      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder, textAlign: 'center' }}>
-        <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>系统健康度</Typography.Title>
-        <Progress type="circle" percent={stats.overallHealth} size={140} strokeColor={stats.overallHealth >= 80 ? '#22c55e' : stats.overallHealth >= 50 ? '#f59e0b' : '#ef4444'}
-          format={p => <span style={{ fontSize: 32, fontWeight: 800, color: stats.overallHealth >= 80 ? '#22c55e' : stats.overallHealth >= 50 ? '#f59e0b' : '#ef4444' }}>{p}</span>} />
-        <div style={{ marginTop: 12, color: subColor, fontSize: 13 }}>
-          事项 {stats.itemHealth} + 专注 {stats.focusHealth} + 习惯 {stats.habitHealth} + 日记 {stats.diaryHealth} + 目标 {stats.goalHealth}
-        </div>
-      </Card>
+      {/* 综合健康分 + 模块细分 */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={10}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder, textAlign: 'center', height: '100%' }}>
+            <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>系统健康度</Typography.Title>
+            <Progress type="circle" percent={stats.overallHealth} size={140} strokeColor={stats.overallHealth >= 80 ? '#22c55e' : stats.overallHealth >= 50 ? '#f59e0b' : '#ef4444'}
+              format={p => <span style={{ fontSize: 32, fontWeight: 800, color: stats.overallHealth >= 80 ? '#22c55e' : stats.overallHealth >= 50 ? '#f59e0b' : '#ef4444' }}>{p}</span>} />
+            <div style={{ marginTop: 12, color: subColor, fontSize: 13 }}>
+              综合评分 = (事项 + 专注 + 习惯 + 日记 + 目标) / 5
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} lg={14}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder, height: '100%' }}>
+            <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>模块健康明细</Typography.Title>
+            <Space direction="vertical" size={14} style={{ width: '100%' }}>
+              {[
+                { label: '事项完成率', value: stats.itemHealth, color: '#3b82f6', desc: `${stats.doneItems}/${stats.totalItems} 已完成` },
+                { label: '专注积累', value: stats.focusHealth, color: '#f59e0b', desc: `${stats.totalFocusMin} 分钟累计` },
+                { label: '习惯今日打卡', value: stats.habitHealth, color: '#22c55e', desc: `${stats.todayHabitRate}% 已打卡` },
+                { label: '日记沉淀', value: stats.diaryHealth, color: '#ec4899', desc: `${stats.totalDiaries} 篇` },
+                { label: '目标推进', value: stats.goalHealth, color: '#8b5cf6', desc: `${stats.doneMilestones}/${stats.totalMilestones} 里程碑` }
+              ].map(m => (
+                <div key={m.label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, color: titleColor, fontWeight: 600 }}>{m.label}</span>
+                    <span style={{ fontSize: 12, color: subColor }}>{m.desc}</span>
+                  </div>
+                  <div style={{ height: 8, borderRadius: 4, background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9', overflow: 'hidden' }}>
+                    <div style={{ width: `${m.value}%`, height: '100%', borderRadius: 4, background: m.value >= 70 ? m.color : m.value >= 40 ? '#f59e0b' : '#ef4444', transition: 'width 0.6s ease' }} />
+                  </div>
+                </div>
+              ))}
+            </Space>
+          </Card>
+        </Col>
+      </Row>
 
       {/* 各模块核心指标 */}
       <Row gutter={[16, 16]}>

@@ -78,6 +78,23 @@ export default function FocusStatsPage() {
     return hours;
   }, [sessions]);
 
+  // 24小时热力图数据（近7天 × 24小时）
+  const heatmapData = useMemo(() => {
+    const data: [number, number, number][] = [];
+    const days = 7;
+    for (let d = 0; d < days; d++) {
+      const day = now.subtract(days - 1 - d, 'day');
+      for (let h = 0; h < 24; h++) {
+        const min = (sessions || []).filter(s => {
+          const t = dayjs(s.startTime);
+          return t.isSame(day, 'day') && t.hour() === h;
+        }).reduce((s, v) => s + v.actualMs / 60_000, 0);
+        data.push([d, h, Math.round(min)]);
+      }
+    }
+    return { data, days, yLabels: Array.from({ length: 24 }, (_, i) => `${i}时`), xLabels: Array.from({ length: days }, (_, i) => now.subtract(days - 1 - i, 'day').format('MM/DD')) };
+  }, [sessions]);
+
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
   const cardBorder = isDark ? `1px solid ${accent}22` : '1px solid rgba(255,255,255,0.8)';
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
@@ -110,6 +127,26 @@ export default function FocusStatsPage() {
         { name: '番茄钟', value: stats.modes.pomodoro, itemStyle: { color: '#f59e0b' } }
       ],
       label: { color: subColor, fontSize: 12 }
+    }]
+  };
+
+  const heatmapOption = {
+    tooltip: { position: 'top' as const },
+    grid: { top: 10, right: 16, bottom: 28, left: 48 },
+    xAxis: { type: 'category' as const, data: heatmapData.xLabels, axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'category' as const, data: heatmapData.yLabels, axisLabel: { color: subColor, fontSize: 10 } },
+    visualMap: {
+      min: 0, max: Math.max(1, ...heatmapData.data.map(v => v[2])),
+      calculable: true,
+      orient: 'horizontal' as const, left: 'center', bottom: 0,
+      inRange: { color: isDark ? ['rgba(255,255,255,0.04)', accent] : ['#f1f5f9', accent] },
+      textStyle: { color: subColor }
+    },
+    series: [{
+      type: 'heatmap' as const,
+      data: heatmapData.data,
+      label: { show: false },
+      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } }
     }]
   };
 
@@ -166,6 +203,11 @@ export default function FocusStatsPage() {
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
         <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>时段能量曲线</Typography.Title>
         <ReactECharts option={hourOption} style={{ height: 200 }} />
+      </Card>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>24小时专注热力图</Typography.Title>
+        <ReactECharts option={heatmapOption} style={{ height: 320 }} />
       </Card>
 
       <Row gutter={[16, 16]}>

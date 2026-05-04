@@ -29,7 +29,7 @@ function getMaxStreak(habitLogs: { habitId: string; date: number }[]) {
 
 export function useAchievements() {
   return useLiveQuery(async () => {
-    const [habits, habitLogs, sessions, diaries, goals, items, memos, unlockedRaw] = await Promise.all([
+    const [habits, habitLogs, sessions, diaries, goals, items, memos, unlockedRaw, unlockedAtRaw] = await Promise.all([
       db.habits.filter(h => !h.deletedAt).toArray(),
       db.habitLogs.toArray(),
       db.focusSessions.toArray(),
@@ -37,9 +37,11 @@ export function useAchievements() {
       db.goals.filter(g => !g.deletedAt).toArray(),
       db.items.filter(i => !i.deletedAt).toArray(),
       db.memos.filter(m => !m.deletedAt).toArray(),
-      db.cacheKv.get('achievements_unlocked')
+      db.cacheKv.get('achievements_unlocked'),
+      db.cacheKv.get('achievements_unlocked_at')
     ]);
     const unlocked: Set<string> = new Set(unlockedRaw?.value || []);
+    const unlockedAt: Record<string, number> = (unlockedAtRaw?.value as Record<string, number>) || {};
     const totalFocusMin = sessions.reduce((s, v) => s + v.actualMs / 60_000, 0);
     const totalFocusH = Math.floor(totalFocusMin / 60);
     const maxStreak = getMaxStreak(habitLogs);
@@ -67,7 +69,11 @@ export function useAchievements() {
 
     const newlyUnlocked: string[] = [];
     const check = (id: string, cond: boolean) => {
-      if (cond && !unlocked.has(id)) { unlocked.add(id); newlyUnlocked.push(id); }
+      if (cond && !unlocked.has(id)) {
+        unlocked.add(id);
+        newlyUnlocked.push(id);
+        unlockedAt[id] = Date.now();
+      }
     };
     check('first_checkin', habitLogs.length > 0);
     check('streak_7', maxStreak >= 7);
@@ -94,9 +100,10 @@ export function useAchievements() {
 
     if (newlyUnlocked.length > 0) {
       await db.cacheKv.put({ key: 'achievements_unlocked', value: Array.from(unlocked) });
+      await db.cacheKv.put({ key: 'achievements_unlocked_at', value: unlockedAt });
     }
 
-    const list = ACHIEVEMENTS.map(a => ({ ...a, unlocked: unlocked.has(a.id) }));
-    return { list, unlockedCount: unlocked.size, total: ACHIEVEMENTS.length, newlyUnlocked };
+    const list = ACHIEVEMENTS.map(a => ({ ...a, unlocked: unlocked.has(a.id), unlockedAt: unlockedAt[a.id] || 0 }));
+    return { list, unlockedCount: unlocked.size, total: ACHIEVEMENTS.length, newlyUnlocked, unlockedAt };
   }, []);
 }

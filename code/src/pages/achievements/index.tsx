@@ -41,6 +41,12 @@ export default function AchievementsPage() {
   const totalCount = achievements?.total || 0;
   const xpPercent = level?.levelProgress || 0;
 
+  // 近期解锁（按解锁时间倒序）
+  const recentUnlocked = achievementList
+    .filter(a => a.unlocked && a.unlockedAt)
+    .sort((a, b) => (b.unlockedAt || 0) - (a.unlockedAt || 0))
+    .slice(0, 5);
+
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
       <Card bordered={false} className="anim-fade-in-up" style={{
@@ -109,6 +115,28 @@ export default function AchievementsPage() {
           ))}
         </Row>
       </Card>
+
+      {/* 近期解锁动态 */}
+      {recentUnlocked.length > 0 && (
+        <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+          <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}><FireOutlined /> 近期解锁</Typography.Title>
+          <Row gutter={[12, 12]}>
+            {recentUnlocked.map(a => (
+              <Col xs={12} sm={8} md={6} lg={4} key={a.id}>
+                <div style={{
+                  borderRadius: 18, padding: 14, textAlign: 'center',
+                  background: isDark ? `${a.color}22` : `${a.color}12`,
+                  border: `1px solid ${a.color}44`
+                }}>
+                  <div style={{ fontSize: 28, marginBottom: 6 }}>{a.icon}</div>
+                  <Typography.Text style={{ display: 'block', color: titleColor, fontWeight: 600, fontSize: 13 }}>{a.name}</Typography.Text>
+                  <Typography.Text style={{ color: subColor, fontSize: 11 }}>{a.unlockedAt ? dayjs(a.unlockedAt).format('MM/DD HH:mm') : ''}</Typography.Text>
+                </div>
+              </Col>
+            ))}
+          </Row>
+        </Card>
+      )}
 
       {/* 快捷导航 */}
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
