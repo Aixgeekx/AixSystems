@@ -12,7 +12,7 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures, buildDailyAnchorJson, expandFailureCluster } from '@/utils/aixAudit';
 import type { ReplayVerification } from '@/utils/aixAudit';
 
 const SKILLS = [
@@ -91,6 +91,7 @@ export default function AixPage() {
   const [playerActive, setPlayerActive] = useState(false);
   const [auditFilter, setAuditFilter] = useState('');
   const [scopeSelection, setScopeSelection] = useState<Record<string, boolean>>({});
+  const [expandedCluster, setExpandedCluster] = useState<string>(''); 
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
@@ -403,6 +404,14 @@ export default function AixPage() {
     downloadText(`aix-audit-${dayjs().format('YYYYMMDD-HHmm')}${tag}.csv`, '﻿' + csv, 'text/csv');
     await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 审计票据 CSV 导出：${filtered.length} 条`, detail: { scope: 'aix-audit-csv', count: filtered.length, scopes: selectedScopes }, createdAt: Date.now() });
     message.success(`已导出 ${filtered.length} 条审计票据为 CSV`);
+  }
+
+  async function exportDailyAnchor() {
+    if (!dailyChainSummary.length || !dailyChainSummary.some(a => a.count)) { message.warning('暂无可导出的链式锚点（最近 7 天均无审计活动）'); return; }
+    const json = buildDailyAnchorJson(dailyChainSummary, capsule?.controlToken?.id || 'AIX-CORE');
+    downloadText(`aix-daily-anchor-${dayjs().format('YYYYMMDD-HHmm')}.json`, json);
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 每日链锚 JSON 凭证导出：${dailyChainSummary.length} 天`, detail: { scope: 'aix-daily-anchor', days: dailyChainSummary.length }, createdAt: Date.now() });
+    message.success(`已导出 ${dailyChainSummary.length} 天链锚 JSON 凭证`);
   }
 
   async function drillAllPresets() {
@@ -861,7 +870,10 @@ export default function AixPage() {
         <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(20,184,166,0.10)' : 'rgba(20,184,166,0.06)', border: '1px solid rgba(20,184,166,0.22)' }}>
           <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
             <Typography.Text strong style={{ color: titleColor }}>近 7 天链式哈希摘要</Typography.Text>
-            <Tag color="cyan">每日链尾锚点 · 跨日比对凭证</Tag>
+            <Space>
+              <Tag color="cyan">每日链尾锚点 · 跨日比对凭证</Tag>
+              <Button size="small" type="primary" ghost disabled={!dailyChainSummary.some(a => a.count)} onClick={exportDailyAnchor} style={{ borderRadius: 10 }}>导出 JSON 凭证</Button>
+            </Space>
           </Space>
           <Typography.Paragraph style={{ color: subColor, marginBottom: 8, fontSize: 12 }}>每天最后一张审计票据的 chainHash 抽出来作为"日链锚点"，可粘贴到外部系统比对哈希一致性，验证当天审计链是否被篡改或丢失。</Typography.Paragraph>
           <Space direction="vertical" size={4} style={{ width: '100%' }}>
@@ -1050,9 +1062,24 @@ export default function AixPage() {
                   <Tag color="magenta">{cluster.label}</Tag>
                   <Typography.Text strong style={{ color: titleColor }}>{cluster.count} 次失败</Typography.Text>
                 </Space>
-                <Typography.Text style={{ color: subColor, fontSize: 12 }}>最近 {dayjs(cluster.lastAt).format('MM-DD HH:mm')}</Typography.Text>
+                <Space wrap>
+                  <Typography.Text style={{ color: subColor, fontSize: 12 }}>最近 {dayjs(cluster.lastAt).format('MM-DD HH:mm')}</Typography.Text>
+                  <Button size="small" type="text" onClick={() => setExpandedCluster(prev => prev === cluster.label ? '' : cluster.label)}>{expandedCluster === cluster.label ? '收起' : '展开明细'}</Button>
+                </Space>
               </Space>
               <Typography.Text style={{ color: subColor, fontSize: 12 }}>影响预设：{cluster.presets.slice(0, 4).join(' · ')}{cluster.presets.length > 4 ? ' …' : ''}</Typography.Text>
+              {expandedCluster === cluster.label ? (
+                <div style={{ marginTop: 8, padding: 8, borderRadius: 10, background: isDark ? 'rgba(244,114,182,0.05)' : 'rgba(244,114,182,0.03)', border: '1px dashed rgba(244,114,182,0.32)' }}>
+                  {expandFailureCluster(powerShellLogs, cluster.label).slice(0, 8).map(detail => (
+                    <div key={detail.at} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '4px 0', flexWrap: 'wrap' }}>
+                      <Tag color={detail.level === 'error' ? 'red' : 'gold'}>{detail.level}</Tag>
+                      <Typography.Text style={{ color: subColor, fontSize: 12, fontFamily: 'Maple Mono NF CN, Consolas, monospace' }}>{dayjs(detail.at).format('MM-DD HH:mm')}</Typography.Text>
+                      <Typography.Text style={{ color: titleColor, fontSize: 12 }}>{detail.preset}</Typography.Text>
+                      <Typography.Text style={{ color: subColor, fontSize: 12 }}>{detail.message}</Typography.Text>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           )) : <Alert type="success" showIcon message="尚未识别到失败原因聚类，演练成功率良好。" style={{ borderRadius: 12 }} />}
         </div>

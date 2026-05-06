@@ -54,6 +54,12 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.94.0 (2026-05-07)
+- Aix 主入口审计回放器卡片「近 7 天链式哈希摘要」头部新增「导出 JSON 凭证」按钮：调 `buildDailyAnchorJson` 把 7 天日链锚点序列化成 schema=aix-daily-anchor-1.0 的 JSON，含 cyrb53 总指纹 aggregateHash，便于跨日凭证比对。
+- Aix 主入口风险驾驶舱「失败原因聚类」每条卡片新增「展开明细」按钮：调 `expandFailureCluster` 取该分类下所有匹配 log 的级别/时间/预设/消息，按时间倒序最多 8 条。
+- Agent 中枢接力链路时间线末尾新增「接力分支健康度评分」卡片：调 `scoreRelayBranches` 综合空闲时长、失败次数、风险等级、进度加权出 0-100 分，≥75 健康/≥45 关注/否则风险，按分值升序排列。
+- `code/src/utils/aixAudit.ts` 新增 `buildDailyAnchorJson` / `expandFailureCluster` / `scoreRelayBranches` 三个工具函数 + `code/src/utils/aixAudit.test.ts` 补 3 套用例（共 72 测试 100% 绿）；`npm run build` 通过。
+
 ### v0.93.0 (2026-05-07)
 - Aix 主入口审计回放器卡片新增「近 7 天链式哈希摘要」：调 `buildDailyChainSummary` 抽出每日最后一张票据的 chainHash 作为日链锚点 + 单条复制按钮，可粘贴到外部系统跨日比对哈希一致性。
 - Aix 主入口风险驾驶舱新增「失败原因聚类」：调 `clusterPresetFailures` 扫描 access denied / timeout / network / not found / execution policy / syntax / parameter 等关键词，按 6 类聚合统计影响最大的失败原因 + 涉及预设。

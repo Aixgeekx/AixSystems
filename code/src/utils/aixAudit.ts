@@ -617,6 +617,93 @@ export function findSleepingRelayBranches(items: Array<{ id: string; title: stri
     .sort((a, b) => b.idleHours - a.idleHours);
 }
 
+export interface DailyAnchorPackage {
+  schema: 'aix-daily-anchor-1.0';
+  generatedAt: number;
+  controlTokenId: string;
+  days: number;
+  aggregateHash: string;
+  anchors: DailyChainAnchor[];
+}
+
+export function buildDailyAnchorJson(anchors: DailyChainAnchor[], controlTokenId = 'AIX-CORE'): string {
+  const aggregate = hashString(anchors.map(a => a.lastChainHash).join('|'));
+  const pkg: DailyAnchorPackage = {
+    schema: 'aix-daily-anchor-1.0',
+    generatedAt: Date.now(),
+    controlTokenId,
+    days: anchors.length,
+    aggregateHash: aggregate,
+    anchors
+  };
+  return JSON.stringify(pkg, null, 2);
+}
+
+export interface FailureDetail {
+  at: number;
+  preset: string;
+  level: string;
+  message: string;
+}
+
+export function expandFailureCluster(logs: EventLog[], label: string): FailureDetail[] {
+  const pattern = FAILURE_PATTERNS.find(p => p.label === label);
+  if (!pattern) return [];
+  const out: FailureDetail[] = [];
+  for (const log of logs) {
+    if (log.detail?.ok !== false && log.level !== 'warn' && log.level !== 'error') continue;
+    const haystack = `${log.message} ${JSON.stringify(log.detail || {})}`.toLowerCase();
+    if (!haystack.includes(pattern.keyword)) continue;
+    out.push({
+      at: log.createdAt,
+      preset: String(log.detail?.preset || log.detail?.skill || '未命名'),
+      level: log.level || 'info',
+      message: log.message
+    });
+  }
+  return out.sort((a, b) => b.at - a.at);
+}
+
+export interface BranchHealthScore {
+  id: string;
+  title: string;
+  capsuleId: string;
+  risk: string;
+  idleHours: number;
+  percent: number;
+  failureCount: number;
+  score: number;
+  band: '健康' | '关注' | '风险';
+}
+
+export function scoreRelayBranches(items: Array<{ id: string; title: string; updatedAt: number; subtasks?: Array<{ done: boolean }>; extra?: any }>, logs: EventLog[], now = Date.now()): BranchHealthScore[] {
+  const failuresByCapsule = new Map<string, number>();
+  for (const log of logs) {
+    if (log.detail?.ok !== false && log.level !== 'warn' && log.level !== 'error') continue;
+    const cap = String(log.detail?.relayFrom || log.detail?.capsuleId || '');
+    if (!cap) continue;
+    failuresByCapsule.set(cap, (failuresByCapsule.get(cap) || 0) + 1);
+  }
+  return items
+    .filter(item => !!item.extra?.relayFrom)
+    .map(item => {
+      const subtasks = item.subtasks || [];
+      const done = subtasks.filter(sub => sub.done).length;
+      const total = subtasks.length || 1;
+      const percent = Math.round(done / total * 100);
+      const idleHours = Math.round((now - item.updatedAt) / 3_600_000 * 10) / 10;
+      const capsuleId = String(item.extra?.relayFrom || '');
+      const failureCount = failuresByCapsule.get(capsuleId) || 0;
+      const risk = String(item.extra?.risk || '低风险');
+      const riskPenalty = risk === '红色' || risk === '高风险' ? 20 : risk === '中风险' ? 10 : 0;
+      const raw = 100 - idleHours * 0.5 - failureCount * 8 - riskPenalty + percent * 0.2;
+      const score = Math.max(0, Math.min(100, Math.round(raw)));
+      const band: '健康' | '关注' | '风险' = score >= 75 ? '健康' : score >= 45 ? '关注' : '风险';
+      return { id: item.id, title: item.title, capsuleId, risk, idleHours, percent, failureCount, score, band };
+    })
+    .sort((a, b) => a.score - b.score);
+}
+
 export function buildPresetTrendRows(logs: EventLog[], presetNames: string[], days = 14, now = Date.now()): PresetTrendRow[] {
   const dayStart = new Date(now);
   dayStart.setHours(0, 0, 0, 0);

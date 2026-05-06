@@ -39,6 +39,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 
 ## 最近更新
 
+- `v0.94.0`：三连深化——审计每日链锚 JSON 凭证导出（chainHash 聚合 cyrb53 后形成总指纹，schema=aix-daily-anchor-1.0）+ PowerShell 失败原因聚类深挖明细（点击展开看每条 log 的具体时间/级别/预设/消息）+ Agent 接力分支健康度评分（综合空闲时长、失败次数、风险、进度加权 0-100，≥75 健康/≥45 关注/否则风险）。
 - `v0.93.0`：三连智控——审计每日链尾锚点（最近 7 天每天最后一张票据 chainHash 抽出作为日链锚点，可一键复制粘贴外部系统比对哈希一致性）+ PowerShell 失败原因聚类（按权限/超时/网络/资源/语法/参数 6 类关键词聚合失败演练，标出影响最大的失败原因和涉及预设）+ Agent 接力分支 SLA 沉睡告警（≥ 24h 未推进且未归档的接力分支统一标黄/红，从 Item.updatedAt 计算空闲）。
 - `v0.92.0`：三连精修——审计 CSV 按 scope 选择性导出（CheckableTag 多选只导出选中 scope 的票据）+ PowerShell 演练成本 TOP 5 排行（按总耗时 = 执行次数 × 平均耗时降序）+ Agent 失效胶囊审计清理（找出 capsuleId 已不被任何 Item 引用的孤儿日志，一键 bulkDelete）。
 - `v0.91.0`：三连导出 + 流程升级——审计票据 CSV 导出（带 BOM 中文支持，Excel 直接打开）+ PowerShell「一键演练全部预设」+ Agent 接力深度树 Markdown 导出。本轮起每次发布都会清理本地旧 NSIS（保留近 3 版）+ 自动 push + 自动跑 release_assets.py 上传 GitHub Release。

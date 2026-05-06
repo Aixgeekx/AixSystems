@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -397,5 +397,62 @@ describe('findSleepingRelayBranches', () => {
     const sleeping = findSleepingRelayBranches(items, 24, fixedNow);
     expect(sleeping.map(branch => branch.id)).toEqual(['idle']);
     expect(sleeping[0].idleHours).toBeGreaterThanOrEqual(24);
+  });
+});
+
+
+describe('buildDailyAnchorJson', () => {
+  it('packages anchors with aggregate hash and schema metadata', () => {
+    const anchors = [
+      { dateLabel: '05-06', dayStart: 1000, count: 0, lastChainHash: '', lastTicketId: '' },
+      { dateLabel: '05-07', dayStart: 86_401_000, count: 2, lastChainHash: 'hash-end', lastTicketId: 'tid' }
+    ];
+    const json = buildDailyAnchorJson(anchors, 'TEST-TOKEN');
+    const parsed = JSON.parse(json);
+    expect(parsed.schema).toBe('aix-daily-anchor-1.0');
+    expect(parsed.controlTokenId).toBe('TEST-TOKEN');
+    expect(parsed.days).toBe(2);
+    expect(parsed.anchors).toHaveLength(2);
+    expect(parsed.aggregateHash).toBeTruthy();
+    expect(typeof parsed.aggregateHash).toBe('string');
+  });
+});
+
+describe('expandFailureCluster', () => {
+  it('returns matching log details sorted by recency', () => {
+    const logs: EventLog[] = [
+      { id: '1', level: 'warn', message: 'Access Denied while reading', detail: { scope: 'desktop-preset-drill', preset: 'startup', ok: false }, createdAt: 1000 },
+      { id: '2', level: 'warn', message: 'timed out after 5s', detail: { ok: false, preset: 'ports' }, createdAt: 2000 },
+      { id: '3', level: 'warn', message: 'permission required (admin)', detail: { ok: false, preset: 'reg' }, createdAt: 3000 }
+    ];
+    const accessDeniedDetails = expandFailureCluster(logs, '权限拒绝');
+    expect(accessDeniedDetails).toHaveLength(1);
+    expect(accessDeniedDetails[0].preset).toBe('startup');
+  });
+
+  it('returns empty array when label is unknown', () => {
+    expect(expandFailureCluster([], '不存在的分类')).toEqual([]);
+  });
+});
+
+describe('scoreRelayBranches', () => {
+  const fixedNow = new Date('2026-05-07T18:00:00Z').getTime();
+
+  it('penalizes idle hours, failure count and risk while rewarding progress', () => {
+    const items = [
+      { id: 'a', title: '健康分支', updatedAt: fixedNow - 2 * 3_600_000, subtasks: [{ done: true }, { done: true }, { done: false }], extra: { relayFrom: 'CAP-A', risk: '低风险' } },
+      { id: 'b', title: '风险分支', updatedAt: fixedNow - 60 * 3_600_000, subtasks: [{ done: false }, { done: false }], extra: { relayFrom: 'CAP-B', risk: '红色' } }
+    ];
+    const logs: EventLog[] = [
+      { id: 'f1', level: 'warn', message: 'fail', detail: { ok: false, relayFrom: 'CAP-B' }, createdAt: fixedNow - 1000 },
+      { id: 'f2', level: 'error', message: 'fail', detail: { ok: false, relayFrom: 'CAP-B' }, createdAt: fixedNow - 500 }
+    ];
+    const scores = scoreRelayBranches(items, logs, fixedNow);
+    expect(scores).toHaveLength(2);
+    const a = scores.find(s => s.id === 'a')!;
+    const b = scores.find(s => s.id === 'b')!;
+    expect(a.score).toBeGreaterThan(b.score);
+    expect(b.failureCount).toBe(2);
+    expect(['健康', '关注', '风险']).toContain(a.band);
   });
 });

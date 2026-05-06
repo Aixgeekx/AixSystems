@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches } from '@/utils/aixAudit';
+import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches, scoreRelayBranches } from '@/utils/aixAudit';
 import type { ParsedCapsule } from '@/utils/aixAudit';
 
 const AGENT_TEMPLATES = [
@@ -119,6 +119,9 @@ export default function AgentPage() {
     return capsuleId && !referencedCapsules.has(capsuleId);
   });
   const sleepingBranches = findSleepingRelayBranches(agentTasks, 24);
+  const relayFailureLogs = useLiveQuery(() => db.eventLog.toArray(), []) || [];
+  const branchHealthScores = scoreRelayBranches(agentTasks, relayFailureLogs);
+
   const disciplineCoach = autonomyQueue.map(item => ({
     title: item.task.title,
     risk: String(item.task.extra?.risk || (item.task.extra?.aixCampaign ? '中风险' : '低风险')),
@@ -527,6 +530,24 @@ export default function AgentPage() {
               </Space>
             </div>
           )) : <Alert type="success" showIcon message="所有接力分支都在 24 小时内有推进，SLA 健康。" style={{ borderRadius: 12 }} />}
+        </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>接力分支健康度评分</Typography.Text>
+            <Tag color="blue">综合 idleHours / percent / 失败次数 / 风险</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>每条接力分支按"100 - 空闲时长 × 0.5 - 失败次数 × 8 - 风险扣减 + 进度 × 0.2"加权打分；≥75 健康、≥45 关注、否则风险，便于一眼定位最需要复盘的分支。</Typography.Paragraph>
+          {branchHealthScores.length ? branchHealthScores.slice(0, 6).map(branch => (
+            <div key={branch.id} style={{ marginBottom: 6, padding: 10, borderRadius: 12, background: isDark ? 'rgba(56,189,248,0.08)' : 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.18)' }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                <Space wrap>
+                  <Tag color={branch.band === '健康' ? 'green' : branch.band === '关注' ? 'gold' : 'red'}>{branch.score} 分 · {branch.band}</Tag>
+                  <Typography.Text strong style={{ color: titleColor }}>{branch.title}</Typography.Text>
+                </Space>
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>胶囊 {branch.capsuleId} · 空闲 {branch.idleHours}h · 进度 {branch.percent}% · 失败 {branch.failureCount}</Typography.Text>
+              </Space>
+            </div>
+          )) : <Alert type="info" showIcon message="暂无接力分支可评分；导入胶囊或开始接力后会自动出现。" style={{ borderRadius: 12 }} />}
         </div>
       </Card>
 

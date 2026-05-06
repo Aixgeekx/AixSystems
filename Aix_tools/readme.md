@@ -2,6 +2,13 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.94.0
+- `code/src/utils/aixAudit.ts` 新增 `buildDailyAnchorJson(anchors, controlTokenId)`（schema=aix-daily-anchor-1.0 + aggregateHash）/ `expandFailureCluster(logs, label)`（按 label 反查 FAILURE_PATTERNS + 时间倒序）/ `scoreRelayBranches(items, logs, now)`（idle×0.5 + failure×8 + risk + progress 加权打分）。
+- Aix 主入口加 `exportDailyAnchor` 函数 + 「导出 JSON 凭证」按钮（disable 条件：所有锚点都没活动票据时）；写 eventLog scope=aix-daily-anchor。
+- Aix 主入口加 `expandedCluster` useState + 「展开明细」按钮，渲染 `expandFailureCluster(powerShellLogs, label)` 的前 8 条详情。
+- Agent 中枢加 `relayFailureLogs` (db.eventLog 全量) + `branchHealthScores` 计算；新增「接力分支健康度评分」div 渲染前 6 条评分卡。
+- 测试新增 3 个 describe（72 全绿）；纯本地计算，不上传数据，不读日记正文。
+
 ## 最新版本 v0.93.0
 - `code/src/utils/aixAudit.ts` 新增 `buildDailyChainSummary(tickets, days, now)`（每日最后一张票据 chainHash + 计数）/ `clusterPresetFailures(logs)`（11 个失败关键词→6 类聚合）/ `findSleepingRelayBranches(items, threshold, now)`（接力分支 idleHours + percent）。
 - Aix 主入口审计回放器卡片末尾加「近 7 天链式哈希摘要」div，循环渲染 `dailyChainSummary`：日期 Tag + 票据数 + chainHash 截断 + 复制按钮（复用既有 `copyResume`）。
