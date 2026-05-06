@@ -54,6 +54,12 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.96.0 (2026-05-07)
+- Aix 主入口审计回放器卡片新增「scope 占比仪表盘」：调 `buildScopeDistribution` 把所有票据按 scope 拆分输出 count/percent，每个 scope 一条横向条形图（label + 百分比 + 颜色），便于一眼看出活动重心。
+- Aix 主入口风险驾驶舱新增「演练黄金路径」：调 `buildPresetGoldenPath` 按等级（绿/黄/红）→ 成功率（高优先）→ 平均耗时（短优先）排序，给每条预设标 #order 和针对 level 的执行建议。
+- Agent 中枢健康度评分卡片对「风险」档分支显示「生成复盘 todo」按钮：调 `buildBranchRetroSubtasks` 给该 Item 追加 3 条子任务（复盘原因 / 改进策略 / 验证方式），写入 eventLog scope=agent-retro-subtasks。
+- `code/src/utils/aixAudit.ts` 新增 `buildScopeDistribution` / `buildPresetGoldenPath` / `buildBranchRetroSubtasks` 三个工具函数 + `code/src/utils/aixAudit.test.ts` 补 3 套用例（共 82 测试 100% 绿）；`npm run build` 通过。
+
 ### v0.95.0 (2026-05-07)
 - Aix 主入口审计回放器卡片新增「链锚反向比对器」：调 `compareDailyAnchors` 将外部 aix-daily-anchor JSON 与本地 `dailyChainSummary` 逐日 diff，输出 identical / mismatch / missingLocal / missingRemote 四类 + 本地与远端 cyrb53 总指纹；写入 eventLog scope=aix-daily-anchor-compare。
 - Aix 主入口风险驾驶舱「失败原因聚类」展开明细底部追加修复建议条：调 `buildFailureFixHint(label)` 给每个分类返回专家级 PowerShell 修复一行（RunAs / OperationTimeout / Test-NetConnection / PSScriptAnalyzer 等），可一键复制。

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend, buildScopeDistribution, buildPresetGoldenPath, buildBranchRetroSubtasks } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -513,5 +513,51 @@ describe('buildBranchHealthTrend', () => {
     expect(today.count).toBe(1);
     expect(today.avgScore).toBeGreaterThan(0);
     expect(today.dateLabel).toMatch(/\d{2}-\d{2}/);
+  });
+});
+
+
+describe('buildScopeDistribution', () => {
+  it('computes percentage per scope', () => {
+    const ticketLogs: EventLog[] = [
+      { id: '1', level: 'info', message: 'a', detail: { scope: 'aix-skill' }, createdAt: 1 },
+      { id: '2', level: 'info', message: 'b', detail: { scope: 'aix-skill' }, createdAt: 2 },
+      { id: '3', level: 'info', message: 'c', detail: { scope: 'aix-campaign' }, createdAt: 3 }
+    ];
+    const tickets = buildAuditTickets(ticketLogs);
+    const dist = buildScopeDistribution(tickets);
+    expect(dist).toHaveLength(2);
+    expect(dist[0].count).toBeGreaterThanOrEqual(dist[1].count);
+    const total = dist.reduce((s, d) => s + d.percent, 0);
+    expect(total).toBeGreaterThan(99);
+    expect(total).toBeLessThan(101);
+  });
+
+  it('handles empty input', () => {
+    expect(buildScopeDistribution([])).toEqual([]);
+  });
+});
+
+describe('buildPresetGoldenPath', () => {
+  it('orders by level then success rate then avgMs', () => {
+    const rows = [
+      { preset: 'A', level: '红色', total: 10, ok: 5, avgMs: 200 },
+      { preset: 'B', level: '绿色', total: 10, ok: 9, avgMs: 100 },
+      { preset: 'C', level: '黄色', total: 10, ok: 8, avgMs: 50 }
+    ];
+    const path = buildPresetGoldenPath(rows);
+    expect(path.map(p => p.preset)).toEqual(['B', 'C', 'A']);
+    expect(path[0].order).toBe(1);
+    expect(path[0].suggestion).toContain('基线');
+  });
+});
+
+describe('buildBranchRetroSubtasks', () => {
+  it('returns 3 actionable subtasks customized to branch state', () => {
+    const subtasks = buildBranchRetroSubtasks({ title: '风险分支', band: '风险', idleHours: 80, failureCount: 3, percent: 20, risk: '红色' });
+    expect(subtasks).toHaveLength(3);
+    expect(subtasks[0]).toContain('失败 3 次');
+    expect(subtasks[1]).toContain('改进');
+    expect(subtasks[2]).toContain('验证');
   });
 });

@@ -2,6 +2,12 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.96.0
+- `code/src/utils/aixAudit.ts` 新增 `buildScopeDistribution(tickets)`（基于 `summarizeTickets` 算 percent 保留一位小数）、`buildPresetGoldenPath(rows)`（level 权重 1/2/3 + ok/total + avgMs 三级排序 + 三档建议）、`buildBranchRetroSubtasks(branch)`（按 failureCount/idleHours/percent 自动选「复盘原因」短语 + 固定改进/验证文案）。
+- Aix 主入口加 `scopeDistribution` / `presetGoldenPath` 两个 useMemo；新增「scope 占比仪表盘」横向条形图 div + 「演练黄金路径」绿色 div。
+- Agent 中枢加 `generateRetroSubtasks` 函数（用 `db.items.update` 追加 nanoid 生成的子任务 + 写 audit）；评分卡片对 band==='风险' 渲染「生成复盘 todo」红色 ghost 按钮。
+- 测试新增 3 个 describe（82 全绿）；遵循"最少行数"和"不读日记"。
+
 ## 最新版本 v0.95.0
 - `code/src/utils/aixAudit.ts` 新增 `compareDailyAnchors(local, jsonText)`（schema 校验 + identical/mismatch/missingLocal/missingRemote 四类输出 + 本地 cyrb53 聚合）、`buildFailureFixHint(label)`（11 个失败标签 → 专家级 PowerShell 修复建议字典，含通用兜底）、`buildBranchHealthTrend(items, logs, days, now)`（按日截断 logs 后调 `scoreRelayBranches` 计算每日均分）。
 - Aix 主入口加 `anchorCompareInput` / `anchorCompareResult` useState + `compareAnchorInput` 函数 + 「链锚反向比对器」purple div：TextArea + 校验按钮 + 结果 Tag 群 + 不一致明细列表。

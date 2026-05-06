@@ -12,7 +12,7 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures, buildDailyAnchorJson, expandFailureCluster, compareDailyAnchors, buildFailureFixHint } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures, buildDailyAnchorJson, expandFailureCluster, compareDailyAnchors, buildFailureFixHint, buildScopeDistribution, buildPresetGoldenPath } from '@/utils/aixAudit';
 import type { ReplayVerification } from '@/utils/aixAudit';
 
 const SKILLS = [
@@ -278,6 +278,8 @@ export default function AixPage() {
     .filter(row => row.totalMs > 0)
     .sort((a, b) => b.totalMs - a.totalMs)
     .slice(0, 5), [powerShellRiskRows]);
+  const scopeDistribution = useMemo(() => buildScopeDistribution(auditTickets), [auditTickets]);
+  const presetGoldenPath = useMemo(() => buildPresetGoldenPath(powerShellRiskRows), [powerShellRiskRows]);
   const auditDisplay = useMemo(() => {
     const keyword = auditFilter.trim().toLowerCase();
     const list = keyword
@@ -879,6 +881,23 @@ export default function AixPage() {
             })}
           </div>
         </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>scope 占比仪表盘</Typography.Text>
+            <Tag color="geekblue">本地票据分布 · 横向条形图</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>把所有审计票据按 scope 拆分，显示每个分类的票据数量 + 百分比横向条，便于一眼看出审计活动重心是否偏移。</Typography.Paragraph>
+          {scopeDistribution.length ? scopeDistribution.map(row => (
+            <div key={row.scope} style={{ marginBottom: 6 }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 2 }}>
+                <Space wrap><Tag color="geekblue">{row.label}</Tag><Typography.Text style={{ color: subColor, fontSize: 12 }}>{row.count} 张 · {row.percent}%</Typography.Text></Space>
+              </Space>
+              <div style={{ height: 8, borderRadius: 6, background: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${row.percent}%`, background: row.color || 'rgba(99,102,241,0.7)', borderRadius: 6, transition: 'width .35s ease' }} />
+              </div>
+            </div>
+          )) : <Alert type="info" showIcon message="暂无审计票据 scope 数据。" style={{ borderRadius: 12 }} />}
+        </div>
         <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(20,184,166,0.10)' : 'rgba(20,184,166,0.06)', border: '1px solid rgba(20,184,166,0.22)' }}>
           <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
             <Typography.Text strong style={{ color: titleColor }}>近 7 天链式哈希摘要</Typography.Text>
@@ -1095,6 +1114,25 @@ export default function AixPage() {
               </Space>
             </div>
           )) : <Alert type="info" showIcon message="尚无演练记录，先做几次只读演练即可看到成本排行。" style={{ borderRadius: 12 }} />}
+        </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(132,204,22,0.10)' : 'rgba(132,204,22,0.06)', border: '1px solid rgba(132,204,22,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>演练黄金路径</Typography.Text>
+            <Tag color="lime">绿 → 黄 → 红 · 成功率优先 · 耗时其次</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>把所有预设按"等级（绿色优先）→ 成功率（高优先）→ 平均耗时（短优先）"排出今天的执行序列；先建立稳定基线再啃硬骨头。</Typography.Paragraph>
+          {presetGoldenPath.length ? presetGoldenPath.map(step => (
+            <div key={step.preset} style={{ marginBottom: 6, padding: 10, borderRadius: 12, background: isDark ? 'rgba(132,204,22,0.08)' : 'rgba(132,204,22,0.05)', border: '1px solid rgba(132,204,22,0.18)' }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                <Space wrap>
+                  <Tag color={step.level === '绿色' ? 'green' : step.level === '黄色' ? 'gold' : 'red'}>#{step.order} · {step.level}</Tag>
+                  <Typography.Text strong style={{ color: titleColor }}>{step.preset}</Typography.Text>
+                </Space>
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>成功率 {step.successRate}% · 平均 {step.avgMs}ms</Typography.Text>
+              </Space>
+              <Typography.Text style={{ color: subColor, fontSize: 12 }}>建议：{step.suggestion}</Typography.Text>
+            </div>
+          )) : <Alert type="info" showIcon message="暂无预设可生成黄金路径，先做几次只读演练即可。" style={{ borderRadius: 12 }} />}
         </div>
         <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(244,114,182,0.10)' : 'rgba(244,114,182,0.06)', border: '1px solid rgba(244,114,182,0.22)' }}>
           <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>

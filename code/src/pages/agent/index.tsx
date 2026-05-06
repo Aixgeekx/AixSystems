@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches, scoreRelayBranches, buildBranchHealthTrend } from '@/utils/aixAudit';
+import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches, scoreRelayBranches, buildBranchHealthTrend, buildBranchRetroSubtasks } from '@/utils/aixAudit';
 import type { ParsedCapsule } from '@/utils/aixAudit';
 
 const AGENT_TEMPLATES = [
@@ -273,6 +273,17 @@ export default function AgentPage() {
     a.href = url; a.download = filename; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1500);
     message.success(`接力深度树 Markdown 已下载：${filename}`);
+  }
+
+  async function generateRetroSubtasks(branch: { id: string; title: string; band: string; idleHours: number; failureCount: number; percent: number; risk: string }) {
+    const subtaskTitles = buildBranchRetroSubtasks(branch);
+    const item = await db.items.get(branch.id);
+    if (!item) { message.error('未找到该分支对应事项'); return; }
+    const existing = item.subtasks || [];
+    const newSubs = subtaskTitles.map(title => ({ id: nanoid(), title, done: false }));
+    await db.items.update(branch.id, { subtasks: [...existing, ...newSubs], updatedAt: Date.now() });
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Agent 风险分支复盘 todo 自动生成：${branch.title}`, detail: { scope: 'agent-retro-subtasks', branchId: branch.id, count: newSubs.length }, createdAt: Date.now() });
+    message.success(`已为「${branch.title}」追加 ${newSubs.length} 条复盘子任务`);
   }
 
   async function cleanOrphanCapsules() {
@@ -545,7 +556,10 @@ export default function AgentPage() {
                   <Tag color={branch.band === '健康' ? 'green' : branch.band === '关注' ? 'gold' : 'red'}>{branch.score} 分 · {branch.band}</Tag>
                   <Typography.Text strong style={{ color: titleColor }}>{branch.title}</Typography.Text>
                 </Space>
-                <Typography.Text style={{ color: subColor, fontSize: 12 }}>胶囊 {branch.capsuleId} · 空闲 {branch.idleHours}h · 进度 {branch.percent}% · 失败 {branch.failureCount}</Typography.Text>
+                <Space wrap>
+                  <Typography.Text style={{ color: subColor, fontSize: 12 }}>胶囊 {branch.capsuleId} · 空闲 {branch.idleHours}h · 进度 {branch.percent}% · 失败 {branch.failureCount}</Typography.Text>
+                  {branch.band === '风险' ? <Button size="small" type="primary" danger ghost onClick={() => generateRetroSubtasks(branch)} style={{ borderRadius: 10 }}>生成复盘 todo</Button> : null}
+                </Space>
               </Space>
             </div>
           )) : <Alert type="info" showIcon message="暂无接力分支可评分；导入胶囊或开始接力后会自动出现。" style={{ borderRadius: 12 }} />}

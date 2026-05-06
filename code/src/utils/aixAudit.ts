@@ -826,3 +826,58 @@ export function buildBranchHealthTrend(items: Array<{ id: string; title: string;
   }
   return result;
 }
+
+export interface ScopeDistribution {
+  scope: string;
+  label: string;
+  color: string;
+  count: number;
+  percent: number;
+}
+
+export function buildScopeDistribution(tickets: AuditTicket[]): ScopeDistribution[] {
+  const summary = summarizeTickets(tickets);
+  const total = summary.reduce((sum, item) => sum + item.count, 0) || 1;
+  return summary.map(item => ({
+    scope: item.scope,
+    label: item.label,
+    color: item.color,
+    count: item.count,
+    percent: Math.round(item.count / total * 1000) / 10
+  }));
+}
+
+export interface PresetGoldenStep {
+  order: number;
+  preset: string;
+  level: string;
+  successRate: number;
+  avgMs: number;
+  suggestion: string;
+}
+
+export function buildPresetGoldenPath(rows: Array<{ preset: string; level: string; total: number; ok: number; avgMs: number }>): PresetGoldenStep[] {
+  const levelWeight: Record<string, number> = { '绿色': 1, '黄色': 2, '红色': 3 };
+  const sorted = [...rows].sort((a, b) => {
+    const lvDiff = (levelWeight[a.level] || 4) - (levelWeight[b.level] || 4);
+    if (lvDiff) return lvDiff;
+    const sa = a.total ? a.ok / a.total : 0;
+    const sb = b.total ? b.ok / b.total : 0;
+    if (sb !== sa) return sb - sa;
+    return a.avgMs - b.avgMs;
+  });
+  return sorted.map((row, idx) => {
+    const successRate = row.total ? Math.round(row.ok / row.total * 1000) / 10 : 0;
+    const suggestion = row.level === '绿色' ? '稳定基线，先快速跑一遍建立锚点' : row.level === '黄色' ? '关注偶发失败，记录耗时和上下文' : '重点排查；先在小窗口或测试机重跑确认';
+    return { order: idx + 1, preset: row.preset, level: row.level, successRate, avgMs: row.avgMs, suggestion };
+  });
+}
+
+export function buildBranchRetroSubtasks(branch: { title: string; band: string; idleHours: number; failureCount: number; percent: number; risk: string }): string[] {
+  const reason = branch.failureCount > 0 ? `失败 ${branch.failureCount} 次` : branch.idleHours >= 24 ? `空闲 ${branch.idleHours}h` : `进度仅 ${branch.percent}%`;
+  return [
+    `复盘原因：${reason} · ${branch.risk}`,
+    `改进策略：拆小步 / 补权限 / 加日志 三选一`,
+    `验证方式：再跑一次只读演练 + 写入审计票据`
+  ];
+}
