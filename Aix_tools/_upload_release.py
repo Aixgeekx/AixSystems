@@ -14,13 +14,13 @@ import requests
 headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'}
 url = 'https://api.github.com/repos/Aixgeekx/AixSystems/releases'
 releases = requests.get(url, headers=headers).json()
-existing = [r for r in releases if r.get('tag_name') == 'v0.72.0']
+existing = [r for r in releases if r.get('tag_name') == 'v0.85.0']
 if existing:
     release_id = existing[0]['id']
     upload_url = existing[0]['upload_url'].replace('{?name,label}', '')
     print('Release exists, id:', release_id)
 else:
-    body = {'tag_name': 'v0.72.0', 'name': 'AixSystems v0.72.0', 'body': 'v0.72.0: 日记统计写作时段分布+属性面板 / 数据统计30天活跃+模块占比饼图 / 成就中心待解锁进度条'}
+    body = {'tag_name': 'v0.85.0', 'name': 'AixSystems v0.85.0', 'body': 'v0.85.0: 日记统计新增写作效率评分+时段偏好+字数里程碑+本月vs上月对比+TOP3高产日+最佳写作周'}
     r = requests.post(url, headers={**headers, 'Content-Type': 'application/json'}, json=body)
     if r.status_code not in (200, 201):
         print('Create release failed:', r.status_code, r.text)
@@ -30,9 +30,9 @@ else:
     print('Created release id:', release_id)
 
 assets = [
-    ('results/AixSystems-0.72.0-Setup.exe', 'AixSystems-0.72.0-Setup.exe'),
-    ('results/AixSystems-0.72.0-portable.exe', 'AixSystems-0.72.0-portable.exe'),
-    ('results/AixSystems-0.72.0-project.zip', 'AixSystems-0.72.0-project.zip'),
+    ('results/AixSystems-0.85.0-Setup.exe', 'AixSystems-0.85.0-Setup.exe'),
+    ('results/AixSystems-0.85.0-portable.exe', 'AixSystems-0.85.0-portable.exe'),
+    ('results/AixSystems-0.85.0-project.zip', 'AixSystems-0.85.0-project.zip'),
 ]
 for path, name in assets:
     print('Uploading', name)

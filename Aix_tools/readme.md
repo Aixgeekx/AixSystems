@@ -198,6 +198,8 @@
 
 ## 工具脚本
 
+- `start_openclaw.bat` — openclaw gateway 启动脚本（带窗口，调试用）。
+- `start_openclaw_silent.vbs` — openclaw gateway 完全静默启动器，双击无窗口、无黑闪，已放启动项 Shell:Startup。
 - `openclaw_study.md` — openclaw 学习笔记，结合时光序、Claude Code、cc-switch 和 Aix 内置 AI 要求，沉淀黑科技全能系统路线。
 - `decode_bundle_cn.py` — webpack minified bundle 里 `\uXXXX` 转义的中文字符串批量解码(调研阶段使用)。
 - `gen_icon_v2.py` — 以 `image-cache/.../1.png` 手绘无穷符号为源图,生成**紫红渐变底 + 银白 logo + iOS 圆角**的应用图标,覆盖 `desktop/build/icon.{png,ico}` 和 `code/{public,dist}/icons/icon-{192,512}.png`。改颜色/版式调 `BG_TOP_LEFT`/`BG_BOT_RIGHT`/`LOGO_COLOR`/`CORNER` 常量。**依赖 Pillow** (`pip install pillow`)。

@@ -1,6 +1,6 @@
 // 成长月报 - 月度综合成长报告
 import React, { useMemo } from 'react';
-import { Button, Card, Col, Progress, Row, Space, Typography } from 'antd';
+import { Button, Card, Col, Progress, Row, Space, Tag, Typography } from 'antd';
 import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, FireOutlined, TrophyOutlined, BookOutlined, AimOutlined, HeartOutlined, BarChartOutlined, RiseOutlined, CrownOutlined, BulbOutlined, LineChartOutlined, UnorderedListOutlined, ThunderboltOutlined, DashboardOutlined, GoldOutlined, SwapOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -98,6 +98,22 @@ export default function GrowthMonthlyPage() {
       habitWeeks.push({ week: `第${w + 1}周`, count });
     }
 
+    // 专注模式分布
+    const focusModeDist: Record<string, number> = {};
+    focusThis.forEach(s => { focusModeDist[s.mode] = (focusModeDist[s.mode] || 0) + 1; });
+
+    // 星期分布
+    const weekdayDist: Record<string, number> = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+    focusThis.forEach(s => { const wd = dayjs(s.startTime).format('ddd'); weekdayDist[wd] = (weekdayDist[wd] || 0) + Math.round((s.actualMs || 0) / 60000); });
+
+    // 事项类型分布
+    const itemTypeDist: Record<string, number> = {};
+    thisMonth.forEach(i => { const t = i.type || '未分类'; itemTypeDist[t] = (itemTypeDist[t] || 0) + 1; });
+
+    // TOP专注日（专注分钟最多的3天）
+    const dailyFocusSorted = [...dailyFocus].sort((a, b) => b.minutes - a.minutes);
+    const topFocusDays = dailyFocusSorted.slice(0, 3);
+
     // 综合得分（百分制）
     const itemScore = doneThisMonth > 0 ? Math.min(doneThisMonth * 5, 30) : 0; // 最高30分
     const focusScore = Math.min(Math.round(focusMinThis / 10), 30); // 最高30分
@@ -117,6 +133,10 @@ export default function GrowthMonthlyPage() {
       monthlyTrend,
       habitWeeks,
       daysInMonth,
+      focusModeDist,
+      weekdayDist,
+      itemTypeDist,
+      topFocusDays,
       // 环比
       itemChange: doneLastMonth > 0 ? Math.round((doneThisMonth - doneLastMonth) / doneLastMonth * 100) : (doneThisMonth > 0 ? 100 : 0),
       focusChange: focusMinLast > 0 ? Math.round((focusMinThis - focusMinLast) / focusMinLast * 100) : (focusMinThis > 0 ? 100 : 0),
@@ -221,6 +241,32 @@ export default function GrowthMonthlyPage() {
     xAxis: { type: 'category' as const, data: stats.habitWeeks.map(d => d.week), axisLabel: { color: subColor, fontSize: 11 } },
     yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
     series: [{ type: 'bar', data: stats.habitWeeks.map(d => d.count), itemStyle: { color: '#22c55e', borderRadius: [4, 4, 0, 0] }, barWidth: '55%' }]
+  };
+
+  const focusModeOption = {
+    tooltip: { trigger: 'item' as const },
+    series: [{
+      type: 'pie' as const, radius: ['40%', '70%'],
+      data: Object.entries(stats.focusModeDist).map(([k, v]) => ({ name: ['countdown', 'stopwatch', 'pomodoro'][k as any] || k, value: v, itemStyle: { color: ['#3b82f6', '#22c55e', '#f59e0b'][['countdown', 'stopwatch', 'pomodoro'].indexOf(k)] || accent } })),
+      label: { color: subColor, fontSize: 12 }
+    }]
+  };
+
+  const weekdayDistOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 16, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'], axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'value' as const, name: '分钟', axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'bar', data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(k => stats.weekdayDist[k] || 0), itemStyle: { color: accent, borderRadius: [4, 4, 0, 0] }, barWidth: '55%' }]
+  };
+
+  const itemTypeOption = {
+    tooltip: { trigger: 'item' as const },
+    series: [{
+      type: 'pie' as const, radius: ['40%', '70%'],
+      data: Object.entries(stats.itemTypeDist).map(([k, v]) => ({ name: k, value: v, itemStyle: { color: ['#3b82f6', '#f59e0b', '#22c55e', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316', '#06b6d4'][Object.keys(stats.itemTypeDist).indexOf(k) % 9] } })),
+      label: { color: subColor, fontSize: 11 }
+    }]
   };
 
   return (
@@ -330,6 +376,51 @@ export default function GrowthMonthlyPage() {
           <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
             <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>本月习惯每周打卡</Typography.Title>
             <ReactECharts option={habitWeekOption} style={{ height: 260 }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>专注模式分布</Typography.Title>
+            {Object.keys(stats.focusModeDist).length > 0 ? (
+              <ReactECharts option={focusModeOption} style={{ height: 240 }} />
+            ) : <div style={{ textAlign: 'center', color: subColor, padding: 60 }}>暂无专注数据</div>}
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>星期专注分布</Typography.Title>
+            <ReactECharts option={weekdayDistOption} style={{ height: 240 }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>本月事项类型分布</Typography.Title>
+            {Object.keys(stats.itemTypeDist).length > 0 ? (
+              <ReactECharts option={itemTypeOption} style={{ height: 240 }} />
+            ) : <div style={{ textAlign: 'center', color: subColor, padding: 60 }}>暂无事项数据</div>}
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>本月 TOP 专注日</Typography.Title>
+            <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              {stats.topFocusDays.length > 0 ? stats.topFocusDays.map((d, i) => (
+                <div key={d.date} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 14, background: isDark ? `${accent}10` : `${accent}08`, border: `1px solid ${accent}20` }}>
+                  <span style={{ fontSize: 20 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: titleColor, fontWeight: 600 }}>{monthStart.format('MM')}月{d.date}日</div>
+                    <div style={{ color: subColor, fontSize: 12 }}>{now.subtract(now.date() - parseInt(d.date), 'day').format('dddd')}</div>
+                  </div>
+                  <Tag color={accent} style={{ borderRadius: 6 }}>{d.minutes} 分钟</Tag>
+                </div>
+              )) : <div style={{ textAlign: 'center', color: subColor, padding: 40 }}>暂无专注记录</div>}
+            </Space>
           </Card>
         </Col>
       </Row>

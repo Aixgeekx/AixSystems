@@ -127,6 +127,38 @@ export default function FocusModeComparePage() {
     }))
   };
 
+  // 推荐模式（最高完成率）
+  const recommended = useMemo(() => {
+    if (!stats.modeStats.length) return null;
+    return stats.modeStats.reduce((best, m) => {
+      const rate = m.total > 0 ? m.completed / m.total : 0;
+      const bestRate = best.total > 0 ? best.completed / best.total : 0;
+      return rate > bestRate ? m : best;
+    }, stats.modeStats[0]);
+  }, [stats]);
+
+  // 计划 vs 实际散点数据
+  const scatterData = useMemo(() => {
+    const all = sessions || [];
+    const completed = all.filter(s => !s.giveUp && s.plannedMs > 0 && s.actualMs > 0);
+    return completed.map(s => ({
+      value: [Math.round(s.plannedMs / 60000), Math.round(s.actualMs / 60000)],
+      mode: s.mode,
+    }));
+  }, [sessions]);
+
+  const scatterOption = {
+    tooltip: { trigger: 'item' as const, formatter: (p: any) => `计划 ${p.value[0]}分 / 实际 ${p.value[1]}分` },
+    legend: { data: ['countdown', 'stopwatch', 'pomodoro'].map(m => MODE_LABELS[m]), textStyle: { color: subColor, fontSize: 11 }, top: 0 },
+    grid: { top: 30, right: 12, bottom: 24, left: 40 },
+    xAxis: { type: 'value' as const, name: '计划(分)', axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    yAxis: { type: 'value' as const, name: '实际(分)', axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: ['countdown', 'stopwatch', 'pomodoro'].map(mode => ({
+      name: MODE_LABELS[mode], type: 'scatter' as const,
+      data: scatterData.filter(d => d.mode === mode).map(d => d.value),
+      itemStyle: { color: MODE_COLORS[mode] }, symbolSize: 8
+    }))
+  };
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
       <Card bordered={false} className="anim-fade-in-up" style={{
@@ -178,6 +210,21 @@ export default function FocusModeComparePage() {
         ))}
       </Row>
 
+      {/* 推荐模式 */}
+      {recommended && (
+        <Card bordered={false} style={{ borderRadius: 24, background: isDark ? `${MODE_COLORS[recommended.mode]}18` : `${MODE_COLORS[recommended.mode]}0f`, border: `2px solid ${MODE_COLORS[recommended.mode]}44` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 46, height: 46, borderRadius: 14, background: `${MODE_COLORS[recommended.mode]}22`, display: 'grid', placeItems: 'center', color: MODE_COLORS[recommended.mode], fontSize: 22 }}>
+              {recommended.mode === 'countdown' ? <ClockCircleOutlined /> : recommended.mode === 'stopwatch' ? <ThunderboltOutlined /> : <FireOutlined />}
+            </div>
+            <div>
+              <Typography.Text style={{ color: titleColor, fontWeight: 700, fontSize: 16 }}>推荐模式：{MODE_LABELS[recommended.mode]}</Typography.Text>
+              <div style={{ color: subColor, fontSize: 13 }}>完成率最高（{recommended.total > 0 ? Math.round(recommended.completed / recommended.total * 100) : 0}%），共 {recommended.completed}/{recommended.total} 次</div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* 近7天对比柱状 */}
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
         <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 7 天模式对比</Typography.Title>
@@ -205,6 +252,12 @@ export default function FocusModeComparePage() {
       <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
         <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>24 小时时段能量分布</Typography.Title>
         <ReactECharts option={hourOption} style={{ height: 260 }} />
+      </Card>
+
+      {/* 计划 vs 实际散点 */}
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>计划 vs 实际时长分布</Typography.Title>
+        <ReactECharts option={scatterOption} style={{ height: 300 }} />
       </Card>
 
       {/* 模式建议 */}

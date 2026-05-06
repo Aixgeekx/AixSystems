@@ -91,6 +91,16 @@ export default function HabitStatsPage() {
       weeklyRateTrend.push([ws.format('MM/DD'), weekExpected ? Math.min(100, Math.round(weekCount / weekExpected * 100)) : 0]);
     }
 
+    // 近30天每日打卡率趋势
+    const dailyRateTrend: [string, number][] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = now.subtract(i, 'day');
+      const dayLogs = logs.filter(l => dayjs(l.date).isSame(d, 'day')).length;
+      const activeHabits = h.filter(habit => dayjs(habit.createdAt).isBefore(d.add(1, 'day'))).length;
+      const rate = activeHabits > 0 ? Math.min(100, Math.round(dayLogs / activeHabits * 100)) : 0;
+      dailyRateTrend.push([d.format('MM/DD'), rate]);
+    }
+
     // 打卡时段分布
     const hourMap = Array(24).fill(0);
     logs.forEach(l => hourMap[dayjs(l.date).hour()]++);
@@ -102,7 +112,13 @@ export default function HabitStatsPage() {
       return { name: habit.name, color: habit.color, count };
     }).sort((a, b) => b.count - a.count);
 
-    return { total, totalCheckins, thisWeek, thisMonth, streaks, bestStreak, dailyData, completionRates, monthHeatmap, weeklyRateTrend, hourDistribution, monthRanking };
+    // 周几打卡分布（周一=1...周日=7）
+    const weekdayMap = Array(7).fill(0);
+    logs.forEach(l => weekdayMap[dayjs(l.date).day()]++);
+    const weekdayLabels = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    const weekdayDistribution = weekdayLabels.map((label, i) => ({ label, count: weekdayMap[i] }));
+
+    return { total, totalCheckins, thisWeek, thisMonth, streaks, bestStreak, dailyData, completionRates, monthHeatmap, weeklyRateTrend, dailyRateTrend, hourDistribution, monthRanking, weekdayDistribution };
   }, [habits, habitLogs, weekStart, monthStart]);
 
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
@@ -141,12 +157,36 @@ export default function HabitStatsPage() {
     series: [{ type: 'line', data: stats.weeklyRateTrend.map(d => d[1]), smooth: true, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#22c55e66' }, { offset: 1, color: '#22c55e11' }] } }, lineStyle: { color: '#22c55e', width: 2 }, itemStyle: { color: '#22c55e' }, symbol: 'circle', symbolSize: 4 }]
   };
 
+  const dailyRateTrendOption = {
+    tooltip: { trigger: 'axis' as const, formatter: (p: any) => `${p[0].name}<br/>打卡率: ${p[0].value}%` },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: stats.dailyRateTrend.map(d => d[0]), axisLabel: { color: subColor, fontSize: 10, interval: 4 } },
+    yAxis: { type: 'value' as const, max: 100, axisLabel: { color: subColor, fontSize: 10, formatter: '{value}%' }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'line', data: stats.dailyRateTrend.map(d => d[1]), smooth: true, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#3b82f666' }, { offset: 1, color: '#3b82f611' }] } }, lineStyle: { color: '#3b82f6', width: 2 }, itemStyle: { color: '#3b82f6' }, showSymbol: false }]
+  };
+
+  const monthRankingOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 20, right: 16, bottom: 60, left: 100 },
+    xAxis: { type: 'value' as const, axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'category' as const, data: stats.monthRanking.map(h => h.name), axisLabel: { color: subColor, fontSize: 11 }, splitLine: { show: false } },
+    series: [{ type: 'bar', data: stats.monthRanking.map(h => ({ value: h.count, itemStyle: { color: h.color, borderRadius: [0, 4, 4, 0] } })), barWidth: '55%' }]
+  };
+
   const hourOption = {
     tooltip: { trigger: 'axis' as const },
     grid: { top: 20, right: 16, bottom: 28, left: 36 },
     xAxis: { type: 'category' as const, data: stats.hourDistribution.map(d => d.hour), axisLabel: { color: subColor, fontSize: 10 } },
     yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
     series: [{ type: 'bar', data: stats.hourDistribution.map(d => d.count), itemStyle: { color: accent, borderRadius: [4, 4, 0, 0] }, barWidth: '60%' }]
+  };
+
+  const weekdayOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 20, right: 16, bottom: 28, left: 36 },
+    xAxis: { type: 'category' as const, data: stats.weekdayDistribution.map(d => d.label), axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'bar', data: stats.weekdayDistribution.map(d => d.count), itemStyle: { color: '#f59e0b', borderRadius: [4, 4, 0, 0] }, barWidth: '50%' }]
   };
 
   return (
@@ -229,6 +269,21 @@ export default function HabitStatsPage() {
       </Card>
 
       <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 30 天打卡率趋势</Typography.Title>
+            <ReactECharts option={dailyRateTrendOption} style={{ height: 220 }} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>本月打卡次数排名</Typography.Title>
+            <ReactECharts option={monthRankingOption} style={{ height: 220 }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
         <Col xs={24} lg={14}>
           <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
             <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>打卡时段分布</Typography.Title>
@@ -237,23 +292,8 @@ export default function HabitStatsPage() {
         </Col>
         <Col xs={24} lg={10}>
           <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
-            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>本月习惯排名</Typography.Title>
-            <Space direction="vertical" size={10} style={{ width: '100%' }}>
-              {stats.monthRanking.map((h, i) => (
-                <div key={h.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 18, width: 28, textAlign: 'center', fontWeight: 700, color: ['#f59e0b', '#94a3b8', '#cd7f32'][i] || subColor }}>{i + 1}</span>
-                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: h.color }} />
-                  <span style={{ flex: 1, fontSize: 13, color: titleColor, fontWeight: 600 }}>{h.name}</span>
-                  <div style={{ flex: 1, maxWidth: 120 }}>
-                    <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9' }}>
-                      <div style={{ height: '100%', width: `${Math.min(100, h.count / Math.max(1, stats.monthRanking[0].count) * 100)}%`, borderRadius: 3, background: h.color, transition: 'width 0.5s' }} />
-                    </div>
-                  </div>
-                  <span style={{ fontWeight: 700, color: titleColor, fontSize: 13, minWidth: 30, textAlign: 'right' }}>{h.count}</span>
-                </div>
-              ))}
-              {stats.monthRanking.length === 0 && <div style={{ textAlign: 'center', color: subColor, padding: 20 }}>暂无数据</div>}
-            </Space>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>周几打卡分布</Typography.Title>
+            <ReactECharts option={weekdayOption} style={{ height: 240 }} />
           </Card>
         </Col>
       </Row>

@@ -67,13 +67,51 @@ export default function AnnualReviewPage() {
       return { month: `${m + 1}月`, items: mi.length, done: md, focus: mfm, habits: mh, diaries: mdi };
     });
 
+    // 专注模式分布
+    const focusModeDist: Record<string, number> = {};
+    allSessions.forEach(s => { focusModeDist[s.mode] = (focusModeDist[s.mode] || 0) + 1; });
+
+    // 星期分布
+    const weekdayDist: Record<string, number> = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+    allSessions.forEach(s => { const wd = dayjs(s.startTime).format('ddd'); weekdayDist[wd] = (weekdayDist[wd] || 0) + Math.round((s.actualMs || 0) / 60000); });
+
+    // 季度汇总
+    const quarters = [
+      { label: 'Q1', months: [0, 1, 2], icon: '🌸' },
+      { label: 'Q2', months: [3, 4, 5], icon: '🌿' },
+      { label: 'Q3', months: [6, 7, 8], icon: '☀️' },
+      { label: 'Q4', months: [9, 10, 11], icon: '❄️' }
+    ].map(q => {
+      const ms = q.months.map(m => monthly[m]);
+      return {
+        label: q.label,
+        icon: q.icon,
+        focus: ms.reduce((s, m) => s + m.focus, 0),
+        items: ms.reduce((s, m) => s + m.items, 0),
+        done: ms.reduce((s, m) => s + m.done, 0),
+        diaries: ms.reduce((s, m) => s + m.diaries, 0),
+        habits: ms.reduce((s, m) => s + m.habits, 0)
+      };
+    });
+
+    // TOP月排名
+    const topMonths = [...monthly].filter(m => m.focus > 0).sort((a, b) => b.focus - a.focus).slice(0, 3);
+
+    // 事项类型分布
+    const itemTypeDist: Record<string, number> = {};
+    allItems.forEach(i => { const t = i.type || '未分类'; itemTypeDist[t] = (itemTypeDist[t] || 0) + 1; });
+
+    // 每年专注天数 vs 上年
+    const yearlyFocusDays = focusDays;
+    const prevFocusDays = new Set(prevSessions.map(s => dayjs(s.startTime).format('YYYYMMDD'))).size;
+
     const totalHabits = (habits || []).length;
     const habitRate = totalHabits > 0 ? Math.round(habitDays / (totalHabits * 365) * 100) : 0;
     const moodMap: Record<string, number> = {};
     allDiaries.forEach(d => { if (d.mood) moodMap[d.mood] = (moodMap[d.mood] || 0) + 1; });
     const topMood = Object.entries(moodMap).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
 
-    return { totalItems: allItems.length, doneItems, overdueItems, totalFocusMin, focusDays, habitDays, totalDiaries: allDiaries.length, activeGoals, completedGoals, totalMilestones, doneMilestones, monthly, habitRate, topMood, totalSessions: allSessions.length, prevDone, prevFocusMin, prevHabitDays, prevDiariesCount };
+    return { totalItems: allItems.length, doneItems, overdueItems, totalFocusMin, focusDays: yearlyFocusDays, habitDays, totalDiaries: allDiaries.length, activeGoals, completedGoals, totalMilestones, doneMilestones, monthly, habitRate, topMood, totalSessions: allSessions.length, prevDone, prevFocusMin, prevHabitDays, prevDiariesCount, focusModeDist, weekdayDist, quarters, topMonths, itemTypeDist, prevFocusDays };
   }, [items, sessions, habits, habitLogs, diaries, goals, year]);
 
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
@@ -101,6 +139,47 @@ export default function AnnualReviewPage() {
     xAxis: { type: 'category' as const, data: stats.monthly.map(m => m.month), axisLabel: { color: subColor, fontSize: 11 } },
     yAxis: { type: 'value' as const, max: 100, axisLabel: { color: subColor, fontSize: 11, formatter: '{value}%' }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
     series: [{ type: 'line' as const, data: stats.monthly.map(m => m.items > 0 ? Math.round(m.done / m.items * 100) : 0), smooth: true, areaStyle: { color: `${accent}22` }, lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent } }]
+  };
+
+  const focusModeOption = {
+    tooltip: { trigger: 'item' as const },
+    series: [{
+      type: 'pie' as const, radius: ['40%', '70%'],
+      data: Object.entries(stats.focusModeDist).map(([k, v]) => ({ name: ['countdown', 'stopwatch', 'pomodoro'][k as any] || k, value: v, itemStyle: { color: ['#3b82f6', '#22c55e', '#f59e0b'][['countdown', 'stopwatch', 'pomodoro'].indexOf(k)] || accent } })),
+      label: { color: subColor, fontSize: 12 }
+    }]
+  };
+
+  const weekdayDistOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 16, right: 12, bottom: 24, left: 36 },
+    xAxis: { type: 'category' as const, data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'], axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'value' as const, name: '分钟', axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'bar', data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(k => stats.weekdayDist[k] || 0), itemStyle: { color: accent, borderRadius: [4, 4, 0, 0] }, barWidth: '55%' }]
+  };
+
+  const quarterOption = {
+    tooltip: { trigger: 'axis' as const },
+    legend: { data: ['专注(分)', '完成事项'], textStyle: { color: subColor, fontSize: 11 }, top: 0 },
+    grid: { top: 30, right: 12, bottom: 24, left: 40 },
+    xAxis: { type: 'category' as const, data: stats.quarters.map(q => `${q.icon} ${q.label}`), axisLabel: { color: subColor, fontSize: 12 } },
+    yAxis: [
+      { type: 'value' as const, name: '分钟', axisLabel: { color: subColor, fontSize: 10 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+      { type: 'value' as const, name: '事项', axisLabel: { color: subColor, fontSize: 10 }, splitLine: { show: false } }
+    ],
+    series: [
+      { name: '专注(分)', type: 'bar' as const, data: stats.quarters.map(q => q.focus), itemStyle: { color: '#f59e0b', borderRadius: [4, 4, 0, 0] }, barWidth: '40%' },
+      { name: '完成事项', type: 'bar' as const, data: stats.quarters.map(q => q.done), itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] }, barWidth: '40%' }
+    ]
+  };
+
+  const itemTypeOption = {
+    tooltip: { trigger: 'item' as const },
+    series: [{
+      type: 'pie' as const, radius: ['40%', '70%'],
+      data: Object.entries(stats.itemTypeDist).map(([k, v]) => ({ name: k, value: v, itemStyle: { color: ['#3b82f6', '#f59e0b', '#22c55e', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316', '#06b6d4'][Object.keys(stats.itemTypeDist).indexOf(k) % 9] } })),
+      label: { color: subColor, fontSize: 11 }
+    }]
   };
 
   const bestMonth = stats.monthly.reduce((best, m) => m.focus > best.focus ? m : best, stats.monthly[0]);
@@ -251,6 +330,76 @@ export default function AnnualReviewPage() {
               <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
                 <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>事项完成率走势</Typography.Title>
                 <ReactECharts option={completionOption} style={{ height: 280 }} />
+              </Card>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]}>
+            <Col xs={24} lg={12}>
+              <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+                <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>季度专注对比</Typography.Title>
+                <ReactECharts option={quarterOption} style={{ height: 240 }} />
+              </Card>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+                <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>星期专注分布</Typography.Title>
+                <ReactECharts option={weekdayDistOption} style={{ height: 240 }} />
+              </Card>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]}>
+            <Col xs={24} lg={12}>
+              <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+                <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>专注模式分布</Typography.Title>
+                {Object.keys(stats.focusModeDist).length > 0 ? (
+                  <ReactECharts option={focusModeOption} style={{ height: 240 }} />
+                ) : <div style={{ textAlign: 'center', color: subColor, padding: 60 }}>暂无专注数据</div>}
+              </Card>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+                <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>TOP 专注月</Typography.Title>
+                <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                  {stats.topMonths.length > 0 ? stats.topMonths.map((m, i) => (
+                    <div key={m.month} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 14, background: isDark ? `${accent}10` : `${accent}08`, border: `1px solid ${accent}20` }}>
+                      <span style={{ fontSize: 20 }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: titleColor, fontWeight: 600 }}>{year}年 {m.month}</div>
+                        <div style={{ color: subColor, fontSize: 12 }}>{m.done} 项完成 · {m.diaries} 篇日记</div>
+                      </div>
+                      <Tag color="#f59e0b" style={{ borderRadius: 6 }}>{m.focus} 分钟</Tag>
+                    </div>
+                  )) : <div style={{ textAlign: 'center', color: subColor, padding: 40 }}>暂无数据</div>}
+                </Space>
+              </Card>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]}>
+            <Col xs={24} lg={12}>
+              <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+                <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>事项类型分布</Typography.Title>
+                {Object.keys(stats.itemTypeDist).length > 0 ? (
+                  <ReactECharts option={itemTypeOption} style={{ height: 240 }} />
+                ) : <div style={{ textAlign: 'center', color: subColor, padding: 60 }}>暂无事项数据</div>}
+              </Card>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+                <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>年度专注天数</Typography.Title>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ fontSize: 52, fontWeight: 900, color: accent }}>{stats.focusDays}</div>
+                  <div>
+                    <div style={{ color: titleColor, fontSize: 18, fontWeight: 700 }}>天有专注记录</div>
+                    {year < dayjs().year() && (
+                      <div style={{ color: stats.focusDays > stats.prevFocusDays ? '#22c55e' : '#ef4444', fontSize: 13 }}>
+                        {stats.focusDays > stats.prevFocusDays ? `+${stats.focusDays - stats.prevFocusDays}` : stats.focusDays < stats.prevFocusDays ? `${stats.focusDays - stats.prevFocusDays}` : '0'} 天较上年
+                      </div>
+                    )}
+                  </div>
+                </div>
               </Card>
             </Col>
           </Row>

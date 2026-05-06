@@ -1,7 +1,7 @@
 // 数据统计中心 - 本地数据可视化分析
 import React, { Suspense, lazy, useMemo } from 'react';
-import { Card, Col, Row, Space, Statistic, Tag, Typography } from 'antd';
-import { BarChartOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, FileTextOutlined, FireOutlined, TrophyOutlined, CrownOutlined, LineChartOutlined, AimOutlined, HeartOutlined, DashboardOutlined, GoldOutlined } from '@ant-design/icons';
+import { Card, Col, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { BarChartOutlined, CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, FileTextOutlined, FireOutlined, TrophyOutlined, CrownOutlined, LineChartOutlined, AimOutlined, HeartOutlined, DashboardOutlined, GoldOutlined, ThunderboltOutlined, RiseOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -31,8 +31,9 @@ export default function StatisticsPage() {
 
     const activeItems = items.filter(i => !i.deletedAt);
     const doneItems = activeItems.filter(i => i.completeStatus === 'done');
-    const todayStart = dayjs().startOf('day').valueOf();
-    const todayItems = activeItems.filter(i => i.startTime >= todayStart && i.startTime <= dayjs().endOf('day').valueOf());
+    const now = dayjs();
+    const todayStart = now.startOf('day').valueOf();
+    const todayItems = activeItems.filter(i => i.startTime >= todayStart && i.startTime <= now.endOf('day').valueOf());
     const totalFocusMin = Math.round(sessions.reduce((s, f) => s + f.actualMs / 60000, 0));
     const todayFocusMin = Math.round(sessions.filter(s => s.startTime >= todayStart).reduce((s, f) => s + f.actualMs / 60000, 0));
     const activeHabits = habits.filter(h => !h.deletedAt);
@@ -64,7 +65,7 @@ export default function StatisticsPage() {
 
     // 7天趋势
     const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = dayjs().subtract(i, 'day');
+      const d = now.subtract(i, 'day');
       const start = d.startOf('day').valueOf();
       const end = d.endOf('day').valueOf();
       return {
@@ -74,6 +75,54 @@ export default function StatisticsPage() {
         checkins: habitLogs.filter(l => l.date >= start && l.date <= end).length
       };
     }).reverse();
+
+    // 周同比
+    const weekStart = now.startOf('week').valueOf();
+    const lastWeekStart = now.subtract(1, 'week').startOf('week').valueOf();
+    const lastWeekEnd = now.subtract(1, 'week').endOf('week').valueOf();
+    const thisWeekItems = activeItems.filter(i => i.createdAt >= weekStart).length;
+    const lastWeekItems = activeItems.filter(i => i.createdAt >= lastWeekStart && i.createdAt <= lastWeekEnd).length;
+    const weekGrowth = lastWeekItems > 0 ? Math.round((thisWeekItems - lastWeekItems) / lastWeekItems * 100) : thisWeekItems > 0 ? 100 : 0;
+
+    // 近4周周分布
+    const weeklyDist = Array.from({ length: 4 }, (_, i) => {
+      const d = now.subtract(3 - i, 'week');
+      const ws = d.startOf('week').valueOf();
+      const we = d.endOf('week').valueOf();
+      return {
+        label: `第${4 - i}周`,
+        items: activeItems.filter(it => it.createdAt >= ws && it.createdAt <= we).length,
+        focus: Math.round(sessions.filter(s => s.startTime >= ws && s.startTime <= we).reduce((sum, s) => sum + s.actualMs / 60000, 0)),
+        checkins: habitLogs.filter(l => l.date >= ws && l.date <= we).length
+      };
+    });
+
+    // 24小时活跃分布
+    const hourlyDist: number[] = Array(24).fill(0);
+    sessions.forEach(s => { const h = dayjs(s.startTime).hour(); hourlyDist[h]++; });
+    habitLogs.forEach(l => { const h = dayjs(l.date).hour(); hourlyDist[h]++; });
+
+    // 模块增长率（本月 vs 上月）
+    const monthStart = now.startOf('month').valueOf();
+    const lastMonthStart = now.subtract(1, 'month').startOf('month').valueOf();
+    const lastMonthEnd = now.subtract(1, 'month').endOf('month').valueOf();
+    const moduleGrowth = [
+      { name: '事项', thisMonth: activeItems.filter(i => i.createdAt >= monthStart).length, lastMonth: activeItems.filter(i => i.createdAt >= lastMonthStart && i.createdAt <= lastMonthEnd).length },
+      { name: '专注', thisMonth: sessions.filter(s => s.startTime >= monthStart).length, lastMonth: sessions.filter(s => s.startTime >= lastMonthStart && s.startTime <= lastMonthEnd).length },
+      { name: '习惯', thisMonth: habitLogs.filter(l => l.date >= monthStart).length, lastMonth: habitLogs.filter(l => l.date >= lastMonthStart && l.date <= lastMonthEnd).length },
+      { name: '日记', thisMonth: diaries.filter(d => !d.deletedAt && d.createdAt >= monthStart).length, lastMonth: diaries.filter(d => !d.deletedAt && d.createdAt >= lastMonthStart && d.createdAt <= lastMonthEnd).length }
+    ];
+
+    // 完成率趋势（近30天）
+    const completionTrend: { date: string; rate: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = now.subtract(i, 'day');
+      const ds = d.startOf('day').valueOf();
+      const de = d.endOf('day').valueOf();
+      const dayItems = activeItems.filter(it => it.startTime >= ds && it.startTime <= de);
+      const rate = dayItems.length > 0 ? Math.round(dayItems.filter(it => it.completeStatus === 'done').length / dayItems.length * 100) : 0;
+      completionTrend.push({ date: d.format('MM/DD'), rate });
+    }
 
     return {
       totalItems: activeItems.length,
@@ -91,7 +140,12 @@ export default function StatisticsPage() {
       completionRate: activeItems.length ? Math.round(doneItems.length / activeItems.length * 100) : 0,
       last7Days,
       daily30,
-      modulePie
+      modulePie,
+      weekGrowth,
+      weeklyDist,
+      hourlyDist,
+      moduleGrowth,
+      completionTrend
     };
   });
 
@@ -135,6 +189,54 @@ export default function StatisticsPage() {
     { label: '备忘录', value: stats?.totalMemos || 0, icon: <FileTextOutlined />, color: '#14b8a6' }
   ];
 
+  const weeklyDistOption = {
+    tooltip: { trigger: 'axis' as const },
+    legend: { data: ['事项', '专注(分)', '打卡'], textStyle: { color: subColor, fontSize: 11 }, top: 0 },
+    grid: { top: 30, right: 12, bottom: 24, left: 36 },
+    xAxis: { type: 'category' as const, data: stats?.weeklyDist.map(d => d.label) || [], axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: [
+      { type: 'value' as const, name: '事项/打卡', axisLabel: { color: subColor, fontSize: 10 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+      { type: 'value' as const, name: '分钟', axisLabel: { color: subColor, fontSize: 10 }, splitLine: { show: false } }
+    ],
+    series: [
+      { name: '事项', type: 'bar' as const, data: stats?.weeklyDist.map(d => d.items) || [], itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] }, barWidth: '40%' },
+      { name: '专注(分)', type: 'bar' as const, data: stats?.weeklyDist.map(d => d.focus) || [], itemStyle: { color: '#f59e0b', borderRadius: [4, 4, 0, 0] }, barWidth: '40%' },
+      { name: '打卡', type: 'line' as const, yAxisIndex: 0, data: stats?.weeklyDist.map(d => d.checkins) || [], smooth: true, lineStyle: { color: '#22c55e', width: 2 }, itemStyle: { color: '#22c55e' }, showSymbol: false }
+    ]
+  };
+
+  const hourlyDistOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 16, right: 12, bottom: 24, left: 36 },
+    xAxis: { type: 'category' as const, data: Array.from({ length: 24 }, (_, i) => `${i}时`), axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 10 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'bar', data: stats?.hourlyDist || [], itemStyle: { color: accent, borderRadius: [3, 3, 0, 0] }, barWidth: '70%' }]
+  };
+
+  const moduleGrowthOption = {
+    tooltip: { trigger: 'axis' as const },
+    legend: { data: ['本月', '上月'], textStyle: { color: subColor, fontSize: 11 }, top: 0 },
+    grid: { top: 30, right: 12, bottom: 24, left: 36 },
+    xAxis: { type: 'category' as const, data: stats?.moduleGrowth.map(d => d.name) || [], axisLabel: { color: subColor, fontSize: 12 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [
+      { name: '本月', type: 'bar' as const, data: stats?.moduleGrowth.map(d => d.thisMonth) || [], itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] }, barWidth: '40%' },
+      { name: '上月', type: 'bar' as const, data: stats?.moduleGrowth.map(d => d.lastMonth) || [], itemStyle: { color: '#8b5cf6', borderRadius: [4, 4, 0, 0] }, barWidth: '40%' }
+    ]
+  };
+
+  const completionTrendOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 16, right: 12, bottom: 24, left: 36 },
+    xAxis: { type: 'category' as const, data: stats?.completionTrend.map(d => d.date) || [], axisLabel: { color: subColor, fontSize: 10 } },
+    yAxis: { type: 'value' as const, minInterval: 1, max: 100, axisLabel: { color: subColor, fontSize: 10, formatter: '{value}%' }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'line', data: stats?.completionTrend.map(d => d.rate) || [], smooth: true, areaStyle: { color: `${accent}22` }, lineStyle: { color: accent, width: 2 }, itemStyle: { color: accent }, showSymbol: false }]
+  };
+
+  // Peak hour
+  const peakHour = stats?.hourlyDist ? stats.hourlyDist.indexOf(Math.max(...stats.hourlyDist)) : null;
+  const peakValue = peakHour !== null ? stats?.hourlyDist[peakHour] : 0;
+
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
       <Card bordered={false} className="anim-fade-in-up" style={{
@@ -170,6 +272,59 @@ export default function StatisticsPage() {
         ))}
       </Row>
 
+      {/* 周同比 + 峰值小时 */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={8}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>
+              <ThunderboltOutlined /> 周同比指标
+            </Typography.Title>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <Progress type="dashboard" percent={Math.min(100, Math.abs(stats?.weekGrowth || 0))} strokeColor={(stats?.weekGrowth || 0) >= 0 ? '#22c55e' : '#ef4444'} size={90} format={() => ''} />
+              <div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: (stats?.weekGrowth || 0) >= 0 ? '#22c55e' : '#ef4444' }}>
+                  {(stats?.weekGrowth || 0) > 0 ? '+' : ''}{stats?.weekGrowth || 0}%
+                </div>
+                <div style={{ color: subColor, fontSize: 12 }}>事项周环比</div>
+                <Tag color={(stats?.weekGrowth || 0) >= 0 ? 'green' : 'red'} style={{ marginTop: 4, borderRadius: 6 }}>
+                  {(stats?.weekGrowth || 0) >= 0 ? <RiseOutlined /> : <BarChartOutlined />} {(stats?.weekGrowth || 0) >= 0 ? '增长' : '下降'}
+                </Tag>
+              </div>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} lg={8}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>
+              <FireOutlined /> 活动峰值小时
+            </Typography.Title>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ fontSize: 48, fontWeight: 900, color: accent }}>{peakHour !== null ? peakHour : '--'}</div>
+              <div>
+                <div style={{ color: subColor, fontSize: 12 }}>活跃峰值时段</div>
+                <div style={{ color: titleColor, fontSize: 18, fontWeight: 700 }}>{peakHour !== null ? `${peakHour}:00 - ${peakHour + 1}:00` : '无数据'}</div>
+                <div style={{ color: subColor, fontSize: 12 }}>共 {peakValue} 条记录</div>
+              </div>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} lg={8}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>
+              <CheckCircleOutlined /> 综合完成率
+            </Typography.Title>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <Progress type="circle" percent={stats?.completionRate || 0} strokeColor={stats?.completionRate >= 70 ? '#22c55e' : stats?.completionRate >= 40 ? '#f59e0b' : '#ef4444'} size={90} />
+              <div>
+                <div style={{ color: subColor, fontSize: 12 }}>所有事项完成率</div>
+                <div style={{ color: titleColor, fontSize: 18, fontWeight: 700 }}>{stats?.doneItems || 0} / {stats?.totalItems || 0}</div>
+                <div style={{ color: subColor, fontSize: 12 }}>已完成 / 总数</div>
+              </div>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={14}>
           <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
@@ -198,8 +353,9 @@ export default function StatisticsPage() {
           </Card>
         </Col>
       </Row>
+
       <Row gutter={[16, 16]}>
-        <Col xs={24} lg={14}>
+        <Col xs={24} lg={12}>
           <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
             <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>近 30 天活跃趋势</Typography.Title>
             <Suspense fallback={<div style={{ height: 260, display: 'grid', placeItems: 'center', color: subColor }}>加载图表...</div>}>
@@ -207,12 +363,68 @@ export default function StatisticsPage() {
             </Suspense>
           </Card>
         </Col>
-        <Col xs={24} lg={10}>
-          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder, height: '100%' }}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>近 30 天完成率趋势</Typography.Title>
+            <Suspense fallback={<div style={{ height: 260, display: 'grid', placeItems: 'center', color: subColor }}>加载图表...</div>}>
+              <ReactECharts option={completionTrendOption} style={{ height: 260 }} />
+            </Suspense>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>近 4 周分布</Typography.Title>
+            <Suspense fallback={<div style={{ height: 240, display: 'grid', placeItems: 'center', color: subColor }}>加载图表...</div>}>
+              <ReactECharts option={weeklyDistOption} style={{ height: 240 }} />
+            </Suspense>
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>24 小时活跃分布</Typography.Title>
+            <Suspense fallback={<div style={{ height: 240, display: 'grid', placeItems: 'center', color: subColor }}>加载图表...</div>}>
+              <ReactECharts option={hourlyDistOption} style={{ height: 240 }} />
+            </Suspense>
+          </Card>
+        </Col>
+      </Row>
+
+      <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>模块月增长率（本月 vs 上月）</Typography.Title>
+        <Suspense fallback={<div style={{ height: 240, display: 'grid', placeItems: 'center', color: subColor }}>加载图表...</div>}>
+          <ReactECharts option={moduleGrowthOption} style={{ height: 240 }} />
+        </Suspense>
+      </Card>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
             <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>模块占比</Typography.Title>
             <Suspense fallback={<div style={{ height: 260, display: 'grid', placeItems: 'center', color: subColor }}>加载图表...</div>}>
               <ReactECharts option={moduleOption} style={{ height: 260 }} />
             </Suspense>
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 16px', color: titleColor }}>本周数据明细</Typography.Title>
+            <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              {stats?.weeklyDist.map(w => (
+                <div key={w.label} style={{ padding: '10px 14px', borderRadius: 14, background: isDark ? `${accent}10` : `${accent}08`, border: `1px solid ${accent}20` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Typography.Text strong style={{ color: titleColor }}>{w.label}</Typography.Text>
+                    <Tag color={accent} style={{ borderRadius: 6 }}>{w.items} 项</Tag>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <span style={{ color: subColor, fontSize: 12 }}><FireOutlined style={{ color: '#f59e0b' }} /> {w.focus} 分钟</span>
+                    <span style={{ color: subColor, fontSize: 12 }}><CheckCircleOutlined style={{ color: '#22c55e' }} /> {w.checkins} 打卡</span>
+                  </div>
+                </div>
+              ))}
+            </Space>
           </Card>
         </Col>
       </Row>

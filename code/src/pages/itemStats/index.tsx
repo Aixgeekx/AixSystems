@@ -64,7 +64,20 @@ export default function ItemStatsPage() {
     });
     const monthTrend = Object.entries(monthMap).sort((a, b) => a[0].localeCompare(b[0])).slice(-6);
 
-    return { total, done, doing, todo, overdue, dailyDone, typeMap, statusMap, totalSubtasks, doneSubtasks, monthTrend, doneRate: total > 0 ? Math.round(done / total * 100) : 0 };
+    // 重要性分布
+    const importanceMap: Record<number, number> = {};
+    all.forEach(i => { importanceMap[i.importance || 0] = (importanceMap[i.importance || 0] || 0) + 1; });
+
+    // 近7天逾期趋势
+    const overDueDaily: { date: string; count: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = now.subtract(i, 'day').startOf('day');
+      const dayEnd = d.endOf('day');
+      const count = all.filter(i => i.endTime && dayjs(i.endTime).isBefore(d, 'day') && i.completeStatus !== 'done' && dayjs(i.endTime).isAfter(now.subtract(30, 'day'), 'day')).length;
+      overDueDaily.push({ date: d.format('MM/DD'), count });
+    }
+
+    return { total, done, doing, todo, overdue, dailyDone, typeMap, statusMap, totalSubtasks, doneSubtasks, monthTrend, doneRate: total > 0 ? Math.round(done / total * 100) : 0, importanceMap, overDueDaily };
   }, [items]);
 
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.94)';
@@ -107,6 +120,23 @@ export default function ItemStatsPage() {
       }),
       label: { color: subColor, fontSize: 12 }
     }]
+  };
+
+  const importancePie = {
+    tooltip: { trigger: 'item' as const },
+    series: [{
+      type: 'pie', radius: ['42%', '70%'],
+      data: Object.entries(stats.importanceMap).map(([imp, c]) => ({ name: `P${imp}`, value: c, itemStyle: { color: ['#ef4444', '#f59e0b', '#3b82f6', '#22c55e'][Number(imp)] || accent } })),
+      label: { color: subColor, fontSize: 12 }
+    }]
+  };
+
+  const overdueOption = {
+    tooltip: { trigger: 'axis' as const },
+    grid: { top: 16, right: 12, bottom: 24, left: 36 },
+    xAxis: { type: 'category' as const, data: stats.overDueDaily.map(d => d.date), axisLabel: { color: subColor, fontSize: 11 } },
+    yAxis: { type: 'value' as const, minInterval: 1, axisLabel: { color: subColor, fontSize: 11 }, splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9' } } },
+    series: [{ type: 'bar', data: stats.overDueDaily.map(d => d.count), itemStyle: { color: '#ef4444', borderRadius: [4, 4, 0, 0] }, barWidth: '45%' }]
   };
 
   return (
@@ -176,6 +206,22 @@ export default function ItemStatsPage() {
           <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
             <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>类型分布</Typography.Title>
             <ReactECharts option={typePie} style={{ height: 240 }} />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 重要性分布 + 逾期趋势 */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>重要性分布</Typography.Title>
+            <ReactECharts option={importancePie} style={{ height: 240 }} />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card bordered={false} style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+            <Typography.Title level={4} style={{ margin: '0 0 12px', color: titleColor }}>近 7 天逾期趋势</Typography.Title>
+            <ReactECharts option={overdueOption} style={{ height: 240 }} />
           </Card>
         </Col>
       </Row>
