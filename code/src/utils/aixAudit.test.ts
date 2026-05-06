@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -121,5 +121,82 @@ describe('buildCheckpointCapsule', () => {
     expect(result.prompt).toContain('成长 Agent');
     expect(result.prompt).toContain('电脑 Agent');
     expect(result.capsuleId).toMatch(/^AIX-CKPT-\d{8}-2$/);
+  });
+});
+
+describe('verifyReplayPackage', () => {
+  it('accepts a freshly exported replay package', () => {
+    const tickets = buildAuditTickets([
+      eventLog('a', 'aix-skill', 1000),
+      eventLog('b', 'aix-campaign', 2000),
+      eventLog('c', 'agent', 3000)
+    ]);
+    const pack = buildReplayPackage(tickets, { capsuleId: 'AIX-CORE' });
+    const verified = verifyReplayPackage(pack);
+    expect(verified.ok).toBe(true);
+    expect(verified.brokenAt).toBe(-1);
+    expect(verified.count).toBe(3);
+    expect(verified.summary.length).toBeGreaterThan(0);
+    expect(verified.reason).toContain('完整');
+  });
+
+  it('detects tampered chain hashes', () => {
+    const tickets = buildAuditTickets([
+      eventLog('a', 'aix-skill', 1000),
+      eventLog('b', 'aix-campaign', 2000)
+    ]);
+    const json = JSON.parse(buildReplayPackage(tickets, {}));
+    json.tickets[1].fingerprint = 'tampered';                // 篡改第二张票据
+    const verified = verifyReplayPackage(JSON.stringify(json));
+    expect(verified.ok).toBe(false);
+    expect(verified.brokenAt).toBeGreaterThanOrEqual(0);
+    expect(verified.reason).toContain('不一致');
+  });
+
+  it('rejects wrong version or invalid JSON', () => {
+    expect(verifyReplayPackage('not json').ok).toBe(false);
+    expect(verifyReplayPackage(JSON.stringify({ version: 'aix-other-1.0' })).ok).toBe(false);
+  });
+});
+
+describe('parseCheckpointCapsule', () => {
+  it('round-trips a capsule produced by buildCheckpointCapsule', () => {
+    const built = buildCheckpointCapsule([
+      { id: 't1', title: '复盘 Agent', risk: '中风险', percent: 50, breakpoint: 'Resume', resume: '继续', next: '复盘 1', proof: 'progress=50%' }
+    ]);
+    const parsed = parseCheckpointCapsule(built.json);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.branches).toHaveLength(1);
+    expect(parsed.branches[0].title).toBe('复盘 Agent');
+    expect(parsed.summary.pending).toBe(1);
+  });
+
+  it('rejects wrong version capsules', () => {
+    const parsed = parseCheckpointCapsule(JSON.stringify({ version: 'wrong', branches: [] }));
+    expect(parsed.ok).toBe(false);
+    expect(parsed.reason).toContain('版本');
+  });
+});
+
+describe('buildPresetDrillSchedule', () => {
+  const fixedNow = new Date('2026-05-07T08:30:00Z').getTime();   // 14:30 UTC+8
+
+  it('schedules red presets today, yellow this week, green next week', () => {
+    const rows = [
+      { preset: 'red-preset', total: 1, ok: 0, fail: 1, fallback: 1, avgMs: 200, lastAt: fixedNow, riskScore: 30, level: '红色' as const, drill: '今天再演练', resume: '' },
+      { preset: 'yellow-preset', total: 1, ok: 1, fail: 0, fallback: 0, avgMs: 200, lastAt: fixedNow, riskScore: 60, level: '黄色' as const, drill: '本周演练', resume: '' },
+      { preset: 'green-preset', total: 1, ok: 1, fail: 0, fallback: 0, avgMs: 200, lastAt: fixedNow, riskScore: 90, level: '绿色' as const, drill: '保持节奏', resume: '' }
+    ];
+    const schedule = buildPresetDrillSchedule(rows, fixedNow);
+    expect(schedule).toHaveLength(3);
+    const today16Local = new Date(fixedNow);
+    today16Local.setHours(16, 0, 0, 0);
+    const todayMatch = today16Local.getTime() < fixedNow ? today16Local.getTime() + 86_400_000 : today16Local.getTime();
+    expect(schedule[0].preset).toBe('red-preset');
+    expect(schedule[0].scheduleAt).toBe(todayMatch);
+    expect(schedule[0].importance).toBe(0);
+    expect(schedule[1].scheduleAt).toBe(todayMatch + 3 * 86_400_000);
+    expect(schedule[2].scheduleAt).toBe(todayMatch + 7 * 86_400_000);
+    expect(schedule.map(item => item.scheduleLabel)).toEqual(['今日 16:00 演练', '本周内演练', '一周后演练']);
   });
 });

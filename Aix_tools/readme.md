@@ -2,6 +2,12 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.87.0
+- Aix 主入口新增「审计回放包导入校验器」：在黑匣子审计回放器卡片底部追加导入区，粘贴 / 文件选择回放包 JSON 后调用 `verifyReplayPackage`（重算 cyrb53 链式哈希、定位断点）；结果写入 eventLog scope=`aix-audit-replay-import`，过程纯本地。
+- Aix 主入口新增「PowerShell 演练编排器」：在风险驾驶舱底部新增"一键写入演练日程"按钮，调用 `buildPresetDrillSchedule(rows)` 生成基于今日 16:00 锚点的演练时间表，红色今日、黄色 3 天后、绿色 7 天后；写入 Item.extra.presetDrill + 提醒队列 + eventLog scope=`powershell-drill-plan`。
+- Agent 中枢新增「CLI Checkpoint 胶囊接力导入」：在 Checkpoint 胶囊卡片底部追加接力区，粘贴 / 文件选择胶囊 JSON 后调用 `parseCheckpointCapsule`，一键根据 branches 创建带 `relayFrom` 标记的接力 Agent 分支；写入 eventLog scope=`agent-checkpoint-relay`。
+- `code/src/utils/aixAudit.ts` 新增 `verifyReplayPackage`、`parseCheckpointCapsule`、`buildPresetDrillSchedule` 三个本地函数，单元测试覆盖到 15 用例。
+
 ## 最新版本 v0.86.0
 - Aix 主入口新增「黑匣子审计回放器」：聚合 eventLog 中 aix-skill / aix-campaign / agent / desktop-preset 等 scope 的事件，按时间链式哈希（cyrb53）合成审计票据，每张票据带回滚指南、Claude Code 续跑提示、prev/chain hash；一键导出 JSON 回放包到 `aix-audit-replay-YYYYMMDD-HHmm.json`；本地工具实现见 `code/src/utils/aixAudit.ts`。
 - Aix 主入口新增「PowerShell 7 风险驾驶舱」：从 eventLog 中 scope=`powershell-preset|desktop-preset|desktop-preset-drill` 的记录聚合每个预设的成功率、fallback 比例、平均耗时和最近演练时间，输出 0-100 评分和绿/黄/红等级；桌面端通过 `window.sgx.runPowerShellPreset(name)` 触发真实白名单只读演练，浏览器端 fallback 为模拟样本；建议每周一次绿色、每周内黄色、当天红色再演练。

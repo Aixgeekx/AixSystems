@@ -1,13 +1,14 @@
 // Agent 控制中枢 - 本地任务分支、恢复和权限日志
-import React from 'react';
-import { Alert, Button, Card, Col, Progress, Row, Space, Tag, Timeline, Typography, message } from 'antd';
+import React, { useState } from 'react';
+import { Alert, Button, Card, Col, Input, Progress, Row, Space, Tag, Timeline, Typography, message } from 'antd';
 import { BranchesOutlined, HistoryOutlined, SafetyCertificateOutlined, ThunderboltOutlined, CodeOutlined } from '@ant-design/icons';
 import { nanoid } from 'nanoid';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildCheckpointCapsule } from '@/utils/aixAudit';
+import { buildCheckpointCapsule, parseCheckpointCapsule } from '@/utils/aixAudit';
+import type { ParsedCapsule } from '@/utils/aixAudit';
 
 const AGENT_TEMPLATES = [
   { title: '成长控制 Agent', desc: '拆解今日目标、习惯和复习压力，生成可恢复的行动分支', risk: '低风险', color: '#10b981', allow: '读写事项/目标/习惯/复习队列', deny: '禁止删除私人数据或跳过复盘', evidence: '今日数据、里程碑、提醒队列' },
@@ -31,6 +32,8 @@ export default function AgentPage() {
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
   const titleColor = isDark ? '#f8fafc' : '#0f172a';
   const subColor = isDark ? 'rgba(226,232,240,0.74)' : '#64748b';
+  const [relayInput, setRelayInput] = useState('');
+  const [parsedRelay, setParsedRelay] = useState<ParsedCapsule | null>(null);
   const agentLogs = useLiveQuery(() => db.eventLog.where('level').equals('info').reverse().sortBy('createdAt'), [])?.filter(log => log.detail?.scope === 'agent').slice(0, 8) || [];
   const agentTasks = useLiveQuery(() => db.items.filter(item => !item.deletedAt && (!!item.extra?.agent || !!item.extra?.aixCampaign)).toArray(), []) || [];
   const recoveryQueue = agentTasks.map(task => {
@@ -146,6 +149,63 @@ export default function AgentPage() {
   async function archiveCapsule() {
     await db.eventLog.add({ id: nanoid(), level: 'info', message: `Agent Checkpoint 胶囊已归档：${checkpointCapsule.capsuleId}`, detail: { scope: 'agent-checkpoint-capsule', capsuleId: checkpointCapsule.capsuleId, summary: checkpointCapsule.summary }, createdAt: Date.now() });
     message.success('胶囊已写入本地审计日志');
+  }
+
+  function parseRelayInput() {
+    const trimmed = relayInput.trim();
+    if (!trimmed) { message.warning('请粘贴一段 aix-cli-checkpoint-1.0 胶囊 JSON'); return; }
+    const result = parseCheckpointCapsule(trimmed);
+    setParsedRelay(result);
+    message[result.ok ? 'success' : 'error'](result.reason);
+  }
+
+  async function pickRelayFile() {
+    return new Promise<void>(resolve => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json,.json';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) { resolve(); return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+          setRelayInput(String(reader.result || ''));
+          resolve();
+        };
+        reader.onerror = () => { message.error('读取文件失败'); resolve(); };
+        reader.readAsText(file);
+      };
+      input.click();
+    });
+  }
+
+  async function relayBranches() {
+    if (!parsedRelay?.ok || !parsedRelay.branches.length) { message.warning('请先解析有效的胶囊 JSON'); return; }
+    const now = Date.now();
+    for (const branch of parsedRelay.branches) {
+      await db.items.add({
+        id: nanoid(),
+        type: 'work',
+        title: `接力 · ${branch.title}`,
+        description: `胶囊 ${parsedRelay.capsuleId} · ${branch.breakpoint} · 进度 ${branch.percent}%`,
+        startTime: now,
+        allDay: false,
+        isLunar: false,
+        reminders: [],
+        completeStatus: 'pending',
+        importance: branch.risk === '低风险' ? 1 : 0,
+        subtasks: [
+          { id: nanoid(), title: `恢复点：${branch.breakpoint}`, done: false },
+          { id: nanoid(), title: `下一步：${branch.next}`, done: false },
+          { id: nanoid(), title: '执行后写入恢复证据', done: false }
+        ],
+        extra: { agent: true, relayFrom: parsedRelay.capsuleId, risk: branch.risk, recoverable: true, claudeWorkflow: { plan: `接力恢复来自 ${parsedRelay.capsuleId}`, tools: '本地 Item 恢复', forbidden: '禁止读取日记正文', checkpoint: `progress=${branch.percent}%`, resume: branch.resume } },
+        createdAt: now,
+        updatedAt: now
+      });
+    }
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Agent 接力胶囊导入：${parsedRelay.branches.length} 个分支`, detail: { scope: 'agent-checkpoint-relay', capsuleId: parsedRelay.capsuleId, summary: parsedRelay.summary }, createdAt: now });
+    message.success(`已接力创建 ${parsedRelay.branches.length} 个 Agent 分支`);
   }
 
   return (
@@ -269,6 +329,33 @@ export default function AgentPage() {
         {checkpointBranches.length ? (
           <pre style={{ margin: 0, padding: 12, borderRadius: 14, maxHeight: 240, overflow: 'auto', whiteSpace: 'pre-wrap', color: titleColor, background: isDark ? 'rgba(0,0,0,0.32)' : 'rgba(15,23,42,0.05)', border: `1px solid ${accent}22` }}>{checkpointCapsule.prompt}</pre>
         ) : <Alert type="info" showIcon message="尚无 Agent 分支；创建分支后此处会生成可粘贴回 Claude Code 的胶囊文本。" style={{ borderRadius: 12 }} />}
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(139,92,246,0.10)' : 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>接力导入：胶囊一键展开为 Agent 分支</Typography.Text>
+            <Tag color="purple">aix-cli-checkpoint-1.0</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>粘贴或选择别人导出的胶囊 JSON，校验版本后一键创建对应数量的 Agent 接力分支；只用胶囊里的元数据，不自动执行未知动作，每条 Item 携带 relayFrom 标记便于审计。</Typography.Paragraph>
+          <Input.TextArea rows={4} value={relayInput} onChange={event => setRelayInput(event.target.value)} placeholder='粘贴 AIX-CKPT-*.json 内容' style={{ borderRadius: 12 }} />
+          <Space wrap style={{ marginTop: 10 }}>
+            <Button type="primary" onClick={parseRelayInput} style={{ borderRadius: 12 }}>解析胶囊</Button>
+            <Button onClick={pickRelayFile} style={{ borderRadius: 12 }}>选择 JSON 文件</Button>
+            <Button disabled={!parsedRelay?.ok || !parsedRelay.branches.length} onClick={relayBranches} style={{ borderRadius: 12 }}>一键创建 {parsedRelay?.branches.length || 0} 个接力分支</Button>
+            <Button onClick={() => { setRelayInput(''); setParsedRelay(null); }} style={{ borderRadius: 12 }}>清空</Button>
+          </Space>
+          {parsedRelay ? (
+            <div style={{ marginTop: 12 }}>
+              <Space wrap>
+                <Tag color={parsedRelay.ok ? 'green' : 'red'}>{parsedRelay.ok ? '版本匹配' : '版本不匹配'}</Tag>
+                {parsedRelay.capsuleId ? <Tag color="blue">{parsedRelay.capsuleId}</Tag> : null}
+                <Tag color="default">总分支 {parsedRelay.summary.total}</Tag>
+                <Tag color="purple">待续跑 {parsedRelay.summary.pending}</Tag>
+                <Tag color="gold">待授权 {parsedRelay.summary.needsApproval}</Tag>
+                <Tag color="green">可归档 {parsedRelay.summary.archived}</Tag>
+              </Space>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8, marginTop: 6 }}>{parsedRelay.reason}</div>
+            </div>
+          ) : null}
+        </div>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>

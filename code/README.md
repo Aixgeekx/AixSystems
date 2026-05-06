@@ -54,6 +54,11 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.87.0 (2026-05-07)
+- Aix 主入口新增「审计回放包导入校验器」：粘贴 / 选择 `aix-audit-replay-1.0` JSON 后重算 cyrb53 链式哈希，逐条比对 prevHash + chainHash 是否连续，标出断点位置；导入结果写入 eventLog scope=`aix-audit-replay-import`，纯本地校验。
+- Aix 主入口新增「PowerShell 演练编排器」：根据风险驾驶舱的红/黄/绿评分自动生成只读演练事项（红色 → 今日 16:00 + 高重要度，黄色 → 3 天后 + 中等重要度，绿色 → 一周后），写入提醒队列、Item.extra.presetDrill 和 eventLog scope=`powershell-drill-plan`。
+- Agent 中枢新增「CLI Checkpoint 胶囊接力导入」：粘贴 / 选择别人导出的 `aix-cli-checkpoint-1.0` JSON 后一键创建对应数量的接力 Agent 分支，每条 Item.extra.relayFrom 携带胶囊 ID，附带 claudeWorkflow 续跑提示，便于多人协同恢复。
+
 ### v0.86.0 (2026-05-07)
 - Aix 主入口新增「黑匣子审计回放器」：把最近的 Aix 技能、控制战役、Agent 分支和桌面预设事件压成链式哈希票据，每张票据带回滚指南和 Claude Code 续跑提示；一键导出 JSON 回放包；只用 eventLog 元数据，不读日记正文。
 - Aix 主入口新增「PowerShell 7 风险驾驶舱」：聚合 PowerShell 白名单预设的成功率、fallback 比例、平均耗时，输出绿/黄/红三色风险评分和 7 天再演练计划；桌面端真实 IPC，浏览器端 fallback 模拟。

@@ -220,3 +220,138 @@ export function buildCheckpointCapsule(branches: CheckpointBranch[]) {
   ].join('\n');
   return { capsuleId, generatedAt, summary, json, prompt };
 }
+
+export interface ReplayVerification {
+  ok: boolean;
+  version: string;
+  count: number;
+  brokenAt: number;                                         // -1 表示链式完整
+  headHash: string;
+  tailHash: string;
+  summary: ReturnType<typeof summarizeTickets>;
+  generatedAt: number;
+  capsule: Record<string, any>;
+  reason: string;
+}
+
+export function verifyReplayPackage(json: string): ReplayVerification {
+  let parsed: any;
+  try { parsed = JSON.parse(json); }
+  catch { return { ok: false, version: '', count: 0, brokenAt: 0, headHash: '0', tailHash: '0', summary: [], generatedAt: 0, capsule: {}, reason: 'JSON 解析失败' }; }
+  if (!parsed || parsed.version !== 'aix-audit-replay-1.0') {
+    return { ok: false, version: String(parsed?.version || ''), count: 0, brokenAt: 0, headHash: '0', tailHash: '0', summary: [], generatedAt: Number(parsed?.generatedAt) || 0, capsule: parsed?.capsule || {}, reason: '版本不匹配，期望 aix-audit-replay-1.0' };
+  }
+  const ticketsRaw: any[] = Array.isArray(parsed.tickets) ? parsed.tickets : [];
+  const sorted = [...ticketsRaw].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+  let prev = '0000000000000';
+  let brokenAt = -1;
+  for (let i = 0; i < sorted.length; i++) {
+    const ticket = sorted[i];
+    const expected = hashString(prev + String(ticket.id) + String(ticket.fingerprint) + Number(ticket.timestamp));
+    const claimedPrev = String(ticket.prevHash || '');
+    const claimedHash = String(ticket.chainHash || '');
+    if (claimedPrev !== prev || claimedHash !== expected) { brokenAt = i; break; }
+    prev = claimedHash;
+  }
+  const recoveredTickets: AuditTicket[] = sorted.map(ticket => ({
+    id: String(ticket.id),
+    scope: String(ticket.scope || 'general'),
+    scopeLabel: String(ticket.scope || 'general'),
+    level: (ticket.level as AuditTicket['level']) || 'info',
+    risk: (ticket.risk as AuditTicket['risk']) || '低风险',
+    color: '#94a3b8',
+    timestamp: Number(ticket.timestamp) || 0,
+    message: String(ticket.message || ''),
+    fingerprint: String(ticket.fingerprint || ''),
+    chainHash: String(ticket.chainHash || ''),
+    prevHash: String(ticket.prevHash || ''),
+    rollback: String(ticket.rollback || ''),
+    resume: String(ticket.resume || '')
+  }));
+  const summary = summarizeTickets(recoveredTickets);
+  const head = sorted[sorted.length - 1];
+  const tail = sorted[0];
+  return {
+    ok: brokenAt < 0,
+    version: 'aix-audit-replay-1.0',
+    count: sorted.length,
+    brokenAt,
+    headHash: head?.chainHash || '0',
+    tailHash: tail?.chainHash || '0',
+    summary,
+    generatedAt: Number(parsed.generatedAt) || 0,
+    capsule: parsed.capsule || {},
+    reason: brokenAt < 0 ? '链式哈希完整' : `第 ${brokenAt + 1} 张票据链式哈希不一致，可能被篡改或部分丢失`
+  };
+}
+
+export interface ParsedCapsule {
+  ok: boolean;
+  capsuleId: string;
+  generatedAt: number;
+  summary: { total: number; pending: number; archived: number; needsApproval: number };
+  branches: CheckpointBranch[];
+  reason: string;
+}
+
+export function parseCheckpointCapsule(json: string): ParsedCapsule {
+  let parsed: any;
+  try { parsed = JSON.parse(json); }
+  catch { return { ok: false, capsuleId: '', generatedAt: 0, summary: { total: 0, pending: 0, archived: 0, needsApproval: 0 }, branches: [], reason: 'JSON 解析失败' }; }
+  if (!parsed || parsed.version !== 'aix-cli-checkpoint-1.0') {
+    return { ok: false, capsuleId: String(parsed?.capsuleId || ''), generatedAt: Number(parsed?.generatedAt) || 0, summary: { total: 0, pending: 0, archived: 0, needsApproval: 0 }, branches: [], reason: '版本不匹配，期望 aix-cli-checkpoint-1.0' };
+  }
+  const branches: CheckpointBranch[] = Array.isArray(parsed.branches) ? parsed.branches.map((branch: any) => ({
+    id: String(branch.id || ''),
+    title: String(branch.title || '未命名分支'),
+    risk: String(branch.risk || '低风险'),
+    percent: Math.max(0, Math.min(100, Number(branch.percent) || 0)),
+    breakpoint: String(branch.breakpoint || 'Resume'),
+    resume: String(branch.resume || ''),
+    next: String(branch.next || '继续推进未完成子任务'),
+    proof: String(branch.proof || '')
+  })) : [];
+  return {
+    ok: true,
+    capsuleId: String(parsed.capsuleId || ''),
+    generatedAt: Number(parsed.generatedAt) || 0,
+    summary: {
+      total: branches.length,
+      pending: branches.filter(branch => branch.percent < 100).length,
+      archived: branches.filter(branch => branch.percent === 100).length,
+      needsApproval: branches.filter(branch => branch.risk !== '低风险' && branch.percent < 67).length
+    },
+    branches,
+    reason: branches.length ? `胶囊解析成功，共 ${branches.length} 个分支` : '胶囊有效但没有分支'
+  };
+}
+
+export interface PresetDrillPlan {
+  preset: string;
+  level: PowerShellRiskEntry['level'];
+  scheduleAt: number;                                        // 演练时间戳
+  scheduleLabel: string;
+  importance: 0 | 1 | 2 | 3;
+  drill: string;
+}
+
+export function buildPresetDrillSchedule(rows: PowerShellRiskEntry[], now = Date.now()): PresetDrillPlan[] {
+  const today16 = new Date(now);
+  today16.setHours(16, 0, 0, 0);
+  if (today16.getTime() < now) today16.setDate(today16.getDate() + 1);
+  return rows.map(row => {
+    const offsetDays = row.level === '红色' ? 0 : row.level === '黄色' ? 3 : 7;
+    const fire = new Date(today16);
+    fire.setDate(today16.getDate() + offsetDays);
+    const importance = row.level === '红色' ? 0 : row.level === '黄色' ? 1 : 2;
+    return {
+      preset: row.preset,
+      level: row.level,
+      scheduleAt: fire.getTime(),
+      scheduleLabel: offsetDays === 0 ? '今日 16:00 演练' : offsetDays === 3 ? '本周内演练' : '一周后演练',
+      importance,
+      drill: row.drill
+    };
+  });
+}
+

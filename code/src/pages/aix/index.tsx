@@ -12,7 +12,8 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule } from '@/utils/aixAudit';
+import type { ReplayVerification } from '@/utils/aixAudit';
 
 const SKILLS = [
   { key: 'growth-control', name: '成长控制技能', version: '1.0.0', risk: '低风险', color: '#10b981', input: '事项 / 目标 / 习惯 / 复习', output: '今日推进顺序与最小闭环' },
@@ -84,6 +85,8 @@ export default function AixPage() {
   const [answer, setAnswer] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<typeof SKILLS[number] | null>(null);
   const [pluginPackage, setPluginPackage] = useState('');
+  const [replayInput, setReplayInput] = useState('');
+  const [replayResult, setReplayResult] = useState<ReplayVerification | null>(null);
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
@@ -391,6 +394,64 @@ export default function AixPage() {
     message.success(`已写入 ${presetName} 演练日志`);
   }
 
+  async function verifyReplayInput() {
+    const trimmed = replayInput.trim();
+    if (!trimmed) { message.warning('请粘贴回放包 JSON 或先导出一份'); return; }
+    const result = verifyReplayPackage(trimmed);
+    setReplayResult(result);
+    await db.eventLog.add({ id: nanoid(), level: result.ok ? 'info' : 'warn', message: `Aix 审计回放包导入校验：${result.ok ? '通过' : '失败'}`, detail: { scope: 'aix-audit-replay-import', ok: result.ok, count: result.count, brokenAt: result.brokenAt, headHash: result.headHash, generatedAt: result.generatedAt }, createdAt: Date.now() });
+    message[result.ok ? 'success' : 'error'](result.reason);
+  }
+
+  async function pickReplayFile() {
+    return new Promise<void>(resolve => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json,.json';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) { resolve(); return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+          setReplayInput(String(reader.result || ''));
+          resolve();
+        };
+        reader.onerror = () => { message.error('读取文件失败'); resolve(); };
+        reader.readAsText(file);
+      };
+      input.click();
+    });
+  }
+
+  async function scheduleAllPresetDrills() {
+    if (!powerShellRiskRows.length) { message.warning('暂无可排程预设'); return; }
+    const plans = buildPresetDrillSchedule(powerShellRiskRows);
+    const now = Date.now();
+    for (const plan of plans) {
+      await db.items.add({
+        id: nanoid(),
+        type: 'work',
+        title: `PowerShell 演练 · ${plan.preset}`,
+        description: `${plan.scheduleLabel}：${plan.drill}`,
+        startTime: plan.scheduleAt,
+        allDay: false,
+        isLunar: false,
+        reminders: [{ offsetMs: 0, label: '到点演练' }],
+        completeStatus: 'pending',
+        importance: plan.importance,
+        subtasks: [
+          { id: nanoid(), title: `运行预设 ${plan.preset}（白名单只读）`, done: false },
+          { id: nanoid(), title: '复盘成功率与 fallback 比例', done: false }
+        ],
+        extra: { presetDrill: true, level: plan.level, preset: plan.preset, scheduledFrom: 'aix-cockpit' },
+        createdAt: now,
+        updatedAt: now
+      });
+    }
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `PowerShell 演练编排：${plans.length} 个预设`, detail: { scope: 'powershell-drill-plan', plans }, createdAt: now });
+    message.success(`已创建 ${plans.length} 条演练事项`);
+  }
+
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 28, background: isDark ? `linear-gradient(135deg, ${accent}20, rgba(5,8,22,0.96))` : 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(79,70,229,0.9), rgba(20,184,166,0.86))' }} bodyStyle={{ padding: 24 }}>
@@ -689,6 +750,35 @@ export default function AixPage() {
             </div>
           ))}
         </Space>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>导入回放包校验链式哈希</Typography.Text>
+            <Tag color="purple">aix-audit-replay-1.0</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>粘贴或选择以前导出的回放包 JSON，校验每张票据的链式哈希是否仍然连续，校验过程纯本地，不上传任何数据。</Typography.Paragraph>
+          <Input.TextArea rows={4} value={replayInput} onChange={event => setReplayInput(event.target.value)} placeholder='粘贴 aix-audit-replay-*.json 内容' style={{ borderRadius: 12 }} />
+          <Space wrap style={{ marginTop: 10 }}>
+            <Button type="primary" onClick={verifyReplayInput} style={{ borderRadius: 12 }}>校验链式哈希</Button>
+            <Button onClick={pickReplayFile} style={{ borderRadius: 12 }}>选择 JSON 文件</Button>
+            <Button onClick={() => { setReplayInput(''); setReplayResult(null); }} style={{ borderRadius: 12 }}>清空</Button>
+          </Space>
+          {replayResult ? (
+            <div style={{ marginTop: 12 }}>
+              <Space wrap>
+                <Tag color={replayResult.ok ? 'green' : 'red'}>{replayResult.ok ? '链式完整' : '存在断点'}</Tag>
+                <Tag color="blue">票据 {replayResult.count}</Tag>
+                {replayResult.brokenAt >= 0 ? <Tag color="red">断点位置 #{replayResult.brokenAt + 1}</Tag> : null}
+                {replayResult.generatedAt ? <Tag>生成 {dayjs(replayResult.generatedAt).format('YYYY-MM-DD HH:mm')}</Tag> : null}
+              </Space>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8, marginTop: 6 }}>{replayResult.reason}</div>
+              {replayResult.summary.length ? (
+                <Space wrap style={{ marginTop: 6 }}>
+                  {replayResult.summary.map(item => <Tag key={item.scope} color="default">{item.label} × {item.count}</Tag>)}
+                </Space>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
@@ -730,6 +820,18 @@ export default function AixPage() {
             </Col>
           ))}
         </Row>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(245,158,11,0.10)' : 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>PowerShell 7 演练编排器</Typography.Text>
+            <Tag color="gold">红 → 今日 · 黄 → 本周 · 绿 → 一周后</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 8, fontSize: 12 }}>根据风险评分生成只读演练事项：红色排到今日 16:00 + 高重要度，黄色排到 3 天后 + 中等重要度，绿色排到一周后；事项写入提醒队列，可在我的一天看到。</Typography.Paragraph>
+          <Space wrap>
+            <Button type="primary" disabled={!powerShellRiskRows.length} onClick={scheduleAllPresetDrills} style={{ borderRadius: 12 }}>一键写入演练日程</Button>
+            <Tag color="green">写入 Item.extra.presetDrill</Tag>
+            <Tag color="purple">写入 eventLog scope=powershell-drill-plan</Tag>
+          </Space>
+        </div>
       </Card>
 
       <Row gutter={[16, 16]}>
