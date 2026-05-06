@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches, scoreRelayBranches, buildBranchHealthTrend, buildBranchRetroSubtasks } from '@/utils/aixAudit';
+import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches, scoreRelayBranches, buildBranchHealthTrend, buildBranchRetroSubtasks, buildHealthTrendCompare } from '@/utils/aixAudit';
 import type { ParsedCapsule } from '@/utils/aixAudit';
 
 const AGENT_TEMPLATES = [
@@ -122,6 +122,7 @@ export default function AgentPage() {
   const relayFailureLogs = useLiveQuery(() => db.eventLog.toArray(), []) || [];
   const branchHealthScores = scoreRelayBranches(agentTasks, relayFailureLogs);
   const branchHealthTrend = buildBranchHealthTrend(agentTasks, relayFailureLogs, 7);
+  const healthTrendCompare = buildHealthTrendCompare(branchHealthTrend);
 
   const disciplineCoach = autonomyQueue.map(item => ({
     title: item.task.title,
@@ -596,6 +597,12 @@ export default function AgentPage() {
                 <div title={`${cell.dateLabel}: 平均 ${cell.avgScore} 分 · ${cell.count} 条分支`} style={{ width: '100%', height: cell.count ? `${Math.max(8, cell.avgScore * 0.6)}px` : '4px', borderRadius: 6, background: !cell.count ? 'rgba(148,163,184,0.32)' : cell.avgScore >= 75 ? 'rgba(34,197,94,0.78)' : cell.avgScore >= 45 ? 'rgba(245,158,11,0.78)' : 'rgba(239,68,68,0.78)' }} />
                 <Typography.Text style={{ color: subColor, fontSize: 10 }}>{cell.dateLabel}</Typography.Text>
                 <Typography.Text style={{ color: titleColor, fontSize: 10, fontWeight: 600 }}>{cell.count ? `${cell.avgScore}` : '—'}</Typography.Text>
+                {(() => {
+                  const cmp = healthTrendCompare.find(c => c.dateLabel === cell.dateLabel);
+                  if (!cmp || !cell.count) return null;
+                  const arrowColor = cmp.delta > 0 ? '#22c55e' : cmp.delta < 0 ? '#ef4444' : '#94a3b8';
+                  return <Typography.Text style={{ color: arrowColor, fontSize: 10 }}>{cmp.arrow}{cmp.delta > 0 ? '+' + cmp.delta : cmp.delta || ''}</Typography.Text>;
+                })()}
               </div>
             ))}
           </div>

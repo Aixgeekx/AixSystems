@@ -428,6 +428,36 @@ export default function AixPage() {
     db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 链锚反向比对：${result.ok ? '一致' : `${result.mismatch.length} 处不一致`}`, detail: { scope: 'aix-daily-anchor-compare', identical: result.identical.length, mismatch: result.mismatch.length, missingLocal: result.missingLocal.length, missingRemote: result.missingRemote.length }, createdAt: Date.now() });
   }
 
+  async function scheduleGoldenPathItems() {
+    if (!presetGoldenPath.length) { message.warning('暂无可写入的黄金路径'); return; }
+    const todayStart = dayjs().startOf('day');
+    let added = 0;
+    for (const step of presetGoldenPath) {
+      const slot = todayStart.add(8 + step.order, 'hour').valueOf();
+      const id = nanoid();
+      await db.items.add({
+        id,
+        title: '🟢 黄金路径 #' + step.order + ' · ' + step.preset,
+        type: 'schedule',
+        startTime: slot,
+        endTime: slot + 30 * 60_000,
+        completeStatus: 'pending',
+        importance: step.level === '红色' ? 'urgent_important' : step.level === '黄色' ? 'important_not_urgent' : 'not_urgent_important',
+        classifyId: 'system',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        subtasks: [
+          { id: nanoid(), title: step.suggestion, done: false }
+        ],
+        tags: ['Aix', 'PowerShell', '黄金路径'],
+        extra: { aixCampaign: true, goldenPath: true, level: step.level, preset: step.preset, risk: step.level }
+      } as any);
+      added += 1;
+    }
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: 'Aix 黄金路径写入今日演练事项：' + added + ' 步', detail: { scope: 'powershell-golden-path-schedule', added }, createdAt: Date.now() });
+    message.success('已写入 ' + added + ' 个黄金路径演练事项到今天');
+  }
+
   async function drillGoldenPath() {
     if (!presetGoldenPath.length) { message.warning('暂无可执行黄金路径'); return; }
     for (const step of presetGoldenPath) await logPresetDrill(step.preset);
@@ -1128,6 +1158,7 @@ export default function AixPage() {
             <Space>
               <Tag color="lime">绿 → 黄 → 红 · 成功率优先 · 耗时其次</Tag>
               <Button size="small" type="primary" ghost disabled={!presetGoldenPath.length} onClick={drillGoldenPath} style={{ borderRadius: 10 }}>一键执行黄金路径</Button>
+              <Button size="small" disabled={!presetGoldenPath.length} onClick={scheduleGoldenPathItems} style={{ borderRadius: 10 }}>写入今日演练事项</Button>
             </Space>
           </Space>
           <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>把所有预设按"等级（绿色优先）→ 成功率（高优先）→ 平均耗时（短优先）"排出今天的执行序列；先建立稳定基线再啃硬骨头。</Typography.Paragraph>

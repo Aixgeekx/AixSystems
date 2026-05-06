@@ -916,3 +916,42 @@ export function buildFullAuditSnapshot(params: { tickets: AuditTicket[]; dailyAn
   };
   return JSON.stringify(snapshot, null, 2);
 }
+
+export interface SnapshotVerification {
+  ok: boolean;
+  schema?: string;
+  generatedAt?: number;
+  totals?: { tickets: number; presets: number; branches: number; days: number };
+  reason?: string;
+}
+
+export function verifyFullAuditSnapshot(jsonText: string): SnapshotVerification {
+  let pkg: any;
+  try {
+    pkg = JSON.parse(jsonText);
+  } catch (e: any) {
+    return { ok: false, reason: 'JSON 解析失败：' + (e?.message || '未知错误') };
+  }
+  if (!pkg || pkg.schema !== 'aix-full-audit-snapshot-1.0') return { ok: false, reason: 'schema 不是 aix-full-audit-snapshot-1.0' };
+  if (!pkg.totals || typeof pkg.totals.tickets !== 'number') return { ok: false, reason: 'totals 字段缺失或格式错误' };
+  const ticketsLen = Array.isArray(pkg.tickets) ? pkg.tickets.length : 0;
+  if (ticketsLen !== pkg.totals.tickets) return { ok: false, reason: `tickets 数量与 totals.tickets 不一致：${ticketsLen} vs ${pkg.totals.tickets}` };
+  return { ok: true, schema: pkg.schema, generatedAt: pkg.generatedAt, totals: pkg.totals };
+}
+
+export interface DailyTrendCompare {
+  dateLabel: string;
+  avgScore: number;
+  prevScore: number;
+  delta: number;
+  arrow: '↑' | '↓' | '→';
+}
+
+export function buildHealthTrendCompare(trend: HealthTrendCell[]): DailyTrendCompare[] {
+  return trend.map((cell, idx) => {
+    const prev = idx > 0 ? trend[idx - 1].avgScore : cell.avgScore;
+    const delta = cell.avgScore - prev;
+    const arrow: '↑' | '↓' | '→' = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
+    return { dateLabel: cell.dateLabel, avgScore: cell.avgScore, prevScore: prev, delta, arrow };
+  });
+}

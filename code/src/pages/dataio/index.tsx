@@ -1,11 +1,11 @@
 // 数据导入导出 - 兼容桌面版原生 FS 与浏览器下载 (v0.21.4 主题适配)
 import React, { useState } from 'react';
-import { Alert, Button, Card, Checkbox, Col, Empty as AntEmpty, Row, Space, Statistic, Tag, Typography, Upload, message } from 'antd';
+import { Alert, Button, Card, Checkbox, Col, Empty as AntEmpty, Input, Row, Space, Statistic, Tag, Typography, Upload, message } from 'antd';
 import { DatabaseOutlined, DownloadOutlined, FolderOpenOutlined, UploadOutlined } from '@ant-design/icons';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { downloadBackup, importAll, pickAndImport } from '@/utils/export';
-import { buildAuditTickets, summarizePowerShellLogs, buildDailyChainSummary, scoreRelayBranches, buildScopeDistribution, buildFullAuditSnapshot } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizePowerShellLogs, buildDailyChainSummary, scoreRelayBranches, buildScopeDistribution, buildFullAuditSnapshot, verifyFullAuditSnapshot } from '@/utils/aixAudit';
 import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import { getElectron, isElectron } from '@/utils/electron';
@@ -32,6 +32,9 @@ export default function DataIOPage() {
     { label: '系统状态', tables: ['eventLog', 'cacheKv'] }
   ];
   const [selectedModules, setSelectedModules] = useState<string[]>(dataModules.map(item => item.label));
+  const [snapshotInput, setSnapshotInput] = useState('');
+  const [snapshotResult, setSnapshotResult] = useState<ReturnType<typeof verifyFullAuditSnapshot> | null>(null);
+
 
   const stats = useLiveQuery(async () => {
     const next: Record<string, number> = {};
@@ -105,6 +108,15 @@ export default function DataIOPage() {
     }
     await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 全量审计快照导出：${tickets.length} 票据 / ${presetNames.length} 预设 / ${branchHealth.length} 分支`, detail: { scope: 'aix-full-audit-snapshot', tickets: tickets.length, presets: presetNames.length, branches: branchHealth.length }, createdAt: Date.now() });
     message.success(`已导出全量审计快照（${tickets.length} 票据 + ${presetNames.length} 预设 + ${branchHealth.length} 分支）`);
+  }
+
+  function verifySnapshotInput() {
+    const trimmed = snapshotInput.trim();
+    if (!trimmed) { message.warning('请粘贴 aix-full-audit-snapshot JSON 内容'); return; }
+    const result = verifyFullAuditSnapshot(trimmed);
+    setSnapshotResult(result);
+    if (result.ok) message.success('快照校验通过：' + (result.totals?.tickets || 0) + ' 票据 / ' + (result.totals?.presets || 0) + ' 预设 / ' + (result.totals?.branches || 0) + ' 分支');
+    else message.error(result.reason || '校验失败');
   }
 
   async function onPartialBackup() {
@@ -319,6 +331,29 @@ export default function DataIOPage() {
                 <Button type="primary" ghost icon={<DownloadOutlined />} onClick={exportFullAuditSnapshot} style={{ borderRadius: 10 }}>
                   导出全量审计快照 JSON
                 </Button>
+                <Typography.Text strong style={{ color: titleColor, display: 'block', marginTop: 12 }}>导入校验</Typography.Text>
+                <Typography.Paragraph style={{ margin: '4px 0 8px', color: subColor, fontSize: 12 }}>粘贴以前导出的 aix-full-audit-snapshot JSON，校验 schema 与 totals 是否完整一致。</Typography.Paragraph>
+                <Input.TextArea rows={3} value={snapshotInput} onChange={event => setSnapshotInput(event.target.value)} placeholder='粘贴 aix-full-audit-snapshot-*.json 内容' style={{ borderRadius: 10, marginBottom: 8 }} />
+                <Space wrap>
+                  <Button onClick={verifySnapshotInput} style={{ borderRadius: 10 }}>校验快照</Button>
+                  <Button onClick={() => { setSnapshotInput(''); setSnapshotResult(null); }} style={{ borderRadius: 10 }}>清空</Button>
+                </Space>
+                {snapshotResult ? (
+                  <div style={{ marginTop: 8 }}>
+                    <Space wrap>
+                      <Tag color={snapshotResult.ok ? 'green' : 'red'}>{snapshotResult.ok ? '校验通过' : '校验失败'}</Tag>
+                      {snapshotResult.ok && snapshotResult.totals ? (
+                        <>
+                          <Tag color="blue">票据 {snapshotResult.totals.tickets}</Tag>
+                          <Tag color="purple">预设 {snapshotResult.totals.presets}</Tag>
+                          <Tag color="cyan">分支 {snapshotResult.totals.branches}</Tag>
+                          <Tag color="gold">日链 {snapshotResult.totals.days}</Tag>
+                        </>
+                      ) : null}
+                      {!snapshotResult.ok && snapshotResult.reason ? <Typography.Text style={{ color: '#ef4444', fontSize: 12 }}>{snapshotResult.reason}</Typography.Text> : null}
+                    </Space>
+                  </div>
+                ) : null}
               </div>
             </Space>
           </Card>

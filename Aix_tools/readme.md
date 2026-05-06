@@ -2,6 +2,13 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.98.0
+- `code/src/utils/aixAudit.ts` 新增 `verifyFullAuditSnapshot(jsonText)`（schema + totals.tickets vs 实际 tickets.length 一致性校验，错误时给具体 reason）、`buildHealthTrendCompare(trend)`（前一天 vs 当前的 delta + 箭头 ↑↓→）。
+- Aix 主入口加 `scheduleGoldenPathItems` 函数（dayjs.startOf('day') + step.order 偏移 + db.items.add + nanoid 子任务 + Aix/PowerShell/黄金路径 tags）+ 「写入今日演练事项」按钮（在已有「一键执行黄金路径」旁，禁用条件相同）。
+- Agent 中枢加 `healthTrendCompare` 计算 + 在每个柱条 IIFE 内查找当日 cmp，渲染绿/红/灰箭头（delta>0 +N，delta<0 -N，0 留空）。
+- 数据中心加 `Input` 引入 + `snapshotInput` / `snapshotResult` useState + `verifySnapshotInput` 函数 + 「导入校验」TextArea + 4 个结果 Tag（票据/预设/分支/日链）。
+- 测试新增 4 个 it（87 全绿）；`npm run build` OK；首次形成"导出 → 校验"闭环。
+
 ## 最新版本 v0.97.0
 - `code/src/utils/aixAudit.ts` 新增 `buildFullAuditSnapshot({ tickets, dailyAnchors, powerShellRisk, branchHealth, scopeDistribution })`：schema=aix-full-audit-snapshot-1.0 + totals 4 项 + 5 类数据数组。
 - Aix 主入口加 `drillGoldenPath` 函数（循环 logPresetDrill + 写 audit）+ 黄金路径头部「一键执行黄金路径」按钮（`presetGoldenPath` 长度判 disable）。

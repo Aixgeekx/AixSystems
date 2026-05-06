@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend, buildScopeDistribution, buildPresetGoldenPath, buildBranchRetroSubtasks, buildFullAuditSnapshot } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend, buildScopeDistribution, buildPresetGoldenPath, buildBranchRetroSubtasks, buildFullAuditSnapshot, verifyFullAuditSnapshot, buildHealthTrendCompare } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -582,5 +582,49 @@ describe('buildFullAuditSnapshot', () => {
     expect(parsed.totals.presets).toBe(1);
     expect(parsed.totals.branches).toBe(1);
     expect(parsed.totals.days).toBe(1);
+  });
+});
+
+
+describe('verifyFullAuditSnapshot', () => {
+  it('returns ok when schema and totals are valid', () => {
+    const json = buildFullAuditSnapshot({
+      tickets: [],
+      dailyAnchors: [],
+      powerShellRisk: [],
+      branchHealth: [],
+      scopeDistribution: []
+    });
+    const result = verifyFullAuditSnapshot(json);
+    expect(result.ok).toBe(true);
+    expect(result.schema).toBe('aix-full-audit-snapshot-1.0');
+    expect(result.totals?.tickets).toBe(0);
+  });
+
+  it('flags invalid schema', () => {
+    const result = verifyFullAuditSnapshot(JSON.stringify({ schema: 'wrong', totals: { tickets: 0 } }));
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('schema');
+  });
+
+  it('flags non-json input', () => {
+    const result = verifyFullAuditSnapshot('not json');
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('JSON');
+  });
+});
+
+describe('buildHealthTrendCompare', () => {
+  it('marks day-over-day delta with arrows', () => {
+    const trend = [
+      { dateLabel: '05-05', dayStart: 0, avgScore: 60, count: 1 },
+      { dateLabel: '05-06', dayStart: 0, avgScore: 75, count: 1 },
+      { dateLabel: '05-07', dayStart: 0, avgScore: 70, count: 1 }
+    ];
+    const compare = buildHealthTrendCompare(trend);
+    expect(compare[0].arrow).toBe('→');
+    expect(compare[1].arrow).toBe('↑');
+    expect(compare[2].arrow).toBe('↓');
+    expect(compare[1].delta).toBe(15);
   });
 });

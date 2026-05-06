@@ -54,6 +54,12 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.98.0 (2026-05-07)
+- Aix 主入口风险驾驶舱「演练黄金路径」加「写入今日演练事项」按钮：调 `scheduleGoldenPathItems` 按 step.order 把每步排到当天 8+N 点的 30 分钟 schedule item，importance 按 level 映射到艾森豪威尔三档，写 eventLog scope=powershell-golden-path-schedule。
+- Agent 中枢「近 7 天健康度趋势」柱条下方加「日对日箭头」：调 `buildHealthTrendCompare` 给每个柱条算 delta 与箭头，绿/红/灰显示回升或下滑。
+- 数据中心「全量审计快照」紫色区下方新增「导入校验」：调 `verifyFullAuditSnapshot` 校验 JSON schema=aix-full-audit-snapshot-1.0 与 totals 一致性，结果 4 个 Tag（票据/预设/分支/日链）。
+- `code/src/utils/aixAudit.ts` 新增 `verifyFullAuditSnapshot` / `buildHealthTrendCompare` 两个工具函数 + `code/src/utils/aixAudit.test.ts` 补 4 套用例（共 87 测试 100% 绿）；`npm run build` 通过；导出—校验闭环完成。
+
 ### v0.97.0 (2026-05-07)
 - Aix 主入口风险驾驶舱「演练黄金路径」头部新增「一键执行黄金路径」按钮：调 `drillGoldenPath` 按 `presetGoldenPath` 顺序循环 `logPresetDrill`，写入 eventLog scope=powershell-golden-path。
 - Agent 中枢健康度评分卡片头部新增「批量生成风险复盘」按钮：`generateBatchRetroSubtasks` 遍历所有 band==='风险' 分支调 `db.items.update` 追加 `buildBranchRetroSubtasks` 生成的 3 条子任务，写入 eventLog scope=agent-retro-subtasks-batch。
