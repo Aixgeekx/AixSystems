@@ -91,6 +91,22 @@ export default function AgentPage() {
     proof: `progress=${item.percent}%; risk=${item.risk}; priority=${item.priority}`
   }));
   const checkpointCapsule = buildCheckpointCapsule(checkpointBranches);
+  const relayChains = agentTasks
+    .filter(task => !!task.extra?.relayFrom)
+    .reduce<Record<string, typeof agentTasks>>((map, task) => {
+      const key = String(task.extra?.relayFrom);
+      if (!map[key]) map[key] = [];
+      map[key].push(task);
+      return map;
+    }, {});
+  const relayChainList = Object.entries(relayChains)
+    .map(([capsuleId, tasks]) => ({
+      capsuleId,
+      tasks: [...tasks].sort((a, b) => a.createdAt - b.createdAt),
+      latestAt: Math.max(...tasks.map(task => task.updatedAt))
+    }))
+    .sort((a, b) => b.latestAt - a.latestAt)
+    .slice(0, 6);
   const disciplineCoach = autonomyQueue.map(item => ({
     title: item.task.title,
     risk: String(item.task.extra?.risk || (item.task.extra?.aixCampaign ? '中风险' : '低风险')),
@@ -356,6 +372,49 @@ export default function AgentPage() {
             </div>
           ) : null}
         </div>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <BranchesOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Agent 接力链路时间线</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>把通过胶囊接力创建的 Agent 分支按 capsuleId 聚合并按时间排序，让多人协作链路一眼可见；只读取本地 Item.extra.relayFrom 标记，不上传任何数据。</Typography.Paragraph>
+        {relayChainList.length ? (
+          <Space direction="vertical" size={14} style={{ width: '100%' }}>
+            {relayChainList.map(chain => (
+              <div key={chain.capsuleId} style={{ padding: 14, borderRadius: 16, background: isDark ? 'rgba(139,92,246,0.10)' : 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.22)' }}>
+                <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Space wrap>
+                    <Tag color="purple">{chain.capsuleId}</Tag>
+                    <Typography.Text strong style={{ color: titleColor }}>{chain.tasks.length} 个接力分支</Typography.Text>
+                  </Space>
+                  <Tag color="blue">最近活动 {dayjs(chain.latestAt).format('MM-DD HH:mm')}</Tag>
+                </Space>
+                <Timeline items={chain.tasks.map(task => {
+                  const subtasks = task.subtasks || [];
+                  const done = subtasks.filter(item => item.done).length;
+                  const total = subtasks.length || 1;
+                  const percent = Math.round(done / total * 100);
+                  return {
+                    color: percent === 100 ? 'green' : percent >= 50 ? 'blue' : 'gray',
+                    children: (
+                      <Space direction="vertical" size={2} style={{ width: '100%' }}>
+                        <Space wrap>
+                          <Typography.Text strong style={{ color: titleColor }}>{task.title}</Typography.Text>
+                          <Tag color={String(task.extra?.risk || '低风险') === '低风险' ? 'green' : 'gold'}>{String(task.extra?.risk || '低风险')}</Tag>
+                          <Tag color={percent === 100 ? 'green' : percent >= 50 ? 'blue' : 'default'}>进度 {percent}%</Tag>
+                        </Space>
+                        <Typography.Text style={{ color: subColor, fontSize: 12 }}>创建：{dayjs(task.createdAt).format('MM-DD HH:mm')} · 更新：{dayjs(task.updatedAt).format('MM-DD HH:mm')}</Typography.Text>
+                        {task.extra?.claudeWorkflow?.resume ? <Typography.Text style={{ color: subColor, fontSize: 12 }}>续跑：{String(task.extra?.claudeWorkflow?.resume).slice(0, 96)}…</Typography.Text> : null}
+                      </Space>
+                    )
+                  };
+                })} />
+              </div>
+            ))}
+          </Space>
+        ) : <Alert type="info" showIcon message="暂无接力分支；从其他人导入的 Checkpoint 胶囊会出现在这里。" style={{ borderRadius: 12 }} />}
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>

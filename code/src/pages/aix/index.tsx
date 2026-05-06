@@ -1,5 +1,5 @@
 // Aix 主入口 - 私人便携 AI 中枢
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Card, Col, Input, Modal, Progress, Row, Space, Tag, Timeline, Typography, message } from 'antd';
 import { BranchesOutlined, CheckCircleOutlined, CloudSyncOutlined, ControlOutlined, DatabaseOutlined, RocketOutlined, SafetyCertificateOutlined, ThunderboltOutlined, FileSearchOutlined, CodeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +12,7 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows } from '@/utils/aixAudit';
 import type { ReplayVerification } from '@/utils/aixAudit';
 
 const SKILLS = [
@@ -87,6 +87,8 @@ export default function AixPage() {
   const [pluginPackage, setPluginPackage] = useState('');
   const [replayInput, setReplayInput] = useState('');
   const [replayResult, setReplayResult] = useState<ReplayVerification | null>(null);
+  const [playerIndex, setPlayerIndex] = useState(-1);
+  const [playerActive, setPlayerActive] = useState(false);
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
@@ -259,6 +261,22 @@ export default function AixPage() {
   }, [powerShellLogs]);
   const powerShellRiskRows = useMemo(() => summarizePowerShellLogs(powerShellLogs, presetNames), [powerShellLogs, presetNames]);
   const powerShellOverallScore = powerShellRiskRows.length ? Math.round(powerShellRiskRows.reduce((sum, row) => sum + row.riskScore, 0) / powerShellRiskRows.length) : 0;
+  const powerShellTrendRows = useMemo(() => buildPresetTrendRows(powerShellLogs, presetNames, 14), [powerShellLogs, presetNames]);
+  const auditDisplay = auditTickets.slice(0, 5);
+  useEffect(() => {
+    if (!playerActive || !auditDisplay.length) return;
+    const timer = window.setInterval(() => {
+      setPlayerIndex(prev => {
+        const next = prev + 1;
+        if (next >= auditDisplay.length) {
+          setPlayerActive(false);
+          return auditDisplay.length - 1;
+        }
+        return next;
+      });
+    }, 1200);
+    return () => window.clearInterval(timer);
+  }, [playerActive, auditDisplay.length]);
 
   async function setSkill(key: string, enabled: boolean) {
     const next = { ...(skillState || {}), [key]: enabled };
@@ -726,29 +744,36 @@ export default function AixPage() {
             </Space>
             <Space wrap style={{ marginTop: 12 }}>
               <Button type="primary" icon={<CloudSyncOutlined />} disabled={!auditTickets.length} onClick={exportReplayPackage} style={{ borderRadius: 12 }}>导出回放包</Button>
+              <Button disabled={!auditDisplay.length} onClick={() => { setPlayerIndex(-1); setPlayerActive(true); }} style={{ borderRadius: 12 }}>{playerActive ? '播放中…' : '播放时间线'}</Button>
+              <Button disabled={!playerActive} onClick={() => setPlayerActive(false)} style={{ borderRadius: 12 }}>暂停</Button>
+              <Button disabled={!auditDisplay.length} onClick={() => { setPlayerActive(false); setPlayerIndex(-1); }} style={{ borderRadius: 12 }}>重置</Button>
               <Tag color="purple">SHA-Lite 链式哈希</Tag>
               <Tag color="gold">含 Claude Code 续跑提示</Tag>
             </Space>
           </Col>
         </Row>
         <Space direction="vertical" size={10} style={{ width: '100%' }}>
-          {auditTickets.slice(0, 5).map(ticket => (
-            <div key={ticket.id} style={{ padding: 12, borderRadius: 16, background: isDark ? `${ticket.color}10` : `${ticket.color}08`, border: `1px solid ${ticket.color}28` }}>
-              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
-                <Space wrap>
-                  <Tag color={ticket.level === 'warn' ? 'gold' : ticket.level === 'error' ? 'red' : 'blue'}>{ticket.scopeLabel}</Tag>
-                  <Typography.Text strong style={{ color: titleColor }}>{ticket.message}</Typography.Text>
+          {auditDisplay.map((ticket, index) => {
+            const highlighted = playerIndex === index;
+            return (
+              <div key={ticket.id} style={{ padding: 12, borderRadius: 16, background: isDark ? `${ticket.color}10` : `${ticket.color}08`, border: highlighted ? `2px solid ${ticket.color}` : `1px solid ${ticket.color}28`, boxShadow: highlighted ? `0 0 0 4px ${ticket.color}22` : 'none', transition: 'all 0.3s ease' }}>
+                <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <Space wrap>
+                    {highlighted ? <Tag color="magenta">▶ 当前</Tag> : null}
+                    <Tag color={ticket.level === 'warn' ? 'gold' : ticket.level === 'error' ? 'red' : 'blue'}>{ticket.scopeLabel}</Tag>
+                    <Typography.Text strong style={{ color: titleColor }}>{ticket.message}</Typography.Text>
+                  </Space>
+                  <Tag color={ticket.risk === '低风险' ? 'green' : ticket.risk === '中风险' ? 'gold' : 'red'}>{ticket.risk}</Tag>
                 </Space>
-                <Tag color={ticket.risk === '低风险' ? 'green' : ticket.risk === '中风险' ? 'gold' : 'red'}>{ticket.risk}</Tag>
-              </Space>
-              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8, marginTop: 6 }}>时间：{dayjs(ticket.timestamp).format('MM-DD HH:mm:ss')} · 指纹：{ticket.fingerprint} · 链：{ticket.chainHash.slice(0, 8)}…</div>
-              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>回滚：{ticket.rollback}</div>
-              <Space wrap style={{ marginTop: 6 }}>
-                <Button size="small" onClick={() => copyResume(ticket.resume)}>复制 Resume</Button>
-                <Tag color="default">prev：{ticket.prevHash.slice(0, 8)}…</Tag>
-              </Space>
-            </div>
-          ))}
+                <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8, marginTop: 6 }}>时间：{dayjs(ticket.timestamp).format('MM-DD HH:mm:ss')} · 指纹：{ticket.fingerprint} · 链：{ticket.chainHash.slice(0, 8)}…</div>
+                <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>回滚：{ticket.rollback}</div>
+                <Space wrap style={{ marginTop: 6 }}>
+                  <Button size="small" onClick={() => copyResume(ticket.resume)}>复制 Resume</Button>
+                  <Tag color="default">prev：{ticket.prevHash.slice(0, 8)}…</Tag>
+                </Space>
+              </div>
+            );
+          })}
         </Space>
         <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
           <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -831,6 +856,38 @@ export default function AixPage() {
             <Tag color="green">写入 Item.extra.presetDrill</Tag>
             <Tag color="purple">写入 eventLog scope=powershell-drill-plan</Tag>
           </Space>
+        </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>近 14 天演练趋势条</Typography.Text>
+            <Tag color="blue">本地聚合 · ECharts-free</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>每行展示一个预设过去 14 天每天的执行情况：绿条=全部成功，黄条=部分成功，红条=全部失败，灰条=未执行；右侧标签输出近 7 天 vs 前 7 天的趋势变化。</Typography.Paragraph>
+          {powerShellTrendRows.length ? powerShellTrendRows.map(row => (
+            <div key={row.preset} style={{ marginBottom: 10 }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Typography.Text strong style={{ color: titleColor, fontSize: 13 }}>{row.preset}</Typography.Text>
+                <Space wrap size={6}>
+                  <Tag color={row.successRatio >= 0.8 ? 'green' : row.successRatio >= 0.5 ? 'gold' : 'red'}>成功率 {Math.round(row.successRatio * 100)}%</Tag>
+                  <Tag color={row.trend === '上升' ? 'green' : row.trend === '下降' ? 'red' : 'default'}>{row.trend}</Tag>
+                </Space>
+              </Space>
+              <div style={{ display: 'flex', gap: 3 }}>
+                {row.buckets.map(bucket => {
+                  const ratioOk = bucket.total ? bucket.ok / bucket.total : 0;
+                  const color = !bucket.total ? (isDark ? 'rgba(148,163,184,0.20)' : 'rgba(148,163,184,0.30)') : ratioOk >= 0.8 ? '#10b981' : ratioOk > 0 ? '#f59e0b' : '#ef4444';
+                  return (
+                    <div key={bucket.dayStart} title={`${bucket.dateLabel} · 总 ${bucket.total} · 成功 ${bucket.ok} · 失败 ${bucket.fail} · fallback ${bucket.fallback}`} style={{ flex: 1, height: 22, borderRadius: 4, background: color, opacity: bucket.total ? 0.95 : 0.5 }} />
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 3, marginTop: 2 }}>
+                {row.buckets.map(bucket => (
+                  <div key={bucket.dayStart + ':label'} style={{ flex: 1, fontSize: 9, textAlign: 'center', color: subColor }}>{bucket.dateLabel.slice(-2)}</div>
+                ))}
+              </div>
+            </div>
+          )) : <Alert type="info" showIcon message="暂无预设记录，演练后再回来查看趋势。" style={{ borderRadius: 12 }} />}
         </div>
       </Card>
 

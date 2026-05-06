@@ -2,6 +2,12 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.88.0
+- Aix 主入口新增「审计票据时间线播放器」：用 useState `playerIndex/playerActive` + `useEffect setInterval(1200ms)` 控制逐张高亮，被高亮的票据使用 2px 实色 border + 4px shadow + ▶ 标签，符合"代码最少行数"原则。
+- Aix 主入口新增「PowerShell 14 天演练趋势条」：调用 `buildPresetTrendRows(logs, presetNames, 14)` 把日志按 day 分桶并计算成功率趋势（前 7 天 vs 后 7 天 ±5% 阈值），UI 端用 14 个 flex div 渲染条形，title 属性悬停显示当日总数 / 成功 / 失败 / fallback。
+- Agent 中枢新增「Agent 接力链路时间线」：扫描 `agentTasks` 中 `extra.relayFrom` 不为空的 Item，按 capsuleId 分组排序，用 antd `Timeline` 渲染；显示前 6 条最近活跃链路，超长 resume 截 96 字。
+- `code/src/utils/aixAudit.ts` 新增 `buildPresetTrendRows`、`PresetTrendRow`、`PresetDayBucket`，单元测试覆盖到 17 用例。
+
 ## 最新版本 v0.87.0
 - Aix 主入口新增「审计回放包导入校验器」：在黑匣子审计回放器卡片底部追加导入区，粘贴 / 文件选择回放包 JSON 后调用 `verifyReplayPackage`（重算 cyrb53 链式哈希、定位断点）；结果写入 eventLog scope=`aix-audit-replay-import`，过程纯本地。
 - Aix 主入口新增「PowerShell 演练编排器」：在风险驾驶舱底部新增"一键写入演练日程"按钮，调用 `buildPresetDrillSchedule(rows)` 生成基于今日 16:00 锚点的演练时间表，红色今日、黄色 3 天后、绿色 7 天后；写入 Item.extra.presetDrill + 提醒队列 + eventLog scope=`powershell-drill-plan`。

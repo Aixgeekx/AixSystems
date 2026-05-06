@@ -54,6 +54,11 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.88.0 (2026-05-07)
+- Aix 主入口新增「审计票据时间线播放器」：在黑匣子审计回放器卡片增加 ▶ 播放 / 暂停 / 重置 控件，1.2 秒一帧逐张高亮票据，链式排序自然展现 Aix 控制流；播放完成自动停止。
+- Aix 主入口新增「PowerShell 14 天演练趋势条」：在风险驾驶舱卡片底部增加每个预设的 14 列条形（绿=全成功，黄=部分成功，红=全失败，灰=未演练），右侧标签输出近 7 天 vs 前 7 天的成功率趋势（上升 / 持平 / 下降）；纯 CSS 渲染，不依赖 ECharts。
+- Agent 中枢新增「Agent 接力链路时间线」：扫描 db.items 中 extra.relayFrom 标记的接力分支，按 capsuleId 聚合后用 antd Timeline 按时间排序展示，每条显示进度、风险、续跑提示前 96 字；多人协作链路一目了然。
+
 ### v0.87.0 (2026-05-07)
 - Aix 主入口新增「审计回放包导入校验器」：粘贴 / 选择 `aix-audit-replay-1.0` JSON 后重算 cyrb53 链式哈希，逐条比对 prevHash + chainHash 是否连续，标出断点位置；导入结果写入 eventLog scope=`aix-audit-replay-import`，纯本地校验。
 - Aix 主入口新增「PowerShell 演练编排器」：根据风险驾驶舱的红/黄/绿评分自动生成只读演练事项（红色 → 今日 16:00 + 高重要度，黄色 → 3 天后 + 中等重要度，绿色 → 一周后），写入提醒队列、Item.extra.presetDrill 和 eventLog scope=`powershell-drill-plan`。

@@ -355,3 +355,58 @@ export function buildPresetDrillSchedule(rows: PowerShellRiskEntry[], now = Date
   });
 }
 
+export interface PresetDayBucket {
+  dateLabel: string;                                         // MM-DD
+  dayStart: number;
+  total: number;
+  ok: number;
+  fail: number;
+  fallback: number;
+  avgMs: number;
+}
+
+export interface PresetTrendRow {
+  preset: string;
+  buckets: PresetDayBucket[];
+  successRatio: number;                                      // 0-1
+  trend: '上升' | '持平' | '下降';
+}
+
+function bucketRatio(buckets: PresetDayBucket[]): number {
+  const total = buckets.reduce((sum, bucket) => sum + bucket.total, 0);
+  const ok = buckets.reduce((sum, bucket) => sum + bucket.ok, 0);
+  return total ? ok / total : 0;
+}
+
+export function buildPresetTrendRows(logs: EventLog[], presetNames: string[], days = 14, now = Date.now()): PresetTrendRow[] {
+  const dayStart = new Date(now);
+  dayStart.setHours(0, 0, 0, 0);
+  const buckets: number[] = [];
+  for (let i = days - 1; i >= 0; i--) buckets.push(dayStart.getTime() - i * 86_400_000);
+  return presetNames.map(preset => {
+    const matches = logs.filter(log => String(log.detail?.preset || log.detail?.skill || '') === preset);
+    const dayBuckets: PresetDayBucket[] = buckets.map(start => {
+      const end = start + 86_400_000;
+      const within = matches.filter(log => log.createdAt >= start && log.createdAt < end);
+      const ok = within.filter(log => log.detail?.ok !== false).length;
+      const fail = within.length - ok;
+      const fallback = within.filter(log => log.detail?.fallback === true || log.detail?.shell === 'powershell.exe').length;
+      const durations = within.map(log => Number(log.detail?.durationMs) || 0).filter(value => value > 0);
+      const avgMs = durations.length ? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length) : 0;
+      const date = new Date(start);
+      const dateLabel = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      return { dateLabel, dayStart: start, total: within.length, ok, fail, fallback, avgMs };
+    });
+    const totalAll = dayBuckets.reduce((sum, bucket) => sum + bucket.total, 0);
+    const okAll = dayBuckets.reduce((sum, bucket) => sum + bucket.ok, 0);
+    const successRatio = totalAll ? okAll / totalAll : 0;
+    const recentHalf = dayBuckets.slice(Math.max(0, dayBuckets.length - 7));
+    const olderHalf = dayBuckets.slice(0, Math.max(0, dayBuckets.length - 7));
+    const recentRatio = bucketRatio(recentHalf);
+    const olderRatio = bucketRatio(olderHalf);
+    const trend: PresetTrendRow['trend'] = recentRatio > olderRatio + 0.05 ? '上升' : recentRatio < olderRatio - 0.05 ? '下降' : '持平';
+    return { preset, buckets: dayBuckets, successRatio, trend };
+  });
+}
+
+

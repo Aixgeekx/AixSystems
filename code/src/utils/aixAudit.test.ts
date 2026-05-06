@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -198,5 +198,37 @@ describe('buildPresetDrillSchedule', () => {
     expect(schedule[1].scheduleAt).toBe(todayMatch + 3 * 86_400_000);
     expect(schedule[2].scheduleAt).toBe(todayMatch + 7 * 86_400_000);
     expect(schedule.map(item => item.scheduleLabel)).toEqual(['今日 16:00 演练', '本周内演练', '一周后演练']);
+  });
+});
+
+describe('buildPresetTrendRows', () => {
+  const fixedNow = new Date('2026-05-07T18:00:00Z').getTime();
+
+  it('groups logs into day buckets, computes success ratio and trend', () => {
+    const dayMs = 86_400_000;
+    const dayStart = new Date(fixedNow);
+    dayStart.setHours(0, 0, 0, 0);
+    const start = dayStart.getTime();
+    const logs: EventLog[] = [
+      eventLog('1', 'powershell-preset', start - 12 * dayMs + 3_600_000, {}, { preset: 'core-disk', ok: false, durationMs: 1200, fallback: true, shell: 'powershell.exe' }),
+      eventLog('2', 'powershell-preset', start - 11 * dayMs + 4_000_000, {}, { preset: 'core-disk', ok: false, durationMs: 1300 }),
+      eventLog('3', 'powershell-preset', start - 5 * dayMs + 1_000_000, {}, { preset: 'core-disk', ok: true, durationMs: 800 }),
+      eventLog('4', 'powershell-preset', start - 2 * dayMs + 5_000_000, {}, { preset: 'core-disk', ok: true, durationMs: 700 })
+    ];
+    const rows = buildPresetTrendRows(logs, ['core-disk'], 14, fixedNow);
+    expect(rows).toHaveLength(1);
+    const row = rows[0];
+    expect(row.buckets).toHaveLength(14);
+    expect(row.buckets.filter(b => b.total > 0)).toHaveLength(4);
+    expect(row.buckets.find(b => b.dayStart === start - 12 * dayMs)?.fallback).toBe(1);
+    expect(row.successRatio).toBeCloseTo(0.5);
+    expect(row.trend).toBe('上升');                                // 后半周成功率高于前半周
+  });
+
+  it('returns zeroed buckets when no logs exist', () => {
+    const rows = buildPresetTrendRows([], ['empty-preset'], 7, fixedNow);
+    expect(rows[0].successRatio).toBe(0);
+    expect(rows[0].trend).toBe('持平');
+    expect(rows[0].buckets.every(bucket => bucket.total === 0)).toBe(true);
   });
 });
