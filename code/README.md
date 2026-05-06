@@ -54,6 +54,11 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v1.0.1 (2026-05-07)
+- openclaw 风格 PowerShell 直达面板（6 个白名单预设按钮）
+- 电脑资源仪表盘（磁盘 + 内存 + CPU + 开机时长）
+- Aix v1 健康度自检卡（audit / PowerShell / Agent 三档综合分）
+
 ### v1.0.0 (2026-05-07)
 - 今日饱和度环（schedule 类计划分钟 / 24h）
 - 习惯连击榜 top 5

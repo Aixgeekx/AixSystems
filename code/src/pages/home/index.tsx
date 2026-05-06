@@ -18,6 +18,7 @@ import * as Icons from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
+import { nanoid } from 'nanoid';
 import { db } from '@/db';
 import { ROUTES } from '@/config/routes';
 import { useAppStore } from '@/stores/appStore';
@@ -76,6 +77,9 @@ export default function HomePage() {
   const [draggingKey, setDraggingKey] = useState<string>();
   const [originStorage, setOriginStorage] = useState<{ usage?: number; quota?: number }>({});
   const [diskStats, setDiskStats] = useState<{ root: string; total: number; free: number; used: number } | null>(null);
+  const [systemSnapshot, setSystemSnapshot] = useState<{ platform: string; cpuModel: string; cpuCores: number; totalMem: number; freeMem: number; uptime: number } | null>(null);
+  const [psRunning, setPsRunning] = useState<string>('');
+  const [psHistory, setPsHistory] = useState<{ preset: string; ok: boolean; ts: number; durationMs?: number }[]>([]);
 
   const dashboard = useLiveQuery(async () => {
     const [items, diaries, memos, sessions, lastBackup, goals, habits, habitLogs, queue] = await Promise.all([
@@ -266,7 +270,29 @@ export default function HomePage() {
   useEffect(() => {
     if (!electron) return;
     getElectron()?.getStorageStats().then(setDiskStats).catch(() => setDiskStats(null));
+    getElectron()?.getSystemSnapshot().then(setSystemSnapshot).catch(() => setSystemSnapshot(null));
   }, [electron]);
+
+  async function runOpenclawPreset(preset: 'computer' | 'processes' | 'services' | 'network' | 'clock' | 'hosts') {
+    setPsRunning(preset);
+    const startedAt = Date.now();
+    let ok = true; let durationMs = 0; let shell: string = 'pwsh.exe'; let fallback = false;
+    const sgx = getElectron();
+    if (sgx?.runPowerShellPreset) {
+      try {
+        const result = await sgx.runPowerShellPreset(preset);
+        ok = !!(result as any)?.output && !(result as any)?.error;
+        durationMs = (result as any)?.durationMs || (Date.now() - startedAt);
+        shell = (result as any)?.shell || shell;
+        fallback = !!(result as any)?.fallback;
+      } catch { ok = false; durationMs = Date.now() - startedAt; }
+    } else {
+      ok = Math.random() > 0.18; durationMs = 240 + Math.round(Math.random() * 1400); fallback = !ok;
+    }
+    await db.eventLog.add({ id: nanoid(), level: ok ? 'info' : 'warn', message: 'openclaw 直达：' + preset, detail: { scope: 'desktop-preset-drill', preset, ok, durationMs, shell, fallback, source: 'home-openclaw' }, createdAt: Date.now() });
+    setPsHistory(prev => [{ preset, ok, ts: Date.now(), durationMs }, ...prev].slice(0, 6));
+    setPsRunning('');
+  }
 
   const storageCards = useMemo(() => ([
     {
@@ -935,6 +961,73 @@ export default function HomePage() {
                   ))}
                 </Space>
               ) : <Typography.Text style={{ color: subColor, fontSize: 12, display: 'block', marginTop: 8 }}>明天暂无 schedule 类事项。</Typography.Text>}
+            </div>
+          </Col>
+        </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 18 }}>
+          <div>
+            <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.02em' }}>openclaw 风格 · 电脑控制 + 资源仪表</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '6px 0 6px', color: titleColor, fontWeight: 700 }}>{electron ? '桌面 IPC 已就绪' : '浏览器模拟模式'}</Typography.Title>
+            <Typography.Text style={{ color: subColor, fontSize: 13 }}>{electron ? '6 个白名单 PowerShell 7 预设 · 只读 · 写审计 eventLog · 失败自动 fallback。' : 'IPC 不可用，按钮模拟执行；切到桌面版获取真实 PS 7 调用。'}</Typography.Text>
+          </div>
+          <Tag color={electron ? 'green' : 'gold'} style={{ borderRadius: 10 }}>{electron ? 'PS 7 直达' : '浏览器'}</Tag>
+        </div>
+        <Row gutter={[12, 12]}>
+          <Col xs={24} md={14}>
+            <div style={{ padding: 14, borderRadius: 18, background: tintedBg('#0ea5e9'), border: '1px solid rgba(14,165,233,0.22)', height: '100%' }}>
+              <Typography.Text strong style={{ color: titleColor }}>白名单预设直达</Typography.Text>
+              <Row gutter={[8, 8]} style={{ marginTop: 10 }}>
+                {[
+                  { key: 'computer', label: '电脑信息' },
+                  { key: 'processes', label: '进程清单' },
+                  { key: 'services', label: '服务状态' },
+                  { key: 'network', label: '网络状态' },
+                  { key: 'clock', label: '时钟同步' },
+                  { key: 'hosts', label: 'hosts 表' }
+                ].map(p => (
+                  <Col xs={12} sm={8} key={p.key}>
+                    <Button block size="small" loading={psRunning === p.key} disabled={!!psRunning && psRunning !== p.key} onClick={() => runOpenclawPreset(p.key as any)} style={{ borderRadius: 10 }}>{p.label}</Button>
+                  </Col>
+                ))}
+              </Row>
+              {psHistory.length ? (
+                <div style={{ marginTop: 10 }}>
+                  <Typography.Text style={{ color: subColor, fontSize: 12 }}>最近 {psHistory.length} 次调用：</Typography.Text>
+                  <Space wrap style={{ marginTop: 4 }}>
+                    {psHistory.map((h, i) => (
+                      <Tag key={i} color={h.ok ? 'green' : 'red'} style={{ borderRadius: 8 }}>{h.preset} · {h.ok ? '成功' : '失败'} · {h.durationMs || 0}ms</Tag>
+                    ))}
+                  </Space>
+                </div>
+              ) : <Typography.Text style={{ color: subColor, fontSize: 12, display: 'block', marginTop: 10 }}>尚无调用记录，点上方按钮触发只读演练。</Typography.Text>}
+            </div>
+          </Col>
+          <Col xs={24} md={10}>
+            <div style={{ padding: 14, borderRadius: 18, background: tintedBg('#a855f7'), border: '1px solid rgba(168,85,247,0.22)', height: '100%' }}>
+              <Typography.Text strong style={{ color: titleColor }}>电脑资源仪表</Typography.Text>
+              <Space direction="vertical" size={6} style={{ width: '100%', marginTop: 8 }}>
+                {diskStats ? (
+                  <div>
+                    <Typography.Text style={{ color: subColor, fontSize: 12 }}>磁盘 {diskStats.root}</Typography.Text>
+                    <Progress percent={Math.round(diskStats.used / Math.max(1, diskStats.total) * 100)} showInfo={false} strokeColor="#a855f7" />
+                    <Typography.Text style={{ color: titleColor, fontSize: 12 }}>{formatBytes(diskStats.used)} / {formatBytes(diskStats.total)}</Typography.Text>
+                  </div>
+                ) : null}
+                {systemSnapshot ? (
+                  <>
+                    <div>
+                      <Typography.Text style={{ color: subColor, fontSize: 12 }}>内存</Typography.Text>
+                      <Progress percent={Math.round((systemSnapshot.totalMem - systemSnapshot.freeMem) / Math.max(1, systemSnapshot.totalMem) * 100)} showInfo={false} strokeColor="#22c55e" />
+                      <Typography.Text style={{ color: titleColor, fontSize: 12 }}>{formatBytes(systemSnapshot.totalMem - systemSnapshot.freeMem)} / {formatBytes(systemSnapshot.totalMem)}</Typography.Text>
+                    </div>
+                    <Typography.Text style={{ color: subColor, fontSize: 12 }}>CPU {systemSnapshot.cpuModel?.slice(0, 24) || '-'} · {systemSnapshot.cpuCores} 核</Typography.Text>
+                    <Typography.Text style={{ color: subColor, fontSize: 12 }}>开机 {Math.round((systemSnapshot.uptime || 0) / 3600)} h · {systemSnapshot.platform}</Typography.Text>
+                  </>
+                ) : !electron ? <Typography.Text style={{ color: subColor, fontSize: 12 }}>浏览器模式无 system snapshot；IndexedDB 用量 {formatBytes(originStorage.usage)} / {formatBytes(originStorage.quota)}</Typography.Text> : null}
+              </Space>
             </div>
           </Col>
         </Row>

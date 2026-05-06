@@ -12,7 +12,7 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures, buildDailyAnchorJson, expandFailureCluster, compareDailyAnchors, buildFailureFixHint, buildScopeDistribution, buildPresetGoldenPath, buildGoldenPathMarkdown } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures, buildDailyAnchorJson, expandFailureCluster, compareDailyAnchors, buildFailureFixHint, buildScopeDistribution, buildPresetGoldenPath, buildGoldenPathMarkdown, scoreRelayBranches, buildV1HealthCheck } from '@/utils/aixAudit';
 import type { ReplayVerification } from '@/utils/aixAudit';
 
 const SKILLS = [
@@ -267,6 +267,9 @@ export default function AixPage() {
   }, [powerShellLogs]);
   const powerShellRiskRows = useMemo(() => summarizePowerShellLogs(powerShellLogs, presetNames), [powerShellLogs, presetNames]);
   const powerShellOverallScore = powerShellRiskRows.length ? Math.round(powerShellRiskRows.reduce((sum, row) => sum + row.riskScore, 0) / powerShellRiskRows.length) : 0;
+  const agentItems = useLiveQuery(() => db.items.filter(i => !i.deletedAt && (!!i.extra?.agent || !!i.extra?.aixCampaign)).toArray(), []) || [];
+  const branchHealthScores = useMemo(() => scoreRelayBranches(agentItems, recentEventLogs), [agentItems, recentEventLogs]);
+  const v1HealthCheck = useMemo(() => buildV1HealthCheck({ tickets: auditTickets, powerShellRisk: powerShellRiskRows, branchHealthScores }), [auditTickets, powerShellRiskRows, branchHealthScores]);
   const powerShellTrendRows = useMemo(() => buildPresetTrendRows(powerShellLogs, presetNames, 14), [powerShellLogs, presetNames]);
   const auditHeatmap = useMemo(() => buildAuditHeatmap(auditTickets, 14), [auditTickets]);
   const auditHeatPeak = useMemo(() => auditHeatmap.reduce((max, cell) => Math.max(max, cell.total), 0), [auditHeatmap]);
@@ -613,6 +616,49 @@ export default function AixPage() {
             </Card>
           </Col>
         </Row>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 12 }}>
+          <Space size={8}>
+            <SafetyCertificateOutlined style={{ color: accent }} />
+            <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>v1.0 健康度自检</Typography.Title>
+          </Space>
+          <Space>
+            <Tag color={v1HealthCheck.ready ? 'green' : v1HealthCheck.overall >= 60 ? 'gold' : 'red'}>{v1HealthCheck.ready ? '就绪' : '待补强'}</Tag>
+            <Progress type="circle" percent={v1HealthCheck.overall} size={56} strokeColor={v1HealthCheck.overall >= 75 ? '#22c55e' : v1HealthCheck.overall >= 50 ? '#f59e0b' : '#ef4444'} />
+          </Space>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor, marginBottom: 12 }}>把审计票据、PowerShell 风险、Agent 接力分支三条主线压成 0-100 综合分；blockers 给出最该补的事，highlights 给已稳住的成果。</Typography.Paragraph>
+        <Row gutter={[12, 12]}>
+          <Col xs={24} md={8}>
+            <div style={{ padding: 12, borderRadius: 14, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
+              <Typography.Text style={{ color: subColor, fontSize: 12 }}>黑匣子审计</Typography.Text>
+              <div style={{ color: titleColor, fontSize: 22, fontWeight: 700 }}>{v1HealthCheck.bands.audit}</div>
+              <Progress percent={v1HealthCheck.bands.audit} showInfo={false} strokeColor="#38bdf8" />
+            </div>
+          </Col>
+          <Col xs={24} md={8}>
+            <div style={{ padding: 12, borderRadius: 14, background: isDark ? 'rgba(244,114,182,0.10)' : 'rgba(244,114,182,0.06)', border: '1px solid rgba(244,114,182,0.22)' }}>
+              <Typography.Text style={{ color: subColor, fontSize: 12 }}>PowerShell 风险</Typography.Text>
+              <div style={{ color: titleColor, fontSize: 22, fontWeight: 700 }}>{v1HealthCheck.bands.powerShell}</div>
+              <Progress percent={v1HealthCheck.bands.powerShell} showInfo={false} strokeColor="#f472b6" />
+            </div>
+          </Col>
+          <Col xs={24} md={8}>
+            <div style={{ padding: 12, borderRadius: 14, background: isDark ? 'rgba(168,85,247,0.10)' : 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.22)' }}>
+              <Typography.Text style={{ color: subColor, fontSize: 12 }}>Agent 接力</Typography.Text>
+              <div style={{ color: titleColor, fontSize: 22, fontWeight: 700 }}>{v1HealthCheck.bands.agent}</div>
+              <Progress percent={v1HealthCheck.bands.agent} showInfo={false} strokeColor="#a855f7" />
+            </div>
+          </Col>
+        </Row>
+        {v1HealthCheck.blockers.length ? (
+          <Alert type="warning" showIcon style={{ marginTop: 12, borderRadius: 12 }} message="待补强" description={<Space direction="vertical" size={4}>{v1HealthCheck.blockers.map((b, i) => <Typography.Text key={i} style={{ color: subColor, fontSize: 12 }}>· {b}</Typography.Text>)}</Space>} />
+        ) : null}
+        {v1HealthCheck.highlights.length ? (
+          <Alert type="success" showIcon style={{ marginTop: 8, borderRadius: 12 }} message="已稳住" description={<Space direction="vertical" size={4}>{v1HealthCheck.highlights.map((h, i) => <Typography.Text key={i} style={{ color: subColor, fontSize: 12 }}>· {h}</Typography.Text>)}</Space>} />
+        ) : null}
       </Card>
 
       <Row gutter={[16, 16]}>
