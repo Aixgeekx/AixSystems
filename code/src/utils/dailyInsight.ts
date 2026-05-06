@@ -16,10 +16,15 @@ export interface TodaySaturation {
 export function computeTodaySaturation(items: Item[]): TodaySaturation {
   const todayStart = dayjs().startOf('day').valueOf();
   const todayEnd = dayjs().endOf('day').valueOf();
-  const todayItems = items.filter(item => !item.deletedAt && SCHEDULE_TYPES.has(String(item.type)) && item.startTime >= todayStart && item.startTime <= todayEnd);
+  const todayItems = items.filter(item => {                                  // 过滤脏数据：endTime 不能早于 startTime
+    if (item.deletedAt || !SCHEDULE_TYPES.has(String(item.type))) return false;
+    if (item.startTime < todayStart || item.startTime > todayEnd) return false;
+    if (item.endTime !== undefined && item.endTime < item.startTime) return false;
+    return true;
+  });
   let plannedMinutes = 0;
   for (const item of todayItems) {
-    const end = item.endTime || (item.startTime + 30 * 60_000);  // 无 endTime 默认 30 分钟
+    const end = item.endTime || (item.startTime + 30 * 60_000);              // 无 endTime 默认 30 分钟
     plannedMinutes += Math.max(0, Math.round((end - item.startTime) / 60_000));
   }
   const ratio = Math.min(100, Math.round(plannedMinutes / (24 * 60) * 100));
@@ -71,6 +76,7 @@ export interface HabitStreak {
   longestStreak: number;                                     // 历史最长连击
   yesterdayDone: boolean;                                    // 昨日是否已打卡（用于醒目标记中断风险）
   todayDone: boolean;                                        // 今日是否已打卡
+  breakDays: number;                                         // 距上一次打卡的天数（0=今日，1=昨日，>=2 已断签；99=从未打卡）
 }
 
 export function computeHabitStreaks(habits: Habit[], logs: HabitLog[], topN = 5): HabitStreak[] {
@@ -95,6 +101,12 @@ export function computeHabitStreaks(habits: Habit[], logs: HabitLog[], topN = 5)
       if (run > longest) longest = run;
       prevKey = day;
     }
+    let breakDays = 99;                                                      // 默认从未打卡
+    if (sorted.length) {
+      const lastDone = sorted[sorted.length - 1];                            // 最后一次打卡
+      const diff = Math.round((todayKey - lastDone) / 86_400_000);
+      breakDays = diff < 0 ? 0 : diff;                                       // 未来记录视为今日已打卡
+    }
     result.push({
       habitId: habit.id,
       name: habit.name,
@@ -102,7 +114,8 @@ export function computeHabitStreaks(habits: Habit[], logs: HabitLog[], topN = 5)
       currentStreak: current,
       longestStreak: longest,
       yesterdayDone: dates.has(yesterdayKey),
-      todayDone: dates.has(todayKey)
+      todayDone: dates.has(todayKey),
+      breakDays
     });
   }
   return result.sort((a, b) => b.currentStreak - a.currentStreak || b.longestStreak - a.longestStreak).slice(0, topN);

@@ -54,6 +54,11 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v1.2.1 (2026-05-07)
+- fix: Mermaid 节点 ID 用 idx 编号，防 item.id 长公共前缀碰撞
+- fix: 习惯断签警示改用 breakDays，多天断签后能正确显示
+- fix: 今日饱和度过滤 endTime < startTime 脏数据，itemCount 不再误计
+
 ### v1.2.0 (2026-05-07)
 - 审计 24h 时段热力条（找出审计高发小时，含 share 占比）
 - PowerShell 演练成本 TOP 5 抽到 utils（summarizePresetCost 加 totalMinutes/costRank，可单测）

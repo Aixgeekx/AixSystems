@@ -1189,13 +1189,14 @@ export function summarizePresetCost(rows: Array<{ preset: string; total: number;
 
 export function buildRelayTreeMermaid(nodes: RelayDepthNode[]): string {     // graph TD 文本，便于嵌入 Markdown
   if (!nodes.length) return '```mermaid\ngraph TD\n  empty[/"暂无接力分支"/]\n```';
-  const safeId = (s: string) => 'n' + s.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
+  const idMap = new Map<string, string>();                                   // node.id → 唯一 mermaid id（防 slice 碰撞）
+  nodes.forEach((node, idx) => idMap.set(node.id, `n${idx}`));
   const safeLabel = (s: string) => s.replace(/["\\\n]/g, ' ').slice(0, 36);
   const lines: string[] = ['```mermaid', 'graph TD'];
   for (const node of nodes) {
-    const nid = safeId(node.id);
+    const nid = idMap.get(node.id)!;
     lines.push(`  ${nid}["${safeLabel(node.title)} · ${node.percent}%"]`);
-    if (node.parentId) lines.push(`  ${safeId(node.parentId)} --> ${nid}`);
+    if (node.parentId && idMap.has(node.parentId)) lines.push(`  ${idMap.get(node.parentId)!} --> ${nid}`);
   }
   lines.push('```');
   return lines.join('\n');

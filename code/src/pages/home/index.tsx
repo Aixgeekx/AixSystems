@@ -955,7 +955,7 @@ export default function HomePage() {
                       <Typography.Text style={{ color: titleColor, fontSize: 12 }}>
                         <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: s.color, marginRight: 6 }} />
                         {s.name}
-                        {s.currentStreak > 0 && !s.yesterdayDone && !s.todayDone ? <Tag color="warning" style={{ marginLeft: 6, marginInlineEnd: 0, fontSize: 10, lineHeight: '14px', padding: '0 4px' }}>昨日断签</Tag> : null}
+                        {s.breakDays >= 2 && s.breakDays !== 99 ? <Tag color="warning" style={{ marginLeft: 6, marginInlineEnd: 0, fontSize: 10, lineHeight: '14px', padding: '0 4px' }}>已断 {s.breakDays} 天</Tag> : null}
                       </Typography.Text>
                       <Typography.Text style={{ color: subColor, fontSize: 12 }}>当前 {s.currentStreak} · 最长 {s.longestStreak}</Typography.Text>
                     </button>

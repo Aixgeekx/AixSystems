@@ -53,6 +53,17 @@ describe('computeTodaySaturation', () => {
     expect(stat.level).toBe('超载');
     expect(stat.ratio).toBeGreaterThanOrEqual(60);
   });
+
+  it('drops items where endTime is before startTime to keep itemCount honest', () => {
+    const t = dayjs().startOf('day').add(10, 'hour').valueOf();
+    const items = [
+      baseItem('valid', 'schedule', t, t + 60 * 60_000),                     // 60min 计入
+      baseItem('reverse', 'schedule', t + 2 * 60 * 60_000, t + 60 * 60_000)  // endTime < startTime → 跳过
+    ];
+    const stat = computeTodaySaturation(items);
+    expect(stat.itemCount).toBe(1);
+    expect(stat.plannedMinutes).toBe(60);
+  });
 });
 
 describe('computeWeeklySaturationTrend', () => {
@@ -104,6 +115,7 @@ describe('computeHabitStreaks', () => {
     expect(result[0].longestStreak).toBe(3);
     expect(result[0].todayDone).toBe(true);
     expect(result[0].yesterdayDone).toBe(true);
+    expect(result[0].breakDays).toBe(0);
   });
 
   it('marks yesterdayDone false when only today logged', () => {
@@ -113,6 +125,7 @@ describe('computeHabitStreaks', () => {
     const result = computeHabitStreaks([habit], logs);
     expect(result[0].todayDone).toBe(true);
     expect(result[0].yesterdayDone).toBe(false);
+    expect(result[0].breakDays).toBe(0);
   });
 
   it('returns 0 streak when never logged', () => {
@@ -122,6 +135,32 @@ describe('computeHabitStreaks', () => {
     expect(result[0].longestStreak).toBe(0);
     expect(result[0].todayDone).toBe(false);
     expect(result[0].yesterdayDone).toBe(false);
+    expect(result[0].breakDays).toBe(99);
+  });
+
+  it('computes breakDays from last log when streak already broken', () => {
+    const today = dayjs().startOf('day').valueOf();
+    const habit: Habit = { id: 'h3', name: '运动', color: '#f43f5e', frequency: 'daily', targetCount: 1, sortOrder: 0, createdAt: 0, updatedAt: 0 };
+    const logs: HabitLog[] = [
+      { id: 'a', habitId: 'h3', date: today - 5 * 86_400_000, count: 1, createdAt: 0 },
+      { id: 'b', habitId: 'h3', date: today - 6 * 86_400_000, count: 1, createdAt: 0 }
+    ];
+    const result = computeHabitStreaks([habit], logs);
+    expect(result[0].currentStreak).toBe(0);                                 // 已断
+    expect(result[0].longestStreak).toBe(2);
+    expect(result[0].breakDays).toBe(5);                                     // 最近一次打卡 = 5 天前
+  });
+
+  it('breakDays=1 when yesterday was last logged', () => {
+    const today = dayjs().startOf('day').valueOf();
+    const habit: Habit = { id: 'h4', name: '阅读', color: '#10b981', frequency: 'daily', targetCount: 1, sortOrder: 0, createdAt: 0, updatedAt: 0 };
+    const logs: HabitLog[] = [
+      { id: 'a', habitId: 'h4', date: today - 86_400_000, count: 1, createdAt: 0 }
+    ];
+    const result = computeHabitStreaks([habit], logs);
+    expect(result[0].breakDays).toBe(1);
+    expect(result[0].yesterdayDone).toBe(true);
+    expect(result[0].todayDone).toBe(false);
   });
 });
 

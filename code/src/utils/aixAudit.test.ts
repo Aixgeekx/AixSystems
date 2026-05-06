@@ -845,8 +845,8 @@ describe('buildRelayTreeMermaid', () => {
     expect(text).toContain('graph TD');
     expect(text).toContain('根任务 · 100%');
     expect(text).toContain('叶任务 · 30%');
-    expect(text).toMatch(/nroot1\s*-->\s*nchild1/);
-    expect(text).toMatch(/nchild1\s*-->\s*nleaf1/);
+    expect(text).toMatch(/n0\s*-->\s*n1/);
+    expect(text).toMatch(/n1\s*-->\s*n2/);
   });
 
   it('escapes special characters in title', () => {
@@ -856,5 +856,27 @@ describe('buildRelayTreeMermaid', () => {
     const text = buildRelayTreeMermaid(nodes);
     expect(text).toContain('含 引号  换行');
     expect(text).not.toMatch(/\n换行"/);
+  });
+
+  it('produces unique mermaid ids even when item ids share long prefix', () => {  // 防 slice 碰撞
+    const nodes: any[] = [
+      { id: 'AAAAAAAAAAAA-distinct-1', title: 'A 节点', capsuleId: 'CAP', depth: 1, risk: '低风险', percent: 10, createdAt: 0 },
+      { id: 'AAAAAAAAAAAA-distinct-2', title: 'B 节点', capsuleId: 'CAP', depth: 2, risk: '低风险', percent: 50, parentId: 'AAAAAAAAAAAA-distinct-1', createdAt: 1 }
+    ];
+    const text = buildRelayTreeMermaid(nodes);
+    const nodeDecls = text.match(/^\s+n\d+\["/gm) || [];
+    expect(nodeDecls.length).toBe(2);                                        // 两个独立节点声明
+    expect(text).toMatch(/n0\s*-->\s*n1/);                                   // 父子边正确
+    expect(text).toContain('A 节点');
+    expect(text).toContain('B 节点');
+  });
+
+  it('skips edge when parent id missing from input', () => {                  // 父节点不在数组里 → 边缺失而不是连到不存在的节点
+    const nodes: any[] = [
+      { id: 'orphan', title: '孤儿', capsuleId: 'CAP', depth: 2, risk: '低风险', percent: 0, parentId: 'missing-root', createdAt: 0 }
+    ];
+    const text = buildRelayTreeMermaid(nodes);
+    expect(text).toContain('孤儿');
+    expect(text).not.toContain('-->');
   });
 });
