@@ -2,6 +2,11 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.92.0
+- Aix 主入口加 `scopeSelection` useState + `Tag.CheckableTag` 多选 UI；`exportAuditCsv` 改为按选中 scope 过滤 `auditTickets` 再调 `buildAuditCsv`；未选时默认全部导出。
+- Aix 主入口风险驾驶舱底部新增「演练成本 TOP 5」div：用 `useMemo` 从 `powerShellRiskRows` 计算 `totalMs = total × avgMs` + 降序 + slice(5)；不引入新工具函数。
+- Agent 中枢加 `capsuleLogs`/`orphanCapsuleLogs` 计算：从 eventLog 取 scope=agent-checkpoint-capsule / agent-checkpoint-relay 的日志，对比 `agentTasks.extra.relayFrom` 引用集找孤儿；`cleanOrphanCapsules` 用 `db.eventLog.bulkDelete` 批量清理 + 写入 agent-orphan-cleanup 审计。
+
 ## 最新版本 v0.91.0
 - `code/src/utils/aixAudit.ts` 新增 `buildAuditCsv(tickets)`（RFC4180 + BOM 中文）和 `buildRelayTreeMarkdown(nodes)`（按 depth 缩进的多跳追溯 md）；新增 csvCell 内部转义函数。
 - Aix 主入口审计回放器加「导出 CSV」按钮，触发下载 `aix-audit-YYYYMMDD-HHmm.csv`，写入 eventLog scope=`aix-audit-csv`。

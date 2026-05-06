@@ -90,6 +90,7 @@ export default function AixPage() {
   const [playerIndex, setPlayerIndex] = useState(-1);
   const [playerActive, setPlayerActive] = useState(false);
   const [auditFilter, setAuditFilter] = useState('');
+  const [scopeSelection, setScopeSelection] = useState<Record<string, boolean>>({});
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
@@ -266,6 +267,11 @@ export default function AixPage() {
   const auditHeatmap = useMemo(() => buildAuditHeatmap(auditTickets, 14), [auditTickets]);
   const auditHeatPeak = useMemo(() => auditHeatmap.reduce((max, cell) => Math.max(max, cell.total), 0), [auditHeatmap]);
   const blacklistFindings = useMemo(() => scanPowerShellBlacklist(powerShellLogs), [powerShellLogs]);
+  const presetCostRanking = useMemo(() => powerShellRiskRows
+    .map(row => ({ preset: row.preset, totalMs: row.total * row.avgMs, total: row.total, avgMs: row.avgMs, level: row.level }))
+    .filter(row => row.totalMs > 0)
+    .sort((a, b) => b.totalMs - a.totalMs)
+    .slice(0, 5), [powerShellRiskRows]);
   const auditDisplay = useMemo(() => {
     const keyword = auditFilter.trim().toLowerCase();
     const list = keyword
@@ -387,11 +393,14 @@ export default function AixPage() {
   }
 
   async function exportAuditCsv() {
-    if (!auditTickets.length) { message.warning('暂无审计票据可导出'); return; }
-    const csv = buildAuditCsv(auditTickets);
-    downloadText(`aix-audit-${dayjs().format('YYYYMMDD-HHmm')}.csv`, '﻿' + csv, 'text/csv');
-    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 审计票据 CSV 导出：${auditTickets.length} 条`, detail: { scope: 'aix-audit-csv', count: auditTickets.length }, createdAt: Date.now() });
-    message.success(`已导出 ${auditTickets.length} 条审计票据为 CSV`);
+    const selectedScopes = Object.entries(scopeSelection).filter(([, on]) => on).map(([scope]) => scope);
+    const filtered = selectedScopes.length ? auditTickets.filter(ticket => selectedScopes.includes(ticket.scope)) : auditTickets;
+    if (!filtered.length) { message.warning('当前选择下没有任何审计票据'); return; }
+    const csv = buildAuditCsv(filtered);
+    const tag = selectedScopes.length ? `-${selectedScopes.length}scopes` : '';
+    downloadText(`aix-audit-${dayjs().format('YYYYMMDD-HHmm')}${tag}.csv`, '﻿' + csv, 'text/csv');
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 审计票据 CSV 导出：${filtered.length} 条`, detail: { scope: 'aix-audit-csv', count: filtered.length, scopes: selectedScopes }, createdAt: Date.now() });
+    message.success(`已导出 ${filtered.length} 条审计票据为 CSV`);
   }
 
   async function drillAllPresets() {
@@ -788,6 +797,16 @@ export default function AixPage() {
               <Tag color="gold">含 Claude Code 续跑提示</Tag>
             </Space>
             <Input allowClear value={auditFilter} onChange={event => setAuditFilter(event.target.value)} placeholder='过滤票据：按 scope / 消息关键字' style={{ marginTop: 10, borderRadius: 12 }} />
+            {auditSummary.length ? (
+              <Space wrap style={{ marginTop: 8 }}>
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>CSV 导出范围：</Typography.Text>
+                {auditSummary.map(item => {
+                  const checked = !!scopeSelection[item.scope];
+                  return <Tag.CheckableTag key={item.scope} checked={checked} onChange={value => setScopeSelection(prev => ({ ...prev, [item.scope]: value }))}>{item.label} × {item.count}</Tag.CheckableTag>;
+                })}
+                <Typography.Text style={{ color: subColor, fontSize: 11 }}>不选则导出全部</Typography.Text>
+              </Space>
+            ) : null}
           </Col>
         </Row>
         <Space direction="vertical" size={10} style={{ width: '100%' }}>
@@ -979,6 +998,25 @@ export default function AixPage() {
               ))}
             </Space>
           ) : <Alert type="success" showIcon message="未发现危险关键词；保持白名单只读演练即可。" style={{ borderRadius: 12 }} />}
+        </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(34,197,94,0.10)' : 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>演练成本 TOP 5（总耗时排行）</Typography.Text>
+            <Tag color="green">总耗时 = 执行次数 × 平均耗时</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>识别"耗时大户"，便于优化高频长耗时预设；总耗时越长越值得拆分或缓存中间结果。</Typography.Paragraph>
+          {presetCostRanking.length ? presetCostRanking.map((row, index) => (
+            <div key={row.preset} style={{ marginBottom: 6, padding: 10, borderRadius: 12, background: isDark ? 'rgba(34,197,94,0.08)' : 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.18)' }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                <Space wrap>
+                  <Tag color={index === 0 ? 'red' : index <= 1 ? 'gold' : 'green'}>#{index + 1}</Tag>
+                  <Typography.Text strong style={{ color: titleColor }}>{row.preset}</Typography.Text>
+                  <Tag color={row.level === '红色' ? 'red' : row.level === '黄色' ? 'gold' : 'green'}>{row.level}</Tag>
+                </Space>
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>{row.total} 次 · 平均 {row.avgMs}ms · 总 {(row.totalMs / 1000).toFixed(1)}s</Typography.Text>
+              </Space>
+            </div>
+          )) : <Alert type="info" showIcon message="尚无演练记录，先做几次只读演练即可看到成本排行。" style={{ borderRadius: 12 }} />}
         </div>
       </Card>
 

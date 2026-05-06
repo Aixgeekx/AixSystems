@@ -109,6 +109,15 @@ export default function AgentPage() {
     .slice(0, 6);
   const relayTree = buildRelayTree(agentTasks);
   const relayMaxDepth = relayTree.reduce((max, node) => Math.max(max, node.depth), 0);
+  const capsuleLogs = useLiveQuery(() => db.eventLog.where('level').equals('info').reverse().sortBy('createdAt'), [])?.filter(log => {
+    const scope = String(log.detail?.scope || '');
+    return scope === 'agent-checkpoint-capsule' || scope === 'agent-checkpoint-relay';
+  }) || [];
+  const referencedCapsules = new Set(agentTasks.map(task => String(task.extra?.relayFrom || '')).filter(Boolean));
+  const orphanCapsuleLogs = capsuleLogs.filter(log => {
+    const capsuleId = String(log.detail?.capsuleId || '');
+    return capsuleId && !referencedCapsules.has(capsuleId);
+  });
   const disciplineCoach = autonomyQueue.map(item => ({
     title: item.task.title,
     risk: String(item.task.extra?.risk || (item.task.extra?.aixCampaign ? '中风险' : '低风险')),
@@ -259,6 +268,13 @@ export default function AgentPage() {
     a.href = url; a.download = filename; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1500);
     message.success(`接力深度树 Markdown 已下载：${filename}`);
+  }
+
+  async function cleanOrphanCapsules() {
+    if (!orphanCapsuleLogs.length) { message.info('暂无失效胶囊日志可清理'); return; }
+    await db.eventLog.bulkDelete(orphanCapsuleLogs.map(log => log.id));
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Agent 失效胶囊清理：${orphanCapsuleLogs.length} 条`, detail: { scope: 'agent-orphan-cleanup', count: orphanCapsuleLogs.length }, createdAt: Date.now() });
+    message.success(`已清理 ${orphanCapsuleLogs.length} 条失效胶囊日志`);
   }
 
   return (
@@ -480,6 +496,17 @@ export default function AgentPage() {
               ))}
             </Space>
           ) : <Alert type="success" showIcon message="当前没有多跳接力，所有 Agent 都在本地原始胶囊上推进。" style={{ borderRadius: 12 }} />}
+        </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(244,114,182,0.10)' : 'rgba(244,114,182,0.06)', border: '1px solid rgba(244,114,182,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>失效胶囊审计清理</Typography.Text>
+            <Tag color="magenta">孤儿胶囊 {orphanCapsuleLogs.length}</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>找出 eventLog 中 scope=agent-checkpoint-capsule / agent-checkpoint-relay 但 capsuleId 已不被任何当前 Agent Item.extra.relayFrom 引用的孤儿日志，可一键批量清理释放空间。</Typography.Paragraph>
+          <Space wrap>
+            <Button danger disabled={!orphanCapsuleLogs.length} onClick={cleanOrphanCapsules} style={{ borderRadius: 12 }}>清理 {orphanCapsuleLogs.length} 条孤儿日志</Button>
+            <Tag color="default">写入 scope=agent-orphan-cleanup 审计</Tag>
+          </Space>
         </div>
       </Card>
 

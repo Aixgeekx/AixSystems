@@ -54,6 +54,12 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.92.0 (2026-05-07)
+- Aix 主入口审计回放器卡片新增「按 scope 选择性 CSV 导出」：每个 scope 用 `Tag.CheckableTag` 切换包含/排除，未选时默认导出全部；导出文件名带 `-{N}scopes` 标记。
+- Aix 主入口风险驾驶舱新增「演练成本 TOP 5 排行」：按 `total × avgMs` 总耗时降序，标出"耗时大户"，便于优先优化高频长耗时预设。
+- Agent 中枢接力链路时间线新增「失效胶囊审计清理」：扫 eventLog 中 scope=agent-checkpoint-capsule / agent-checkpoint-relay 的记录，对比当前 Item.extra.relayFrom 引用，找出孤儿胶囊日志并一键 `bulkDelete`，写入 scope=agent-orphan-cleanup 审计。
+- 64 测试全绿；npm run build 通过；本轮无新工具函数，纯 UI / useMemo 实现，符合"最少行数"原则。
+
 ### v0.91.0 (2026-05-07)
 - Aix 主入口审计回放器卡片新增「导出 CSV」按钮：调 `buildAuditCsv` 输出 RFC4180 风格表格，前缀加 BOM 让 Excel 直接识别中文。
 - Aix 主入口风险驾驶舱演练编排区新增「一键演练全部预设」：一次循环触发所有预设的 `logPresetDrill`，并写入 `eventLog scope=powershell-drill-all` 审计。
