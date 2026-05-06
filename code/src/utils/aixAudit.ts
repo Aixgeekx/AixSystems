@@ -955,3 +955,127 @@ export function buildHealthTrendCompare(trend: HealthTrendCell[]): DailyTrendCom
     return { dateLabel: cell.dateLabel, avgScore: cell.avgScore, prevScore: prev, delta, arrow };
   });
 }
+
+export function buildGoldenPathMarkdown(steps: PresetGoldenStep[]): string {
+  if (!steps.length) return ['# 演练黄金路径', '', '_当前没有可生成的黄金路径，先做几次只读演练即可。_', ''].join('\n');
+  const lines: string[] = ['# 演练黄金路径'];
+  lines.push('');
+  lines.push(`> 共 ${steps.length} 步 · 等级排序：绿色 → 黄色 → 红色 · 成功率优先 · 平均耗时其次`);
+  lines.push('');
+  lines.push('| # | 等级 | 预设 | 成功率 | 平均耗时 | 建议 |');
+  lines.push('|---|---|---|---|---|---|');
+  for (const step of steps) {
+    lines.push(`| ${step.order} | ${step.level} | ${step.preset} | ${step.successRate}% | ${step.avgMs}ms | ${step.suggestion} |`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
+export interface RetroProgressStat {
+  totalGenerated: number;
+  branches: number;
+  completed: number;
+  pending: number;
+  completionRate: number;
+}
+
+export function summarizeRetroProgress(eventLogs: EventLog[], items: Array<{ subtasks?: Array<{ title: string; done: boolean }> }>): RetroProgressStat {
+  const retroLogs = eventLogs.filter(log => {
+    const scope = String(log.detail?.scope || '');
+    return scope === 'agent-retro-subtasks' || scope === 'agent-retro-subtasks-batch';
+  });
+  let totalGenerated = 0;
+  const branchSet = new Set<string>();
+  for (const log of retroLogs) {
+    totalGenerated += Number(log.detail?.count || log.detail?.subtasks || 0);
+    if (log.detail?.branchId) branchSet.add(String(log.detail.branchId));
+    if (log.detail?.branches) totalGenerated; // count已包含
+  }
+  // 计算实际复盘子任务的完成情况：识别带"复盘原因"/"改进策略"/"验证方式"前缀的子任务
+  let completed = 0;
+  let pending = 0;
+  for (const item of items) {
+    for (const sub of item.subtasks || []) {
+      const isRetro = sub.title.startsWith('复盘原因：') || sub.title.startsWith('改进策略：') || sub.title.startsWith('验证方式：');
+      if (!isRetro) continue;
+      if (sub.done) completed += 1;
+      else pending += 1;
+    }
+  }
+  const total = completed + pending;
+  return {
+    totalGenerated: Math.max(totalGenerated, total),
+    branches: branchSet.size,
+    completed,
+    pending,
+    completionRate: total ? Math.round(completed / total * 100) : 0
+  };
+}
+
+export interface SnapshotDiffEntry {
+  key: string;
+  before: number;
+  after: number;
+  delta: number;
+  arrow: '↑' | '↓' | '→';
+}
+
+export interface SnapshotDiffResult {
+  ok: boolean;
+  reason?: string;
+  beforeAt?: number;
+  afterAt?: number;
+  totals: SnapshotDiffEntry[];
+  scopeChanges: SnapshotDiffEntry[];
+  riskShift: { beforeRedYellow: number; afterRedYellow: number; delta: number; arrow: '↑' | '↓' | '→' };
+  branchHealthShift: { beforeAvg: number; afterAvg: number; delta: number; arrow: '↑' | '↓' | '→' };
+}
+
+function diffEntry(key: string, before: number, after: number): SnapshotDiffEntry {
+  const delta = after - before;
+  const arrow: '↑' | '↓' | '→' = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
+  return { key, before, after, delta, arrow };
+}
+
+export function compareFullAuditSnapshots(beforeJson: string, afterJson: string): SnapshotDiffResult {
+  const empty: SnapshotDiffResult = { ok: false, totals: [], scopeChanges: [], riskShift: { beforeRedYellow: 0, afterRedYellow: 0, delta: 0, arrow: '→' }, branchHealthShift: { beforeAvg: 0, afterAvg: 0, delta: 0, arrow: '→' } };
+  let before: any, after: any;
+  try { before = JSON.parse(beforeJson); after = JSON.parse(afterJson); } catch (e: any) { return { ...empty, reason: '快照 JSON 解析失败：' + (e?.message || '未知错误') }; }
+  if (before?.schema !== 'aix-full-audit-snapshot-1.0' || after?.schema !== 'aix-full-audit-snapshot-1.0') return { ...empty, reason: 'schema 不是 aix-full-audit-snapshot-1.0（请用数据中心导出的快照）' };
+  const bt = before.totals || {}, at = after.totals || {};
+  const totals: SnapshotDiffEntry[] = [
+    diffEntry('tickets', Number(bt.tickets || 0), Number(at.tickets || 0)),
+    diffEntry('presets', Number(bt.presets || 0), Number(at.presets || 0)),
+    diffEntry('branches', Number(bt.branches || 0), Number(at.branches || 0)),
+    diffEntry('days', Number(bt.days || 0), Number(at.days || 0))
+  ];
+  const beforeScopes = new Map((before.scopeDistribution || []).map((s: any) => [String(s.scope), Number(s.count || 0)]));
+  const afterScopes = new Map((after.scopeDistribution || []).map((s: any) => [String(s.scope), Number(s.count || 0)]));
+  const allScopes = new Set<string>([...beforeScopes.keys(), ...afterScopes.keys()] as string[]);
+  const scopeChanges: SnapshotDiffEntry[] = [];
+  for (const scope of allScopes) {
+    const b = Number(beforeScopes.get(scope) || 0);
+    const a = Number(afterScopes.get(scope) || 0);
+    if (b !== a) scopeChanges.push(diffEntry(scope, b, a));
+  }
+  scopeChanges.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+  const beforeRiskRows = (before.powerShellRisk || []) as Array<{ level: string }>;
+  const afterRiskRows = (after.powerShellRisk || []) as Array<{ level: string }>;
+  const beforeRedYellow = beforeRiskRows.filter(r => r.level === '红色' || r.level === '黄色').length;
+  const afterRedYellow = afterRiskRows.filter(r => r.level === '红色' || r.level === '黄色').length;
+  const riskShift = diffEntry('riskRedYellow', beforeRedYellow, afterRedYellow);
+  const beforeBranches = (before.branchHealth || []) as Array<{ score: number }>;
+  const afterBranches = (after.branchHealth || []) as Array<{ score: number }>;
+  const beforeAvg = beforeBranches.length ? Math.round(beforeBranches.reduce((s, b) => s + Number(b.score || 0), 0) / beforeBranches.length) : 0;
+  const afterAvg = afterBranches.length ? Math.round(afterBranches.reduce((s, b) => s + Number(b.score || 0), 0) / afterBranches.length) : 0;
+  const branchShift = diffEntry('branchAvg', beforeAvg, afterAvg);
+  return {
+    ok: true,
+    beforeAt: Number(before.generatedAt) || undefined,
+    afterAt: Number(after.generatedAt) || undefined,
+    totals,
+    scopeChanges,
+    riskShift: { beforeRedYellow, afterRedYellow, delta: riskShift.delta, arrow: riskShift.arrow },
+    branchHealthShift: { beforeAvg, afterAvg, delta: branchShift.delta, arrow: branchShift.arrow }
+  };
+}

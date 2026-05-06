@@ -12,7 +12,7 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures, buildDailyAnchorJson, expandFailureCluster, compareDailyAnchors, buildFailureFixHint, buildScopeDistribution, buildPresetGoldenPath } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures, buildDailyAnchorJson, expandFailureCluster, compareDailyAnchors, buildFailureFixHint, buildScopeDistribution, buildPresetGoldenPath, buildGoldenPathMarkdown } from '@/utils/aixAudit';
 import type { ReplayVerification } from '@/utils/aixAudit';
 
 const SKILLS = [
@@ -280,13 +280,16 @@ export default function AixPage() {
     .slice(0, 5), [powerShellRiskRows]);
   const scopeDistribution = useMemo(() => buildScopeDistribution(auditTickets), [auditTickets]);
   const presetGoldenPath = useMemo(() => buildPresetGoldenPath(powerShellRiskRows), [powerShellRiskRows]);
+  const [displayScopeFilter, setDisplayScopeFilter] = useState<Record<string, boolean>>({});
   const auditDisplay = useMemo(() => {
     const keyword = auditFilter.trim().toLowerCase();
+    const activeDisplayScopes = Object.entries(displayScopeFilter).filter(([, on]) => on).map(([scope]) => scope);
+    const filteredByScope = activeDisplayScopes.length ? auditTickets.filter(ticket => activeDisplayScopes.includes(ticket.scope)) : auditTickets;
     const list = keyword
-      ? auditTickets.filter(ticket => ticket.message.toLowerCase().includes(keyword) || ticket.scope.toLowerCase().includes(keyword) || ticket.scopeLabel.toLowerCase().includes(keyword))
-      : auditTickets;
+      ? filteredByScope.filter(ticket => ticket.message.toLowerCase().includes(keyword) || ticket.scope.toLowerCase().includes(keyword) || ticket.scopeLabel.toLowerCase().includes(keyword))
+      : filteredByScope;
     return list.slice(0, 5);
-  }, [auditTickets, auditFilter]);
+  }, [auditTickets, auditFilter, displayScopeFilter]);
   useEffect(() => {
     if (!playerActive || !auditDisplay.length) return;
     const timer = window.setInterval(() => {
@@ -463,6 +466,13 @@ export default function AixPage() {
     for (const step of presetGoldenPath) await logPresetDrill(step.preset);
     await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 黄金路径自动演练：${presetGoldenPath.length} 步`, detail: { scope: 'powershell-golden-path', steps: presetGoldenPath.map(s => s.preset) }, createdAt: Date.now() });
     message.success(`已按黄金路径执行 ${presetGoldenPath.length} 次只读演练`);
+  }
+
+  async function exportGoldenPathMarkdown() {
+    const md = buildGoldenPathMarkdown(presetGoldenPath);
+    downloadText(`aix-golden-path-${dayjs().format('YYYYMMDD-HHmm')}.md`, md, 'text/markdown');
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 黄金路径 Markdown 导出：${presetGoldenPath.length} 步`, detail: { scope: 'powershell-golden-path-md', steps: presetGoldenPath.length }, createdAt: Date.now() });
+    message.success(`已导出 ${presetGoldenPath.length} 步黄金路径 Markdown`);
   }
 
   async function drillAllPresets() {
@@ -869,6 +879,16 @@ export default function AixPage() {
                 <Typography.Text style={{ color: subColor, fontSize: 11 }}>不选则导出全部</Typography.Text>
               </Space>
             ) : null}
+            {auditSummary.length ? (
+              <Space wrap style={{ marginTop: 6 }}>
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>显示过滤：</Typography.Text>
+                {auditSummary.map(item => {
+                  const checked = !!displayScopeFilter[item.scope];
+                  return <Tag.CheckableTag key={item.scope} checked={checked} onChange={value => setDisplayScopeFilter(prev => ({ ...prev, [item.scope]: value }))}>{item.label}</Tag.CheckableTag>;
+                })}
+                <Typography.Text style={{ color: subColor, fontSize: 11 }}>不选则显示全部</Typography.Text>
+              </Space>
+            ) : null}
           </Col>
         </Row>
         <Space direction="vertical" size={10} style={{ width: '100%' }}>
@@ -1159,6 +1179,7 @@ export default function AixPage() {
               <Tag color="lime">绿 → 黄 → 红 · 成功率优先 · 耗时其次</Tag>
               <Button size="small" type="primary" ghost disabled={!presetGoldenPath.length} onClick={drillGoldenPath} style={{ borderRadius: 10 }}>一键执行黄金路径</Button>
               <Button size="small" disabled={!presetGoldenPath.length} onClick={scheduleGoldenPathItems} style={{ borderRadius: 10 }}>写入今日演练事项</Button>
+              <Button size="small" disabled={!presetGoldenPath.length} onClick={exportGoldenPathMarkdown} style={{ borderRadius: 10 }}>导出 Markdown</Button>
             </Space>
           </Space>
           <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>把所有预设按"等级（绿色优先）→ 成功率（高优先）→ 平均耗时（短优先）"排出今天的执行序列；先建立稳定基线再啃硬骨头。</Typography.Paragraph>

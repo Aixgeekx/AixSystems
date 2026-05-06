@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches, scoreRelayBranches, buildBranchHealthTrend, buildBranchRetroSubtasks, buildHealthTrendCompare } from '@/utils/aixAudit';
+import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches, scoreRelayBranches, buildBranchHealthTrend, buildBranchRetroSubtasks, buildHealthTrendCompare, summarizeRetroProgress } from '@/utils/aixAudit';
 import type { ParsedCapsule } from '@/utils/aixAudit';
 
 const AGENT_TEMPLATES = [
@@ -123,6 +123,7 @@ export default function AgentPage() {
   const branchHealthScores = scoreRelayBranches(agentTasks, relayFailureLogs);
   const branchHealthTrend = buildBranchHealthTrend(agentTasks, relayFailureLogs, 7);
   const healthTrendCompare = buildHealthTrendCompare(branchHealthTrend);
+  const retroProgress = summarizeRetroProgress(relayFailureLogs, agentTasks);
 
   const disciplineCoach = autonomyQueue.map(item => ({
     title: item.task.title,
@@ -584,6 +585,20 @@ export default function AgentPage() {
               </Space>
             </div>
           )) : <Alert type="info" showIcon message="暂无接力分支可评分；导入胶囊或开始接力后会自动出现。" style={{ borderRadius: 12 }} />}
+        </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(244,114,182,0.10)' : 'rgba(244,114,182,0.06)', border: '1px solid rgba(244,114,182,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>风险复盘进度</Typography.Text>
+            <Tag color={retroProgress.completionRate >= 80 ? 'green' : retroProgress.completionRate >= 50 ? 'gold' : 'red'}>完成率 {retroProgress.completionRate}%</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>统计「复盘原因 / 改进策略 / 验证方式」三类子任务的完成情况；只追踪由批量生成器写入的 retro 类型，不读子任务正文。</Typography.Paragraph>
+          <Row gutter={[8, 8]}>
+            <Col xs={12} md={6}><div style={{ padding: 10, borderRadius: 12, background: isDark ? 'rgba(244,114,182,0.10)' : 'rgba(244,114,182,0.05)', border: '1px solid rgba(244,114,182,0.18)' }}><Typography.Text style={{ color: subColor, fontSize: 12 }}>累计生成</Typography.Text><div style={{ color: titleColor, fontSize: 20, fontWeight: 700 }}>{retroProgress.totalGenerated}</div></div></Col>
+            <Col xs={12} md={6}><div style={{ padding: 10, borderRadius: 12, background: isDark ? 'rgba(34,197,94,0.10)' : 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.18)' }}><Typography.Text style={{ color: subColor, fontSize: 12 }}>已完成</Typography.Text><div style={{ color: '#22c55e', fontSize: 20, fontWeight: 700 }}>{retroProgress.completed}</div></div></Col>
+            <Col xs={12} md={6}><div style={{ padding: 10, borderRadius: 12, background: isDark ? 'rgba(245,158,11,0.10)' : 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.18)' }}><Typography.Text style={{ color: subColor, fontSize: 12 }}>待办</Typography.Text><div style={{ color: '#f59e0b', fontSize: 20, fontWeight: 700 }}>{retroProgress.pending}</div></div></Col>
+            <Col xs={12} md={6}><div style={{ padding: 10, borderRadius: 12, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.18)' }}><Typography.Text style={{ color: subColor, fontSize: 12 }}>覆盖分支</Typography.Text><div style={{ color: '#38bdf8', fontSize: 20, fontWeight: 700 }}>{retroProgress.branches}</div></div></Col>
+          </Row>
+          {retroProgress.totalGenerated ? <Progress percent={retroProgress.completionRate} status={retroProgress.completionRate >= 80 ? 'success' : retroProgress.completionRate >= 50 ? 'active' : 'exception'} style={{ marginTop: 12 }} /> : <Alert type="info" showIcon style={{ marginTop: 10, borderRadius: 12 }} message="暂无复盘子任务记录；先「批量生成风险复盘」即可看到进度。" />}
         </div>
         <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(34,197,94,0.10)' : 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.22)' }}>
           <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>

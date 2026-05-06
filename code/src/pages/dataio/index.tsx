@@ -5,7 +5,7 @@ import { DatabaseOutlined, DownloadOutlined, FolderOpenOutlined, UploadOutlined 
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { downloadBackup, importAll, pickAndImport } from '@/utils/export';
-import { buildAuditTickets, summarizePowerShellLogs, buildDailyChainSummary, scoreRelayBranches, buildScopeDistribution, buildFullAuditSnapshot, verifyFullAuditSnapshot } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizePowerShellLogs, buildDailyChainSummary, scoreRelayBranches, buildScopeDistribution, buildFullAuditSnapshot, verifyFullAuditSnapshot, compareFullAuditSnapshots } from '@/utils/aixAudit';
 import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import { getElectron, isElectron } from '@/utils/electron';
@@ -34,6 +34,9 @@ export default function DataIOPage() {
   const [selectedModules, setSelectedModules] = useState<string[]>(dataModules.map(item => item.label));
   const [snapshotInput, setSnapshotInput] = useState('');
   const [snapshotResult, setSnapshotResult] = useState<ReturnType<typeof verifyFullAuditSnapshot> | null>(null);
+  const [diffBefore, setDiffBefore] = useState('');
+  const [diffAfter, setDiffAfter] = useState('');
+  const [diffResult, setDiffResult] = useState<ReturnType<typeof compareFullAuditSnapshots> | null>(null);
 
 
   const stats = useLiveQuery(async () => {

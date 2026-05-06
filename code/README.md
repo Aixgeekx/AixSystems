@@ -54,6 +54,12 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.99.0 (2026-05-07)
+- Aix 主入口风险驾驶舱「演练黄金路径」加「导出 Markdown」按钮：调 `buildGoldenPathMarkdown` 输出 4 列表格（#、等级、预设、成功率、平均耗时、建议）的 .md 文件，写 eventLog scope=powershell-golden-path-md。
+- Aix 主入口审计回放器卡片在 CSV 导出 scope 多选下方新增「显示过滤」一行 CheckableTag，使用独立 `displayScopeFilter` useState；与现有关键词过滤叠加生效。
+- Agent 中枢健康度趋势条下方加「复盘 todo 进度」紫色卡片：调 `summarizeRetroProgress` 识别「复盘原因/改进策略/验证方式」前缀子任务的完成情况，4 张统计卡 + Progress 条（≥80% 绿色 / ≥50% 黄色 / 否则红色）。
+- `code/src/utils/aixAudit.ts` 新增 `buildGoldenPathMarkdown` / `summarizeRetroProgress` 两个工具函数 + `code/src/utils/aixAudit.test.ts` 补 3 套用例（共 90 测试 100% 绿）；`npm run build` 通过；接近 v1.0 体验完善。
+
 ### v0.98.0 (2026-05-07)
 - Aix 主入口风险驾驶舱「演练黄金路径」加「写入今日演练事项」按钮：调 `scheduleGoldenPathItems` 按 step.order 把每步排到当天 8+N 点的 30 分钟 schedule item，importance 按 level 映射到艾森豪威尔三档，写 eventLog scope=powershell-golden-path-schedule。
 - Agent 中枢「近 7 天健康度趋势」柱条下方加「日对日箭头」：调 `buildHealthTrendCompare` 给每个柱条算 delta 与箭头，绿/红/灰显示回升或下滑。

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend, buildScopeDistribution, buildPresetGoldenPath, buildBranchRetroSubtasks, buildFullAuditSnapshot, verifyFullAuditSnapshot, buildHealthTrendCompare } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend, buildScopeDistribution, buildPresetGoldenPath, buildBranchRetroSubtasks, buildFullAuditSnapshot, verifyFullAuditSnapshot, buildHealthTrendCompare, buildGoldenPathMarkdown, summarizeRetroProgress, compareFullAuditSnapshots } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -626,5 +626,78 @@ describe('buildHealthTrendCompare', () => {
     expect(compare[1].arrow).toBe('↑');
     expect(compare[2].arrow).toBe('↓');
     expect(compare[1].delta).toBe(15);
+  });
+});
+
+
+describe('buildGoldenPathMarkdown', () => {
+  it('returns markdown table for steps', () => {
+    const steps = [
+      { order: 1, preset: 'A', level: '绿色', successRate: 90, avgMs: 100, suggestion: '稳定基线' },
+      { order: 2, preset: 'B', level: '红色', successRate: 50, avgMs: 300, suggestion: '重点排查' }
+    ];
+    const md = buildGoldenPathMarkdown(steps);
+    expect(md).toContain('# 演练黄金路径');
+    expect(md).toContain('| 1 | 绿色 | A | 90% | 100ms');
+    expect(md).toContain('| 2 | 红色 | B | 50%');
+  });
+
+  it('returns empty placeholder when no steps', () => {
+    expect(buildGoldenPathMarkdown([])).toContain('当前没有可生成');
+  });
+});
+
+describe('summarizeRetroProgress', () => {
+  it('counts retro subtasks across items and progress logs', () => {
+    const items = [
+      { subtasks: [
+        { title: '复盘原因：失败 2 次', done: true },
+        { title: '改进策略：拆小步', done: false },
+        { title: '验证方式：再演练一次', done: false },
+        { title: '其它任务', done: true }
+      ] }
+    ];
+    const logs: EventLog[] = [
+      { id: '1', level: 'info', message: 'gen', detail: { scope: 'agent-retro-subtasks', count: 3, branchId: 'B1' }, createdAt: 1 }
+    ];
+    const stat = summarizeRetroProgress(logs, items);
+    expect(stat.completed).toBe(1);
+    expect(stat.pending).toBe(2);
+    expect(stat.completionRate).toBe(33);
+    expect(stat.branches).toBe(1);
+    expect(stat.totalGenerated).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('compareFullAuditSnapshots', () => {
+  const makeSnapshot = (totals: any, scopes: Array<{scope: string; count: number}>, riskLevels: string[], branchScores: number[], generatedAt: number) => JSON.stringify({
+    schema: 'aix-full-audit-snapshot-1.0',
+    generatedAt,
+    totals,
+    tickets: [],
+    dailyAnchors: [],
+    powerShellRisk: riskLevels.map(level => ({ preset: 'p', level, riskScore: 0, total: 0, ok: 0, fail: 0, avgMs: 0 })),
+    branchHealth: branchScores.map(score => ({ id: 'b', title: 't', capsuleId: 'c', score, band: '健康', percent: 0, idleHours: 0, failureCount: 0, risk: '低风险' })),
+    scopeDistribution: scopes
+  });
+
+  it('returns ok with totals/scope/risk/branch deltas', () => {
+    const before = makeSnapshot({ tickets: 10, presets: 3, branches: 2, days: 7 }, [{ scope: 'aix-skill', count: 4 }, { scope: 'powershell-drill', count: 6 }], ['绿色', '黄色', '红色'], [80, 60], 1000);
+    const after = makeSnapshot({ tickets: 15, presets: 3, branches: 3, days: 7 }, [{ scope: 'aix-skill', count: 6 }, { scope: 'powershell-drill', count: 9 }], ['绿色', '绿色', '绿色'], [82, 70, 65], 2000);
+    const diff = compareFullAuditSnapshots(before, after);
+    expect(diff.ok).toBe(true);
+    const ticketsRow = diff.totals.find(t => t.key === 'tickets');
+    expect(ticketsRow?.delta).toBe(5);
+    expect(ticketsRow?.arrow).toBe('↑');
+    expect(diff.scopeChanges.length).toBe(2);
+    expect(diff.riskShift.beforeRedYellow).toBe(2);
+    expect(diff.riskShift.afterRedYellow).toBe(0);
+    expect(diff.riskShift.delta).toBe(-2);
+    expect(diff.branchHealthShift.afterAvg).toBeGreaterThan(diff.branchHealthShift.beforeAvg);
+  });
+
+  it('refuses non-snapshot JSON', () => {
+    expect(compareFullAuditSnapshots('{}', '{}').ok).toBe(false);
+    expect(compareFullAuditSnapshots('not json', 'not json').ok).toBe(false);
   });
 });

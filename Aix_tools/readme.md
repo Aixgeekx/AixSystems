@@ -2,6 +2,12 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.99.0
+- `code/src/utils/aixAudit.ts` 新增 `buildGoldenPathMarkdown(steps)`（标题 + 引用 + 6 列表格 Markdown）和 `summarizeRetroProgress(logs, items)`（前缀识别 + audit branch 聚合 + completionRate）。
+- Aix 主入口加 `exportGoldenPathMarkdown` 函数 + 「导出 Markdown」按钮（与既有写入今日演练事项按钮并列）；新增 `displayScopeFilter` useState + auditDisplay 多 scope 过滤 + UI CheckableTag 行。
+- Agent 中枢加 `retroProgress` 计算 + 「复盘 todo 进度」紫色卡（4 张数字卡 + antd Progress；按 80/50% 切换 success/active/exception 状态）。
+- 测试新增 3 个 it（90 全绿）；`npm run build` OK。
+
 ## 最新版本 v0.98.0
 - `code/src/utils/aixAudit.ts` 新增 `verifyFullAuditSnapshot(jsonText)`（schema + totals.tickets vs 实际 tickets.length 一致性校验，错误时给具体 reason）、`buildHealthTrendCompare(trend)`（前一天 vs 当前的 delta + 箭头 ↑↓→）。
 - Aix 主入口加 `scheduleGoldenPathItems` 函数（dayjs.startOf('day') + step.order 偏移 + db.items.add + nanoid 子任务 + Aix/PowerShell/黄金路径 tags）+ 「写入今日演练事项」按钮（在已有「一键执行黄金路径」旁，禁用条件相同）。
