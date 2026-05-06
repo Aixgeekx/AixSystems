@@ -12,7 +12,7 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv } from '@/utils/aixAudit';
 import type { ReplayVerification } from '@/utils/aixAudit';
 
 const SKILLS = [
@@ -384,6 +384,21 @@ export default function AixPage() {
     downloadText(`aix-audit-replay-${dayjs().format('YYYYMMDD-HHmm')}.json`, json);
     await db.eventLog.add({ id: nanoid(), level: 'info', message: 'Aix 黑匣子审计回放包已导出', detail: { scope: 'aix-audit-replay', tickets: auditTickets.length, controlToken: capsule?.controlToken?.id || 'AIX-CORE' }, createdAt: Date.now() });
     message.success('审计回放包已下载');
+  }
+
+  async function exportAuditCsv() {
+    if (!auditTickets.length) { message.warning('暂无审计票据可导出'); return; }
+    const csv = buildAuditCsv(auditTickets);
+    downloadText(`aix-audit-${dayjs().format('YYYYMMDD-HHmm')}.csv`, '﻿' + csv, 'text/csv');
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 审计票据 CSV 导出：${auditTickets.length} 条`, detail: { scope: 'aix-audit-csv', count: auditTickets.length }, createdAt: Date.now() });
+    message.success(`已导出 ${auditTickets.length} 条审计票据为 CSV`);
+  }
+
+  async function drillAllPresets() {
+    if (!presetNames.length) { message.warning('暂无可演练预设'); return; }
+    for (const preset of presetNames) await logPresetDrill(preset);
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `PowerShell 一键全演练：${presetNames.length} 个预设`, detail: { scope: 'powershell-drill-all', presets: presetNames }, createdAt: Date.now() });
+    message.success(`已为 ${presetNames.length} 个预设各记录一次演练`);
   }
 
   async function copyResume(text: string) {
@@ -765,6 +780,7 @@ export default function AixPage() {
             </Space>
             <Space wrap style={{ marginTop: 12 }}>
               <Button type="primary" icon={<CloudSyncOutlined />} disabled={!auditTickets.length} onClick={exportReplayPackage} style={{ borderRadius: 12 }}>导出回放包</Button>
+              <Button disabled={!auditTickets.length} onClick={exportAuditCsv} style={{ borderRadius: 12 }}>导出 CSV</Button>
               <Button disabled={!auditDisplay.length} onClick={() => { setPlayerIndex(-1); setPlayerActive(true); }} style={{ borderRadius: 12 }}>{playerActive ? '播放中…' : '播放时间线'}</Button>
               <Button disabled={!playerActive} onClick={() => setPlayerActive(false)} style={{ borderRadius: 12 }}>暂停</Button>
               <Button disabled={!auditDisplay.length} onClick={() => { setPlayerActive(false); setPlayerIndex(-1); }} style={{ borderRadius: 12 }}>重置</Button>
@@ -899,6 +915,7 @@ export default function AixPage() {
           <Typography.Paragraph style={{ color: subColor, marginBottom: 8, fontSize: 12 }}>根据风险评分生成只读演练事项：红色排到今日 16:00 + 高重要度，黄色排到 3 天后 + 中等重要度，绿色排到一周后；事项写入提醒队列，可在我的一天看到。</Typography.Paragraph>
           <Space wrap>
             <Button type="primary" disabled={!powerShellRiskRows.length} onClick={scheduleAllPresetDrills} style={{ borderRadius: 12 }}>一键写入演练日程</Button>
+            <Button disabled={!presetNames.length} onClick={drillAllPresets} style={{ borderRadius: 12 }}>一键演练全部预设</Button>
             <Button danger onClick={clearDrillLogs} style={{ borderRadius: 12 }}>清零演练日志</Button>
             <Tag color="green">写入 Item.extra.presetDrill</Tag>
             <Tag color="purple">写入 eventLog scope=powershell-drill-plan</Tag>

@@ -54,6 +54,13 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.91.0 (2026-05-07)
+- Aix 主入口审计回放器卡片新增「导出 CSV」按钮：调 `buildAuditCsv` 输出 RFC4180 风格表格，前缀加 BOM 让 Excel 直接识别中文。
+- Aix 主入口风险驾驶舱演练编排区新增「一键演练全部预设」：一次循环触发所有预设的 `logPresetDrill`，并写入 `eventLog scope=powershell-drill-all` 审计。
+- Agent 中枢接力链路时间线新增「导出深度树 Markdown」按钮：调 `buildRelayTreeMarkdown` 把多跳节点按 depth 缩进输出 `agent-relay-depth-*.md`，便于复盘多人接力链。
+- 工具层 `code/src/utils/aixAudit.ts` 新增 `buildAuditCsv`、`buildRelayTreeMarkdown` + 3 个单元测试，64 测试全绿。
+- 发布流程升级：每轮发布前清理 dist-installer 中除最近 3 版以外的旧产物（保留 GitHub Release 作为长期备份），dist-installer 体积从 5.2G 降到 ~600M。
+
 ### v0.90.0 (2026-05-07)
 - Aix 主入口审计回放器卡片新增「14 天风险热力图」：每天用三层条带（绿低 / 紫中 / 红需确认）按当天票据数缩放高度，hover 显示明细；纯 CSS 渲染，零 ECharts 依赖。
 - Aix 主入口风险驾驶舱新增「PowerShell 黑名单关键词审计」：本地扫描所有演练日志中的 format/rm -rf/taskkill/iex 等 30+ 危险关键词，按高/中/低三档严重度排序输出告警卡 + Claude Code 续跑提示；不调用模型。

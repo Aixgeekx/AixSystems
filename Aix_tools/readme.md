@@ -2,6 +2,13 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.91.0
+- `code/src/utils/aixAudit.ts` 新增 `buildAuditCsv(tickets)`（RFC4180 + BOM 中文）和 `buildRelayTreeMarkdown(nodes)`（按 depth 缩进的多跳追溯 md）；新增 csvCell 内部转义函数。
+- Aix 主入口审计回放器加「导出 CSV」按钮，触发下载 `aix-audit-YYYYMMDD-HHmm.csv`，写入 eventLog scope=`aix-audit-csv`。
+- Aix 主入口风险驾驶舱演练编排区加「一键演练全部预设」按钮，循环 `logPresetDrill(preset)` 后写入 eventLog scope=`powershell-drill-all`。
+- Agent 中枢接力链路时间线加「导出深度树 Markdown」按钮，复用 `buildRelayTree` + 新 `buildRelayTreeMarkdown`，下载 `agent-relay-depth-*.md`。
+- 发布流程：每轮发布前清理 `desktop/dist-installer/` 中除最近 3 版以外的所有 .exe / .blockmap（GitHub Releases 已作为长期备份）；release_assets.py 仍负责 commit/push 之后自动上传当前版本资产。
+
 ## 最新版本 v0.90.0
 - `code/src/utils/aixAudit.ts` 新增三个本地工具：`buildAuditHeatmap(tickets, days)` 按天分桶并按风险等级（低/中/需确认）统计；`scanPowerShellBlacklist(logs)` 静态扫描 30+ 危险关键词并按 高/中/低 三档严重度排序输出告警；`buildRelayTree(items)` 递归 `extra.relayFrom` 多跳计算每个 Agent 接力分支的 depth + parentId。
 - Aix 主入口审计回放器卡片新增「14 天风险热力图」div：每天三层条带，纯 CSS 实现，无 ECharts 依赖。

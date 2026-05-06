@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -303,5 +303,39 @@ describe('buildRelayTree', () => {
 
   it('returns empty when no items have relayFrom', () => {
     expect(buildRelayTree([{ id: 'x', title: 'no relay', createdAt: 1, updatedAt: 1 }])).toEqual([]);
+  });
+});
+
+describe('buildAuditCsv', () => {
+  it('produces RFC4180-style CSV with header and quotes special chars', () => {
+    const ticketsLogs: EventLog[] = [
+      { id: 'a', level: 'info', message: 'aix, with comma', detail: { scope: 'aix-skill', note: 'inner "quote"' }, createdAt: 1000 },
+      { id: 'b', level: 'info', message: 'plain', detail: { scope: 'aix-campaign' }, createdAt: 2000 }
+    ];
+    const tickets = buildAuditTickets(ticketsLogs);
+    const csv = buildAuditCsv(tickets);
+    const lines = csv.split('\r\n');
+    expect(lines[0]).toBe('id,timestamp,datetime,scope,level,risk,message,fingerprint,chainHash,prevHash');
+    expect(lines).toHaveLength(3);
+    const middle = lines.find(line => line.startsWith('a,'))!;
+    expect(middle).toContain('aix-skill');
+    expect(middle).toContain('"aix, with comma"');         // 含逗号的字段被双引号包围
+  });
+});
+
+describe('buildRelayTreeMarkdown', () => {
+  it('renders indented bullets per depth and reports max depth', () => {
+    const md = buildRelayTreeMarkdown([
+      { id: 'a', title: '一跳', capsuleId: 'CAP-1', depth: 1, risk: '低风险', percent: 50, parentId: 'origin', createdAt: 1 },
+      { id: 'b', title: '二跳', capsuleId: 'CAP-2', depth: 2, risk: '中风险', percent: 80, parentId: 'a', createdAt: 2 }
+    ]);
+    expect(md).toContain('# Agent 接力深度追溯');
+    expect(md).toContain('最深 2 跳');
+    expect(md).toContain('- **一跳**');
+    expect(md).toContain('  - **二跳**');                   // depth=2 → 2 个空格缩进
+  });
+
+  it('handles empty input with friendly message', () => {
+    expect(buildRelayTreeMarkdown([])).toContain('空');
   });
 });

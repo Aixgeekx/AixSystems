@@ -491,6 +491,38 @@ export function buildRelayTree(items: Array<{ id: string; title: string; created
   return nodes.sort((a, b) => a.depth - b.depth || a.createdAt - b.createdAt);
 }
 
+function csvCell(value: any): string {                     // CSV 转义：逗号 / 引号 / 换行
+  const s = String(value ?? '');
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+export function buildAuditCsv(tickets: AuditTicket[]): string {
+  const header = ['id', 'timestamp', 'datetime', 'scope', 'level', 'risk', 'message', 'fingerprint', 'chainHash', 'prevHash'];
+  const rows = tickets.map(ticket => [
+    ticket.id,
+    ticket.timestamp,
+    new Date(ticket.timestamp).toISOString(),
+    ticket.scope,
+    ticket.level,
+    ticket.risk,
+    ticket.message,
+    ticket.fingerprint,
+    ticket.chainHash,
+    ticket.prevHash
+  ].map(csvCell).join(','));
+  return [header.join(','), ...rows].join('\r\n');
+}
+
+export function buildRelayTreeMarkdown(nodes: RelayDepthNode[]): string {
+  if (!nodes.length) return '# Agent 接力深度追溯（空）\n\n当前没有任何带 relayFrom 标记的 Agent 分支。\n';
+  const lines = ['# Agent 接力深度追溯', '', `生成时间：${new Date().toISOString()}`, `节点总数：${nodes.length} · 最深 ${nodes.reduce((max, node) => Math.max(max, node.depth), 0)} 跳`, ''];
+  for (const node of nodes) {
+    const indent = '  '.repeat(Math.max(0, node.depth - 1));
+    lines.push(`${indent}- **${node.title}** · 深度 ${node.depth} · 风险 ${node.risk} · 进度 ${node.percent}% · 来自 ${node.capsuleId} · 父分支 ${node.parentId || '原始胶囊源'}`);
+  }
+  return lines.join('\n') + '\n';
+}
+
 export function buildPresetTrendRows(logs: EventLog[], presetNames: string[], days = 14, now = Date.now()): PresetTrendRow[] {
   const dayStart = new Date(now);
   dayStart.setHours(0, 0, 0, 0);

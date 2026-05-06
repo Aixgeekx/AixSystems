@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree } from '@/utils/aixAudit';
+import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown } from '@/utils/aixAudit';
 import type { ParsedCapsule } from '@/utils/aixAudit';
 
 const AGENT_TEMPLATES = [
@@ -249,6 +249,18 @@ export default function AgentPage() {
     message.success(`接力链路 Markdown 已下载：${filename}`);
   }
 
+  function exportRelayDepthMarkdown() {
+    if (!relayTree.length) { message.warning('当前没有多跳接力分支'); return; }
+    const md = buildRelayTreeMarkdown(relayTree);
+    const filename = `agent-relay-depth-${dayjs().format('YYYYMMDD-HHmm')}.md`;
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    message.success(`接力深度树 Markdown 已下载：${filename}`);
+  }
+
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 28, background: isDark ? `linear-gradient(135deg, ${accent}18, rgba(10,14,28,0.96))` : 'linear-gradient(135deg, rgba(37,99,235,0.94), rgba(15,23,42,0.9))' }} bodyStyle={{ padding: 24 }}>
@@ -407,6 +419,7 @@ export default function AgentPage() {
         <Typography.Paragraph style={{ color: subColor }}>把通过胶囊接力创建的 Agent 分支按 capsuleId 聚合并按时间排序，让多人协作链路一眼可见；只读取本地 Item.extra.relayFrom 标记，不上传任何数据。</Typography.Paragraph>
         <Space wrap style={{ marginBottom: 12 }}>
           <Button disabled={!relayChainList.length} onClick={exportRelayMarkdown} style={{ borderRadius: 12 }}>导出接力链路 Markdown</Button>
+          <Button disabled={!relayTree.length} onClick={exportRelayDepthMarkdown} style={{ borderRadius: 12 }}>导出深度树 Markdown</Button>
           <Tag color="purple">只导出元数据，不含日记正文</Tag>
         </Space>
         {relayChainList.length ? (
