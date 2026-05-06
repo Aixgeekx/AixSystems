@@ -54,6 +54,11 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v1.0.0 (2026-05-07)
+- 今日饱和度环（schedule 类计划分钟 / 24h）
+- 习惯连击榜 top 5
+- 明日事项预览前 5 条
+
 ### v0.99.0 (2026-05-07)
 - 黄金路径 Markdown 导出
 - 风险复盘 todo 进度卡

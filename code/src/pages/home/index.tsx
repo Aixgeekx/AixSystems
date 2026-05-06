@@ -28,6 +28,7 @@ import { getElectron, isElectron } from '@/utils/electron';
 import { callAixModel } from '@/utils/aixModel';
 import { useThemeVariants } from '@/hooks/useVariants';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { computeTodaySaturation, computeHabitStreaks, computeTomorrowAgenda } from '@/utils/dailyInsight';
 import type { ItemType } from '@/config/itemTypes';
 
 type CompactFilter = 'all' | 'favorites' | 'agenda' | 'growth' | 'records' | 'tools' | 'settings';
@@ -199,7 +200,10 @@ export default function HomePage() {
       overloadLevel,
       overloadAdvice,
       commandCenter,
-      controlToken
+      controlToken,
+      todaySaturation: computeTodaySaturation(activeItems),
+      habitStreaks: computeHabitStreaks(habits, habitLogs),
+      tomorrowAgenda: computeTomorrowAgenda(activeItems)
     };
   }, []);
 
@@ -884,6 +888,56 @@ export default function HomePage() {
             {dashboard.focusAlert.tasks.map((task: string) => <Tag key={task} color="blue" style={{ borderRadius: 8 }}>{task}</Tag>)}
           </Space>
         ) : null}
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 18 }}>
+          <div>
+            <Typography.Text style={{ color: subColor, fontWeight: 500, letterSpacing: '0.02em' }}>时间管理日常洞察</Typography.Text>
+            <Typography.Title level={4} style={{ margin: '6px 0 6px', color: titleColor, fontWeight: 700 }}>今日饱和度 · {dashboard?.todaySaturation.level || '空闲'}</Typography.Title>
+            <Typography.Text style={{ color: subColor, fontSize: 13 }}>{dashboard?.todaySaturation.advice || '今日尚有大量空闲，可以补一个目标推进。'}</Typography.Text>
+          </div>
+          <Progress type="circle" percent={dashboard?.todaySaturation.ratio || 0} size={82} strokeColor={(dashboard?.todaySaturation.ratio || 0) >= 60 ? '#ef4444' : (dashboard?.todaySaturation.ratio || 0) >= 30 ? '#f59e0b' : '#22c55e'} trailColor={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.04)'} />
+        </div>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} md={8}>
+            <div style={{ padding: 14, borderRadius: 18, background: tintedBg('#38bdf8'), border: '1px solid rgba(56,189,248,0.22)', height: '100%' }}>
+              <Typography.Text strong style={{ color: titleColor }}>今日饱和度</Typography.Text>
+              <div style={{ marginTop: 8, color: titleColor, fontSize: 22, fontWeight: 800 }}>{dashboard?.todaySaturation.plannedMinutes || 0} <span style={{ fontSize: 13, color: subColor, fontWeight: 500 }}>分钟</span></div>
+              <Typography.Text style={{ color: subColor, fontSize: 12 }}>{dashboard?.todaySaturation.itemCount || 0} 件计划事项 · 占 24h 的 {dashboard?.todaySaturation.ratio || 0}%</Typography.Text>
+            </div>
+          </Col>
+          <Col xs={24} md={8}>
+            <div style={{ padding: 14, borderRadius: 18, background: tintedBg('#10b981'), border: '1px solid rgba(16,185,129,0.22)', height: '100%' }}>
+              <Typography.Text strong style={{ color: titleColor }}>习惯连击榜</Typography.Text>
+              {dashboard?.habitStreaks?.length ? (
+                <Space direction="vertical" size={4} style={{ width: '100%', marginTop: 8 }}>
+                  {dashboard.habitStreaks.map((s: any) => (
+                    <Space key={s.habitId} style={{ width: '100%', justifyContent: 'space-between' }}>
+                      <Typography.Text style={{ color: titleColor, fontSize: 12 }}><span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: s.color, marginRight: 6 }} />{s.name}</Typography.Text>
+                      <Typography.Text style={{ color: subColor, fontSize: 12 }}>当前 {s.currentStreak} · 最长 {s.longestStreak}</Typography.Text>
+                    </Space>
+                  ))}
+                </Space>
+              ) : <Typography.Text style={{ color: subColor, fontSize: 12, display: 'block', marginTop: 8 }}>暂无习惯，去添加一个开始打卡。</Typography.Text>}
+            </div>
+          </Col>
+          <Col xs={24} md={8}>
+            <div style={{ padding: 14, borderRadius: 18, background: tintedBg('#a855f7'), border: '1px solid rgba(168,85,247,0.22)', height: '100%' }}>
+              <Typography.Text strong style={{ color: titleColor }}>明日事项预览</Typography.Text>
+              {dashboard?.tomorrowAgenda?.length ? (
+                <Space direction="vertical" size={4} style={{ width: '100%', marginTop: 8 }}>
+                  {dashboard.tomorrowAgenda.map((entry: any) => (
+                    <Space key={entry.itemId} style={{ width: '100%', justifyContent: 'space-between' }}>
+                      <Typography.Text style={{ color: titleColor, fontSize: 12 }}>{entry.startLabel} {entry.title}</Typography.Text>
+                      <Tag color={entry.importance >= 3 ? 'red' : entry.importance >= 2 ? 'gold' : 'blue'} style={{ marginInlineEnd: 0 }}>{entry.type}</Tag>
+                    </Space>
+                  ))}
+                </Space>
+              ) : <Typography.Text style={{ color: subColor, fontSize: 12, display: 'block', marginTop: 8 }}>明天暂无 schedule 类事项。</Typography.Text>}
+            </div>
+          </Col>
+        </Row>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up stagger-2" style={{ ...cardStyle, borderRadius: 32 }} bodyStyle={{ padding: 24 }}>
