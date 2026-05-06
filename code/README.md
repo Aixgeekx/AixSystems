@@ -55,86 +55,74 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 ## 更新日志
 
 ### v0.99.0 (2026-05-07)
-- Aix 主入口风险驾驶舱「演练黄金路径」加「导出 Markdown」按钮：调 `buildGoldenPathMarkdown` 输出 4 列表格（#、等级、预设、成功率、平均耗时、建议）的 .md 文件，写 eventLog scope=powershell-golden-path-md。
-- Aix 主入口审计回放器卡片在 CSV 导出 scope 多选下方新增「显示过滤」一行 CheckableTag，使用独立 `displayScopeFilter` useState；与现有关键词过滤叠加生效。
-- Agent 中枢健康度趋势条下方加「复盘 todo 进度」紫色卡片：调 `summarizeRetroProgress` 识别「复盘原因/改进策略/验证方式」前缀子任务的完成情况，4 张统计卡 + Progress 条（≥80% 绿色 / ≥50% 黄色 / 否则红色）。
-- `code/src/utils/aixAudit.ts` 新增 `buildGoldenPathMarkdown` / `summarizeRetroProgress` 两个工具函数 + `code/src/utils/aixAudit.test.ts` 补 3 套用例（共 90 测试 100% 绿）；`npm run build` 通过；接近 v1.0 体验完善。
+- 黄金路径 Markdown 导出
+- 风险复盘 todo 进度卡
+- 数据中心快照对比器
 
 ### v0.98.0 (2026-05-07)
-- Aix 主入口风险驾驶舱「演练黄金路径」加「写入今日演练事项」按钮：调 `scheduleGoldenPathItems` 按 step.order 把每步排到当天 8+N 点的 30 分钟 schedule item，importance 按 level 映射到艾森豪威尔三档，写 eventLog scope=powershell-golden-path-schedule。
-- Agent 中枢「近 7 天健康度趋势」柱条下方加「日对日箭头」：调 `buildHealthTrendCompare` 给每个柱条算 delta 与箭头，绿/红/灰显示回升或下滑。
-- 数据中心「全量审计快照」紫色区下方新增「导入校验」：调 `verifyFullAuditSnapshot` 校验 JSON schema=aix-full-audit-snapshot-1.0 与 totals 一致性，结果 4 个 Tag（票据/预设/分支/日链）。
-- `code/src/utils/aixAudit.ts` 新增 `verifyFullAuditSnapshot` / `buildHealthTrendCompare` 两个工具函数 + `code/src/utils/aixAudit.test.ts` 补 4 套用例（共 87 测试 100% 绿）；`npm run build` 通过；导出—校验闭环完成。
+- 黄金路径写入今日演练事项
+- 健康度趋势日对日箭头
+- 全量审计快照导入校验
 
 ### v0.97.0 (2026-05-07)
-- Aix 主入口风险驾驶舱「演练黄金路径」头部新增「一键执行黄金路径」按钮：调 `drillGoldenPath` 按 `presetGoldenPath` 顺序循环 `logPresetDrill`，写入 eventLog scope=powershell-golden-path。
-- Agent 中枢健康度评分卡片头部新增「批量生成风险复盘」按钮：`generateBatchRetroSubtasks` 遍历所有 band==='风险' 分支调 `db.items.update` 追加 `buildBranchRetroSubtasks` 生成的 3 条子任务，写入 eventLog scope=agent-retro-subtasks-batch。
-- 数据中心「导出备份」卡片末尾新增紫色「全量审计快照」区：调 `buildFullAuditSnapshot` 把当前 audit 票据、近 7 天日链锚、PowerShell 风险评分、Agent 接力分支健康度和 scope 占比一次性打包成 schema=aix-full-audit-snapshot-1.0 JSON 下载。
-- `code/src/utils/aixAudit.ts` 新增 `buildFullAuditSnapshot` 工具函数 + `code/src/utils/aixAudit.test.ts` 补 1 套用例（共 83 测试 100% 绿）；`npm run build` 通过；首次跨模块联动到 dataio 页面。
+- 一键执行黄金路径
+- 批量生成风险分支复盘
+- 全量审计快照 JSON 导出
 
 ### v0.96.0 (2026-05-07)
-- Aix 主入口审计回放器卡片新增「scope 占比仪表盘」：调 `buildScopeDistribution` 把所有票据按 scope 拆分输出 count/percent，每个 scope 一条横向条形图（label + 百分比 + 颜色），便于一眼看出活动重心。
-- Aix 主入口风险驾驶舱新增「演练黄金路径」：调 `buildPresetGoldenPath` 按等级（绿/黄/红）→ 成功率（高优先）→ 平均耗时（短优先）排序，给每条预设标 #order 和针对 level 的执行建议。
-- Agent 中枢健康度评分卡片对「风险」档分支显示「生成复盘 todo」按钮：调 `buildBranchRetroSubtasks` 给该 Item 追加 3 条子任务（复盘原因 / 改进策略 / 验证方式），写入 eventLog scope=agent-retro-subtasks。
-- `code/src/utils/aixAudit.ts` 新增 `buildScopeDistribution` / `buildPresetGoldenPath` / `buildBranchRetroSubtasks` 三个工具函数 + `code/src/utils/aixAudit.test.ts` 补 3 套用例（共 82 测试 100% 绿）；`npm run build` 通过。
+- 审计 scope 占比仪表盘
+- PowerShell 演练黄金路径
+- 风险分支自动复盘 todo
 
 ### v0.95.0 (2026-05-07)
-- Aix 主入口审计回放器卡片新增「链锚反向比对器」：调 `compareDailyAnchors` 将外部 aix-daily-anchor JSON 与本地 `dailyChainSummary` 逐日 diff，输出 identical / mismatch / missingLocal / missingRemote 四类 + 本地与远端 cyrb53 总指纹；写入 eventLog scope=aix-daily-anchor-compare。
-- Aix 主入口风险驾驶舱「失败原因聚类」展开明细底部追加修复建议条：调 `buildFailureFixHint(label)` 给每个分类返回专家级 PowerShell 修复一行（RunAs / OperationTimeout / Test-NetConnection / PSScriptAnalyzer 等），可一键复制。
-- Agent 中枢接力链路时间线新增「近 7 天健康度趋势」柱条：调 `buildBranchHealthTrend` 把每天截止当日所有接力分支的健康分平均，按 ≥75 绿 / ≥45 黄 / 否则红 三档色标，鼠标悬停看具体分数与分支数。
-- `code/src/utils/aixAudit.ts` 新增 `compareDailyAnchors` / `buildFailureFixHint` / `buildBranchHealthTrend` 三个工具函数 + `code/src/utils/aixAudit.test.ts` 补 3 套用例（共 78 测试 100% 绿）；`npm run build` 通过。
+- 审计链锚反向比对器
+- PowerShell 失败修复建议映射器
+- 接力分支健康度 7 天趋势
 
 ### v0.94.0 (2026-05-07)
-- Aix 主入口审计回放器卡片「近 7 天链式哈希摘要」头部新增「导出 JSON 凭证」按钮：调 `buildDailyAnchorJson` 把 7 天日链锚点序列化成 schema=aix-daily-anchor-1.0 的 JSON，含 cyrb53 总指纹 aggregateHash，便于跨日凭证比对。
-- Aix 主入口风险驾驶舱「失败原因聚类」每条卡片新增「展开明细」按钮：调 `expandFailureCluster` 取该分类下所有匹配 log 的级别/时间/预设/消息，按时间倒序最多 8 条。
-- Agent 中枢接力链路时间线末尾新增「接力分支健康度评分」卡片：调 `scoreRelayBranches` 综合空闲时长、失败次数、风险等级、进度加权出 0-100 分，≥75 健康/≥45 关注/否则风险，按分值升序排列。
-- `code/src/utils/aixAudit.ts` 新增 `buildDailyAnchorJson` / `expandFailureCluster` / `scoreRelayBranches` 三个工具函数 + `code/src/utils/aixAudit.test.ts` 补 3 套用例（共 72 测试 100% 绿）；`npm run build` 通过。
+- 每日链锚 JSON 凭证导出
+- 失败原因聚类深挖明细
+- 接力分支健康度评分
 
 ### v0.93.0 (2026-05-07)
-- Aix 主入口审计回放器卡片新增「近 7 天链式哈希摘要」：调 `buildDailyChainSummary` 抽出每日最后一张票据的 chainHash 作为日链锚点 + 单条复制按钮，可粘贴到外部系统跨日比对哈希一致性。
-- Aix 主入口风险驾驶舱新增「失败原因聚类」：调 `clusterPresetFailures` 扫描 access denied / timeout / network / not found / execution policy / syntax / parameter 等关键词，按 6 类聚合统计影响最大的失败原因 + 涉及预设。
-- Agent 中枢接力链路时间线新增「接力分支 SLA 沉睡告警」：调 `findSleepingRelayBranches` 找出超过 24h 未更新且未归档的接力分支，按 24/48/72h 三档标橙/黄/红，从 Item.updatedAt 计算空闲时长。
-- `code/src/utils/aixAudit.ts` 新增 `buildDailyChainSummary` / `clusterPresetFailures` / `findSleepingRelayBranches` 三个工具函数 + `code/src/utils/aixAudit.test.ts` 补 3 套用例（共 67 测试 100% 绿）；`npm run build` 通过。
+- 每日链尾锚点
+- PowerShell 失败原因聚类
+- 接力分支 SLA 沉睡告警
 
 ### v0.92.0 (2026-05-07)
-- Aix 主入口审计回放器卡片新增「按 scope 选择性 CSV 导出」：每个 scope 用 `Tag.CheckableTag` 切换包含/排除，未选时默认导出全部；导出文件名带 `-{N}scopes` 标记。
-- Aix 主入口风险驾驶舱新增「演练成本 TOP 5 排行」：按 `total × avgMs` 总耗时降序，标出"耗时大户"，便于优先优化高频长耗时预设。
-- Agent 中枢接力链路时间线新增「失效胶囊审计清理」：扫 eventLog 中 scope=agent-checkpoint-capsule / agent-checkpoint-relay 的记录，对比当前 Item.extra.relayFrom 引用，找出孤儿胶囊日志并一键 `bulkDelete`，写入 scope=agent-orphan-cleanup 审计。
-- 64 测试全绿；npm run build 通过；本轮无新工具函数，纯 UI / useMemo 实现，符合"最少行数"原则。
+- 审计 CSV 按 scope 选择性导出
+- 演练成本 TOP 5 排行
+- 失效胶囊审计清理
 
 ### v0.91.0 (2026-05-07)
-- Aix 主入口审计回放器卡片新增「导出 CSV」按钮：调 `buildAuditCsv` 输出 RFC4180 风格表格，前缀加 BOM 让 Excel 直接识别中文。
-- Aix 主入口风险驾驶舱演练编排区新增「一键演练全部预设」：一次循环触发所有预设的 `logPresetDrill`，并写入 `eventLog scope=powershell-drill-all` 审计。
-- Agent 中枢接力链路时间线新增「导出深度树 Markdown」按钮：调 `buildRelayTreeMarkdown` 把多跳节点按 depth 缩进输出 `agent-relay-depth-*.md`，便于复盘多人接力链。
-- 工具层 `code/src/utils/aixAudit.ts` 新增 `buildAuditCsv`、`buildRelayTreeMarkdown` + 3 个单元测试，64 测试全绿。
-- 发布流程升级：每轮发布前清理 dist-installer 中除最近 3 版以外的旧产物（保留 GitHub Release 作为长期备份），dist-installer 体积从 5.2G 降到 ~600M。
+- 审计票据 CSV 导出（带 BOM 中文）
+- 一键演练全部 PowerShell 预设
+- Agent 接力深度树 Markdown 导出
 
 ### v0.90.0 (2026-05-07)
-- Aix 主入口审计回放器卡片新增「14 天风险热力图」：每天用三层条带（绿低 / 紫中 / 红需确认）按当天票据数缩放高度，hover 显示明细；纯 CSS 渲染，零 ECharts 依赖。
-- Aix 主入口风险驾驶舱新增「PowerShell 黑名单关键词审计」：本地扫描所有演练日志中的 format/rm -rf/taskkill/iex 等 30+ 危险关键词，按高/中/低三档严重度排序输出告警卡 + Claude Code 续跑提示；不调用模型。
-- Agent 中枢接力链路时间线卡片新增「接力深度追溯」：递归 Item.extra.relayFrom 多跳回溯每个分支的源头，按 depth 缩进展示链路深度；让 A→B→C 多跳协作一目了然。
-- 工具层 `code/src/utils/aixAudit.ts` 新增 `buildAuditHeatmap`、`scanPowerShellBlacklist`、`buildRelayTree`，单元测试覆盖到 22 用例（共 61 测试）。
-- 发布闭环升级：commit/push 之后自动调 `python Aix_tools/release_assets.py` 给当前 tag 上传 Setup.exe + blockmap，GitHub Releases 与 main 分支同步。
+- 审计票据 14 天风险热力图
+- PowerShell 黑名单关键词审计
+- Agent 接力深度追溯（多跳）
 
 ### v0.89.0 (2026-05-07)
-- Aix 主入口审计回放器卡片新增「票据搜索过滤」：实时按 scope / 消息关键字过滤当前显示的 5 条票据，与播放器联动（过滤后再播放）。
-- Agent 中枢接力链路时间线卡片新增「导出 Markdown」：一键把所有接力链路（capsuleId / 分支数 / 风险 / 进度 / 续跑提示）导出为 `agent-relay-chain-*.md`，便于团队接力交接。
-- Aix 主入口风险驾驶舱演练编排区新增「清零演练日志」：批量删除 eventLog 中 scope=`desktop-preset-drill` 与 `powershell-drill-plan` 的记录，回到初始状态便于重新演练。
+- 审计票据搜索过滤
+- Agent 接力链路 Markdown 导出
+- PowerShell 演练日志清零
 
 ### v0.88.0 (2026-05-07)
-- Aix 主入口新增「审计票据时间线播放器」：在黑匣子审计回放器卡片增加 ▶ 播放 / 暂停 / 重置 控件，1.2 秒一帧逐张高亮票据，链式排序自然展现 Aix 控制流；播放完成自动停止。
-- Aix 主入口新增「PowerShell 14 天演练趋势条」：在风险驾驶舱卡片底部增加每个预设的 14 列条形（绿=全成功，黄=部分成功，红=全失败，灰=未演练），右侧标签输出近 7 天 vs 前 7 天的成功率趋势（上升 / 持平 / 下降）；纯 CSS 渲染，不依赖 ECharts。
-- Agent 中枢新增「Agent 接力链路时间线」：扫描 db.items 中 extra.relayFrom 标记的接力分支，按 capsuleId 聚合后用 antd Timeline 按时间排序展示，每条显示进度、风险、续跑提示前 96 字；多人协作链路一目了然。
+- 审计票据时间线播放器
+- PowerShell 7 近 14 天演练趋势条
+- Agent 接力链路时间线
 
 ### v0.87.0 (2026-05-07)
-- Aix 主入口新增「审计回放包导入校验器」：粘贴 / 选择 `aix-audit-replay-1.0` JSON 后重算 cyrb53 链式哈希，逐条比对 prevHash + chainHash 是否连续，标出断点位置；导入结果写入 eventLog scope=`aix-audit-replay-import`，纯本地校验。
-- Aix 主入口新增「PowerShell 演练编排器」：根据风险驾驶舱的红/黄/绿评分自动生成只读演练事项（红色 → 今日 16:00 + 高重要度，黄色 → 3 天后 + 中等重要度，绿色 → 一周后），写入提醒队列、Item.extra.presetDrill 和 eventLog scope=`powershell-drill-plan`。
-- Agent 中枢新增「CLI Checkpoint 胶囊接力导入」：粘贴 / 选择别人导出的 `aix-cli-checkpoint-1.0` JSON 后一键创建对应数量的接力 Agent 分支，每条 Item.extra.relayFrom 携带胶囊 ID，附带 claudeWorkflow 续跑提示，便于多人协同恢复。
+- 审计回放包导入校验器
+- PowerShell 演练编排器
+- CLI Checkpoint 胶囊接力导入
 
 ### v0.86.0 (2026-05-07)
-- Aix 主入口新增「黑匣子审计回放器」：把最近的 Aix 技能、控制战役、Agent 分支和桌面预设事件压成链式哈希票据，每张票据带回滚指南和 Claude Code 续跑提示；一键导出 JSON 回放包；只用 eventLog 元数据，不读日记正文。
-- Aix 主入口新增「PowerShell 7 风险驾驶舱」：聚合 PowerShell 白名单预设的成功率、fallback 比例、平均耗时，输出绿/黄/红三色风险评分和 7 天再演练计划；桌面端真实 IPC，浏览器端 fallback 模拟。
-- Agent 中枢新增「CLI 续跑 Checkpoint 胶囊」：把所有 Agent 分支压成单 JSON 胶囊 + 可粘贴回 Claude Code 的 Prompt，支持一键复制、下载、归档审计。
+- Aix 黑匣子审计回放器
+- PowerShell 7 风险驾驶舱
+- Agent CLI 续跑 Checkpoint 胶囊
 
 ### v0.66.0 (2026-05-04)
 - 成就中心增强：新增近30天解锁趋势折线图（ECharts 面积图）和成就分类分布环形饼图。

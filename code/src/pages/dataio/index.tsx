@@ -122,6 +122,15 @@ export default function DataIOPage() {
     else message.error(result.reason || '校验失败');
   }
 
+  function runSnapshotDiff() {
+    const a = diffBefore.trim(); const b = diffAfter.trim();
+    if (!a || !b) { message.warning('两份快照都需要粘贴（旧 + 新）'); return; }
+    const result = compareFullAuditSnapshots(a, b);
+    setDiffResult(result);
+    if (!result.ok) message.error(result.reason || '对比失败');
+    else message.success('对比完成：' + result.totals.length + ' 项 totals · ' + result.scopeChanges.length + ' 项 scope 变化');
+  }
+
   async function onPartialBackup() {
     if (!selectedTables.length) return message.warning('请至少选择一个导出模块');
     const result = await downloadBackup(selectedTables);
@@ -355,6 +364,45 @@ export default function DataIOPage() {
                       ) : null}
                       {!snapshotResult.ok && snapshotResult.reason ? <Typography.Text style={{ color: '#ef4444', fontSize: 12 }}>{snapshotResult.reason}</Typography.Text> : null}
                     </Space>
+                  </div>
+                ) : null}
+                <Typography.Text strong style={{ color: titleColor, display: 'block', marginTop: 14 }}>快照对比器</Typography.Text>
+                <Typography.Paragraph style={{ margin: '4px 0 8px', color: subColor, fontSize: 12 }}>粘贴两份快照（旧 + 新），自动算 totals/scope/风险/分支健康度差值，一眼看出审计走向。</Typography.Paragraph>
+                <Input.TextArea rows={3} value={diffBefore} onChange={event => setDiffBefore(event.target.value)} placeholder='旧快照 JSON' style={{ borderRadius: 10, marginBottom: 6 }} />
+                <Input.TextArea rows={3} value={diffAfter} onChange={event => setDiffAfter(event.target.value)} placeholder='新快照 JSON' style={{ borderRadius: 10, marginBottom: 8 }} />
+                <Space wrap>
+                  <Button onClick={runSnapshotDiff} style={{ borderRadius: 10 }}>对比快照</Button>
+                  <Button onClick={() => { setDiffBefore(''); setDiffAfter(''); setDiffResult(null); }} style={{ borderRadius: 10 }}>清空</Button>
+                </Space>
+                {diffResult ? (
+                  <div style={{ marginTop: 10 }}>
+                    {diffResult.ok ? (
+                      <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                        <Space wrap>
+                          {diffResult.totals.map(row => (
+                            <Tag key={row.key} color={row.delta > 0 ? 'green' : row.delta < 0 ? 'red' : 'default'}>
+                              {row.key}: {row.before} {row.arrow} {row.after}{row.delta ? `（${row.delta > 0 ? '+' : ''}${row.delta}）` : ''}
+                            </Tag>
+                          ))}
+                        </Space>
+                        <Space wrap>
+                          <Tag color={diffResult.riskShift.delta < 0 ? 'green' : diffResult.riskShift.delta > 0 ? 'red' : 'default'}>风险预设(红+黄): {diffResult.riskShift.beforeRedYellow} {diffResult.riskShift.arrow} {diffResult.riskShift.afterRedYellow}</Tag>
+                          <Tag color={diffResult.branchHealthShift.delta > 0 ? 'green' : diffResult.branchHealthShift.delta < 0 ? 'red' : 'default'}>分支均分: {diffResult.branchHealthShift.beforeAvg} {diffResult.branchHealthShift.arrow} {diffResult.branchHealthShift.afterAvg}</Tag>
+                        </Space>
+                        {diffResult.scopeChanges.length ? (
+                          <div>
+                            <Typography.Text style={{ color: subColor, fontSize: 12 }}>scope 变化（按变化绝对值排序）：</Typography.Text>
+                            <Space wrap style={{ marginTop: 4 }}>
+                              {diffResult.scopeChanges.slice(0, 8).map(row => (
+                                <Tag key={row.key} color={row.delta > 0 ? 'blue' : 'orange'}>{row.key}: {row.before} {row.arrow} {row.after}（{row.delta > 0 ? '+' : ''}{row.delta}）</Tag>
+                              ))}
+                            </Space>
+                          </div>
+                        ) : <Typography.Text style={{ color: subColor, fontSize: 12 }}>scope 占比无变化。</Typography.Text>}
+                      </Space>
+                    ) : (
+                      <Typography.Text style={{ color: '#ef4444', fontSize: 12 }}>{diffResult.reason || '对比失败'}</Typography.Text>
+                    )}
                   </div>
                 ) : null}
               </div>

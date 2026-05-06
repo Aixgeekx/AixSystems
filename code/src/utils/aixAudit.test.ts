@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend, buildScopeDistribution, buildPresetGoldenPath, buildBranchRetroSubtasks, buildFullAuditSnapshot, verifyFullAuditSnapshot, buildHealthTrendCompare, buildGoldenPathMarkdown, summarizeRetroProgress, compareFullAuditSnapshots } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend, buildScopeDistribution, buildPresetGoldenPath, buildBranchRetroSubtasks, buildFullAuditSnapshot, verifyFullAuditSnapshot, buildHealthTrendCompare, buildGoldenPathMarkdown, summarizeRetroProgress, buildV1HealthCheck, buildPresetManualMarkdown, buildBranchHealthCsv, compareFullAuditSnapshots } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -699,5 +699,67 @@ describe('compareFullAuditSnapshots', () => {
   it('refuses non-snapshot JSON', () => {
     expect(compareFullAuditSnapshots('{}', '{}').ok).toBe(false);
     expect(compareFullAuditSnapshots('not json', 'not json').ok).toBe(false);
+  });
+});
+
+
+describe('buildV1HealthCheck', () => {
+  it('returns ready=true when all three lines have healthy data', () => {
+    const tickets = buildAuditTickets([
+      { id: '1', level: 'info', message: 'a', detail: { scope: 'aix-skill' }, createdAt: 1 } as EventLog
+    ]);
+    const psRisk: any[] = [
+      { preset: 'A', total: 10, ok: 9, fail: 1, fallback: 0, avgMs: 100, lastAt: Date.now(), riskScore: 90, level: '绿色', drill: 'd', resume: 'r' }
+    ];
+    const branchHealth: any[] = [
+      { id: 'x', title: 't', capsuleId: 'CAP-1', risk: '低风险', idleHours: 1, percent: 90, failureCount: 0, score: 85, band: '健康' }
+    ];
+    const result = buildV1HealthCheck({ tickets, powerShellRisk: psRisk, branchHealthScores: branchHealth });
+    expect(result.ready).toBe(true);
+    expect(result.overall).toBeGreaterThanOrEqual(75);
+    expect(result.blockers).toHaveLength(0);
+  });
+
+  it('lists blockers when any main line is empty', () => {
+    const result = buildV1HealthCheck({ tickets: [], powerShellRisk: [], branchHealthScores: [] });
+    expect(result.ready).toBe(false);
+    expect(result.blockers.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('buildPresetManualMarkdown', () => {
+  it('produces sectioned markdown per preset', () => {
+    const rows: any[] = [
+      { preset: 'A', total: 5, ok: 5, fail: 0, fallback: 0, avgMs: 100, lastAt: 0, riskScore: 90, level: '绿色', drill: '保持', resume: 'r1' },
+      { preset: 'B', total: 5, ok: 2, fail: 3, fallback: 1, avgMs: 200, lastAt: 0, riskScore: 30, level: '红色', drill: '重点', resume: 'r2' }
+    ];
+    const md = buildPresetManualMarkdown(rows);
+    expect(md).toContain('# PowerShell 预设维护手册');
+    expect(md).toContain('## A');
+    expect(md).toContain('## B');
+    expect(md).toContain('风险评分 30/100');
+  });
+
+  it('handles empty list with placeholder', () => {
+    expect(buildPresetManualMarkdown([])).toContain('暂无预设');
+  });
+});
+
+describe('buildBranchHealthCsv', () => {
+  it('outputs CSV with header and rows', () => {
+    const scores: any[] = [
+      { id: 'x', title: 't', capsuleId: 'CAP-1', risk: '低风险', idleHours: 5, percent: 80, failureCount: 0, score: 85, band: '健康' }
+    ];
+    const csv = buildBranchHealthCsv(scores);
+    expect(csv).toContain('id,title,capsuleId,risk,band,score');
+    expect(csv).toContain('x,t,CAP-1,低风险,健康,85');
+  });
+
+  it('escapes commas in title', () => {
+    const scores: any[] = [
+      { id: '1', title: 'a,b', capsuleId: 'CAP', risk: '低风险', idleHours: 0, percent: 0, failureCount: 0, score: 50, band: '关注' }
+    ];
+    const csv = buildBranchHealthCsv(scores);
+    expect(csv).toContain('"a,b"');
   });
 });

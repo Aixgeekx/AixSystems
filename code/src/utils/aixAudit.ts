@@ -1079,3 +1079,61 @@ export function compareFullAuditSnapshots(beforeJson: string, afterJson: string)
     branchHealthShift: { beforeAvg, afterAvg, delta: branchShift.delta, arrow: branchShift.arrow }
   };
 }
+
+export interface V1HealthCheck {
+  overall: number;
+  ready: boolean;
+  bands: { audit: number; powerShell: number; agent: number };
+  blockers: string[];
+  highlights: string[];
+}
+
+export function buildV1HealthCheck(params: { tickets: AuditTicket[]; powerShellRisk: PowerShellRiskEntry[]; branchHealthScores: BranchHealthScore[] }): V1HealthCheck {
+  const blockers: string[] = [];
+  const highlights: string[] = [];
+  const auditScore = params.tickets.length === 0 ? 30 : Math.min(100, 60 + Math.min(40, params.tickets.length));
+  if (params.tickets.length === 0) blockers.push('audit 票据为空，先执行任意控制战役/技能生成审计链');
+  else highlights.push('audit 已生成 ' + params.tickets.length + ' 张票据');
+  const psAvg = params.powerShellRisk.length ? Math.round(params.powerShellRisk.reduce((s, r) => s + r.riskScore, 0) / params.powerShellRisk.length) : 0;
+  const psScore = params.powerShellRisk.length === 0 ? 35 : psAvg;
+  if (params.powerShellRisk.length === 0) blockers.push('PowerShell 预设演练为空，先做几次只读演练');
+  else if (psAvg < 60) blockers.push('PowerShell 平均风险评分仅 ' + psAvg + '，建议优化失败聚类');
+  else highlights.push('PowerShell 平均风险评分 ' + psAvg);
+  const branchAvg = params.branchHealthScores.length ? Math.round(params.branchHealthScores.reduce((s, b) => s + b.score, 0) / params.branchHealthScores.length) : 0;
+  const agentScore = params.branchHealthScores.length === 0 ? 40 : branchAvg;
+  if (params.branchHealthScores.length === 0) blockers.push('Agent 接力分支为空，先导入 Checkpoint 胶囊或开始接力');
+  else if (branchAvg < 50) blockers.push('Agent 接力分支平均健康度仅 ' + branchAvg + '，需复盘');
+  else highlights.push('Agent 接力分支平均健康度 ' + branchAvg);
+  const overall = Math.round((auditScore + psScore + agentScore) / 3);
+  return {
+    overall,
+    ready: overall >= 75 && blockers.length === 0,
+    bands: { audit: auditScore, powerShell: psScore, agent: agentScore },
+    blockers,
+    highlights
+  };
+}
+
+export function buildPresetManualMarkdown(rows: PowerShellRiskEntry[]): string {
+  if (!rows.length) return ['# PowerShell 预设维护手册', '', '_暂无预设演练记录，先做几次只读演练即可生成手册。_', ''].join('\n');
+  const lines: string[] = ['# PowerShell 预设维护手册', '', '> 共 ' + rows.length + ' 个预设 · 按风险评分升序 · 仅汇总本地演练数据', ''];
+  for (const row of rows) {
+    lines.push('## ' + row.preset);
+    lines.push('');
+    lines.push('- **风险等级**：' + row.level + '（风险评分 ' + row.riskScore + '/100）');
+    lines.push('- **演练次数**：' + row.total + '（成功 ' + row.ok + ' / 失败 ' + row.fail + ' / fallback ' + row.fallback + '）');
+    lines.push('- **平均耗时**：' + row.avgMs + 'ms');
+    lines.push('- **演练建议**：' + row.drill);
+    lines.push('- **续跑提示**：`' + row.resume + '`');
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+export function buildBranchHealthCsv(scores: BranchHealthScore[]): string {
+  const header = 'id,title,capsuleId,risk,band,score,idleHours,percent,failureCount';
+  if (!scores.length) return header + '\n';
+  const escape = (value: string) => /[,"\n]/.test(value) ? '"' + value.replace(/"/g, '""') + '"' : value;
+  const rows = scores.map(s => [escape(s.id), escape(s.title), escape(s.capsuleId), escape(s.risk), s.band, String(s.score), String(s.idleHours), String(s.percent), String(s.failureCount)].join(','));
+  return [header, ...rows].join('\n') + '\n';
+}
