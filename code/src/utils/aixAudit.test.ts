@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend, buildScopeDistribution, buildPresetGoldenPath, buildBranchRetroSubtasks } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend, buildScopeDistribution, buildPresetGoldenPath, buildBranchRetroSubtasks, buildFullAuditSnapshot } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -559,5 +559,28 @@ describe('buildBranchRetroSubtasks', () => {
     expect(subtasks[0]).toContain('失败 3 次');
     expect(subtasks[1]).toContain('改进');
     expect(subtasks[2]).toContain('验证');
+  });
+});
+
+
+describe('buildFullAuditSnapshot', () => {
+  it('packages all audit data with schema and totals', () => {
+    const ticketLogs: EventLog[] = [
+      { id: '1', level: 'info', message: 'a', detail: { scope: 'aix-skill' }, createdAt: 1 }
+    ];
+    const tickets = buildAuditTickets(ticketLogs);
+    const json = buildFullAuditSnapshot({
+      tickets,
+      dailyAnchors: [{ dateLabel: '05-07', dayStart: 0, count: 1, lastChainHash: 'h', lastTicketId: '1' }],
+      powerShellRisk: [{ preset: 'A', level: '绿色', riskScore: 90, total: 5, ok: 5, fail: 0, avgMs: 200 }],
+      branchHealth: [{ id: 'x', title: 't', capsuleId: 'CAP-1', risk: '低风险', idleHours: 1, percent: 50, failureCount: 0, score: 80, band: '健康' }],
+      scopeDistribution: [{ scope: 'aix-skill', label: '技能', color: '#3b82f6', count: 1, percent: 100 }]
+    });
+    const parsed = JSON.parse(json);
+    expect(parsed.schema).toBe('aix-full-audit-snapshot-1.0');
+    expect(parsed.totals.tickets).toBe(1);
+    expect(parsed.totals.presets).toBe(1);
+    expect(parsed.totals.branches).toBe(1);
+    expect(parsed.totals.days).toBe(1);
   });
 });

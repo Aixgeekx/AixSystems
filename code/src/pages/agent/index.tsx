@@ -275,6 +275,23 @@ export default function AgentPage() {
     message.success(`接力深度树 Markdown 已下载：${filename}`);
   }
 
+  async function generateBatchRetroSubtasks() {
+    const targets = branchHealthScores.filter(b => b.band === '风险');
+    if (!targets.length) { message.info('当前没有风险档分支需要批量生成复盘 todo'); return; }
+    let added = 0;
+    for (const branch of targets) {
+      const item = await db.items.get(branch.id);
+      if (!item) continue;
+      const subtaskTitles = buildBranchRetroSubtasks(branch);
+      const existing = item.subtasks || [];
+      const newSubs = subtaskTitles.map(title => ({ id: nanoid(), title, done: false }));
+      await db.items.update(branch.id, { subtasks: [...existing, ...newSubs], updatedAt: Date.now() });
+      added += newSubs.length;
+    }
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Agent 批量风险分支复盘 todo：${targets.length} 个分支，${added} 条子任务`, detail: { scope: 'agent-retro-subtasks-batch', branches: targets.length, subtasks: added }, createdAt: Date.now() });
+    message.success(`已为 ${targets.length} 个风险分支批量生成 ${added} 条复盘子任务`);
+  }
+
   async function generateRetroSubtasks(branch: { id: string; title: string; band: string; idleHours: number; failureCount: number; percent: number; risk: string }) {
     const subtaskTitles = buildBranchRetroSubtasks(branch);
     const item = await db.items.get(branch.id);
@@ -546,7 +563,10 @@ export default function AgentPage() {
         <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
           <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
             <Typography.Text strong style={{ color: titleColor }}>接力分支健康度评分</Typography.Text>
-            <Tag color="blue">综合 idleHours / percent / 失败次数 / 风险</Tag>
+            <Space>
+              <Tag color="blue">综合 idleHours / percent / 失败次数 / 风险</Tag>
+              <Button size="small" type="primary" danger ghost disabled={!branchHealthScores.some(b => b.band === '风险')} onClick={generateBatchRetroSubtasks} style={{ borderRadius: 10 }}>批量生成风险复盘</Button>
+            </Space>
           </Space>
           <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>每条接力分支按"100 - 空闲时长 × 0.5 - 失败次数 × 8 - 风险扣减 + 进度 × 0.2"加权打分；≥75 健康、≥45 关注、否则风险，便于一眼定位最需要复盘的分支。</Typography.Paragraph>
           {branchHealthScores.length ? branchHealthScores.slice(0, 6).map(branch => (

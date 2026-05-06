@@ -39,6 +39,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 
 ## 最近更新
 
+- `v0.97.0`：三连联动落地——Aix 风险驾驶舱「一键执行黄金路径」（按 buildPresetGoldenPath 排好的顺序批量记录只读演练，写入 powershell-golden-path 审计）+ Agent 中枢「批量生成风险复盘」（一次性给所有「风险」档接力分支批量追加复盘子任务，遍历 db.items.update）+ 数据中心「全量审计快照导出 JSON」（把审计票据、7 天日链锚、PowerShell 风险、Agent 健康分、scope 占比一次性打包成 schema=aix-full-audit-snapshot-1.0 文件）。
 - `v0.96.0`：三连仪表盘——审计 scope 占比仪表盘（票据按 scope 拆分横向条形图，含百分比和颜色标识，看清审计活动重心是否偏移）+ PowerShell 演练黄金路径（按等级→成功率→平均耗时三键排序生成今日执行序列，含建议）+ Agent 风险分支自动复盘 todo（对评分为「风险」档的接力分支一键追加 3 条复盘子任务：复盘原因 / 改进策略 / 验证方式）。
 - `v0.95.0`：三连反向校验——审计链锚反向比对器（粘贴外部 aix-daily-anchor JSON 与本地 7 天逐日比对：identical / mismatch / missingLocal / missingRemote 四类一目了然，附本地与远端总指纹）+ PowerShell 失败原因修复建议映射器（每个失败聚类展开后追加一行 RunAs / OperationTimeout / Test-NetConnection / PSScriptAnalyzer 等专家级修复建议，可一键复制）+ Agent 接力健康度近 7 天趋势条（截止当日所有分支平均分柱条，绿黄红三档显示整体接力健康度走向）。
 - `v0.94.0`：三连深化——审计每日链锚 JSON 凭证导出（chainHash 聚合 cyrb53 后形成总指纹，schema=aix-daily-anchor-1.0）+ PowerShell 失败原因聚类深挖明细（点击展开看每条 log 的具体时间/级别/预设/消息）+ Agent 接力分支健康度评分（综合空闲时长、失败次数、风险、进度加权 0-100，≥75 健康/≥45 关注/否则风险）。

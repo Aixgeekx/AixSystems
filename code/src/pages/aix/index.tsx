@@ -428,6 +428,13 @@ export default function AixPage() {
     db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 链锚反向比对：${result.ok ? '一致' : `${result.mismatch.length} 处不一致`}`, detail: { scope: 'aix-daily-anchor-compare', identical: result.identical.length, mismatch: result.mismatch.length, missingLocal: result.missingLocal.length, missingRemote: result.missingRemote.length }, createdAt: Date.now() });
   }
 
+  async function drillGoldenPath() {
+    if (!presetGoldenPath.length) { message.warning('暂无可执行黄金路径'); return; }
+    for (const step of presetGoldenPath) await logPresetDrill(step.preset);
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 黄金路径自动演练：${presetGoldenPath.length} 步`, detail: { scope: 'powershell-golden-path', steps: presetGoldenPath.map(s => s.preset) }, createdAt: Date.now() });
+    message.success(`已按黄金路径执行 ${presetGoldenPath.length} 次只读演练`);
+  }
+
   async function drillAllPresets() {
     if (!presetNames.length) { message.warning('暂无可演练预设'); return; }
     for (const preset of presetNames) await logPresetDrill(preset);
@@ -1118,7 +1125,10 @@ export default function AixPage() {
         <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(132,204,22,0.10)' : 'rgba(132,204,22,0.06)', border: '1px solid rgba(132,204,22,0.22)' }}>
           <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
             <Typography.Text strong style={{ color: titleColor }}>演练黄金路径</Typography.Text>
-            <Tag color="lime">绿 → 黄 → 红 · 成功率优先 · 耗时其次</Tag>
+            <Space>
+              <Tag color="lime">绿 → 黄 → 红 · 成功率优先 · 耗时其次</Tag>
+              <Button size="small" type="primary" ghost disabled={!presetGoldenPath.length} onClick={drillGoldenPath} style={{ borderRadius: 10 }}>一键执行黄金路径</Button>
+            </Space>
           </Space>
           <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>把所有预设按"等级（绿色优先）→ 成功率（高优先）→ 平均耗时（短优先）"排出今天的执行序列；先建立稳定基线再啃硬骨头。</Typography.Paragraph>
           {presetGoldenPath.length ? presetGoldenPath.map(step => (

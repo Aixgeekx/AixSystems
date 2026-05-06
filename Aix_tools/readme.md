@@ -2,6 +2,13 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.97.0
+- `code/src/utils/aixAudit.ts` 新增 `buildFullAuditSnapshot({ tickets, dailyAnchors, powerShellRisk, branchHealth, scopeDistribution })`：schema=aix-full-audit-snapshot-1.0 + totals 4 项 + 5 类数据数组。
+- Aix 主入口加 `drillGoldenPath` 函数（循环 logPresetDrill + 写 audit）+ 黄金路径头部「一键执行黄金路径」按钮（`presetGoldenPath` 长度判 disable）。
+- Agent 中枢加 `generateBatchRetroSubtasks` 函数（filter band==='风险' + 遍历 db.items.update + 写 audit）+ 评分卡片头部「批量生成风险复盘」红色 ghost 按钮（按是否有风险分支判 disable）。
+- 数据中心 `dataio/index.tsx` 新增 imports（aixAudit / nanoid / dayjs）+ `exportFullAuditSnapshot` 函数（聚合所有 eventLog → tickets / psRisk / dailyAnchors / branchHealth / scopeDistribution）+ 紫色「全量审计快照」div 含「导出全量审计快照 JSON」按钮，写 audit。
+- 测试新增 1 个 describe（83 全绿）；`npm run build` OK；首次跨模块联动到 dataio。
+
 ## 最新版本 v0.96.0
 - `code/src/utils/aixAudit.ts` 新增 `buildScopeDistribution(tickets)`（基于 `summarizeTickets` 算 percent 保留一位小数）、`buildPresetGoldenPath(rows)`（level 权重 1/2/3 + ok/total + avgMs 三级排序 + 三档建议）、`buildBranchRetroSubtasks(branch)`（按 failureCount/idleHours/percent 自动选「复盘原因」短语 + 固定改进/验证文案）。
 - Aix 主入口加 `scopeDistribution` / `presetGoldenPath` 两个 useMemo；新增「scope 占比仪表盘」横向条形图 div + 「演练黄金路径」绿色 div。

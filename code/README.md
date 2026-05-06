@@ -54,6 +54,12 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.97.0 (2026-05-07)
+- Aix 主入口风险驾驶舱「演练黄金路径」头部新增「一键执行黄金路径」按钮：调 `drillGoldenPath` 按 `presetGoldenPath` 顺序循环 `logPresetDrill`，写入 eventLog scope=powershell-golden-path。
+- Agent 中枢健康度评分卡片头部新增「批量生成风险复盘」按钮：`generateBatchRetroSubtasks` 遍历所有 band==='风险' 分支调 `db.items.update` 追加 `buildBranchRetroSubtasks` 生成的 3 条子任务，写入 eventLog scope=agent-retro-subtasks-batch。
+- 数据中心「导出备份」卡片末尾新增紫色「全量审计快照」区：调 `buildFullAuditSnapshot` 把当前 audit 票据、近 7 天日链锚、PowerShell 风险评分、Agent 接力分支健康度和 scope 占比一次性打包成 schema=aix-full-audit-snapshot-1.0 JSON 下载。
+- `code/src/utils/aixAudit.ts` 新增 `buildFullAuditSnapshot` 工具函数 + `code/src/utils/aixAudit.test.ts` 补 1 套用例（共 83 测试 100% 绿）；`npm run build` 通过；首次跨模块联动到 dataio 页面。
+
 ### v0.96.0 (2026-05-07)
 - Aix 主入口审计回放器卡片新增「scope 占比仪表盘」：调 `buildScopeDistribution` 把所有票据按 scope 拆分输出 count/percent，每个 scope 一条横向条形图（label + 百分比 + 颜色），便于一眼看出活动重心。
 - Aix 主入口风险驾驶舱新增「演练黄金路径」：调 `buildPresetGoldenPath` 按等级（绿/黄/红）→ 成功率（高优先）→ 平均耗时（短优先）排序，给每条预设标 #order 和针对 level 的执行建议。

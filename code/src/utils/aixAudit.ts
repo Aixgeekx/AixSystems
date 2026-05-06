@@ -881,3 +881,38 @@ export function buildBranchRetroSubtasks(branch: { title: string; band: string; 
     `验证方式：再跑一次只读演练 + 写入审计票据`
   ];
 }
+
+export interface FullAuditSnapshot {
+  schema: 'aix-full-audit-snapshot-1.0';
+  generatedAt: number;
+  totals: {
+    tickets: number;
+    presets: number;
+    branches: number;
+    days: number;
+  };
+  tickets: AuditTicket[];
+  dailyAnchors: DailyChainAnchor[];
+  powerShellRisk: Array<{ preset: string; level: string; riskScore: number; total: number; ok: number; fail: number; avgMs: number }>;
+  branchHealth: BranchHealthScore[];
+  scopeDistribution: ScopeDistribution[];
+}
+
+export function buildFullAuditSnapshot(params: { tickets: AuditTicket[]; dailyAnchors: DailyChainAnchor[]; powerShellRisk: Array<{ preset: string; level: string; riskScore: number; total: number; ok: number; fail: number; avgMs: number }>; branchHealth: BranchHealthScore[]; scopeDistribution: ScopeDistribution[] }): string {
+  const snapshot: FullAuditSnapshot = {
+    schema: 'aix-full-audit-snapshot-1.0',
+    generatedAt: Date.now(),
+    totals: {
+      tickets: params.tickets.length,
+      presets: params.powerShellRisk.length,
+      branches: params.branchHealth.length,
+      days: params.dailyAnchors.length
+    },
+    tickets: params.tickets,
+    dailyAnchors: params.dailyAnchors,
+    powerShellRisk: params.powerShellRisk,
+    branchHealth: params.branchHealth,
+    scopeDistribution: params.scopeDistribution
+  };
+  return JSON.stringify(snapshot, null, 2);
+}

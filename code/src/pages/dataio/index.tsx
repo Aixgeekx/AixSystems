@@ -5,6 +5,9 @@ import { DatabaseOutlined, DownloadOutlined, FolderOpenOutlined, UploadOutlined 
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { downloadBackup, importAll, pickAndImport } from '@/utils/export';
+import { buildAuditTickets, summarizePowerShellLogs, buildDailyChainSummary, scoreRelayBranches, buildScopeDistribution, buildFullAuditSnapshot } from '@/utils/aixAudit';
+import { nanoid } from 'nanoid';
+import dayjs from 'dayjs';
 import { getElectron, isElectron } from '@/utils/electron';
 import { fmtDateTime, fmtFromNow } from '@/utils/time';
 import Empty from '@/components/Empty';
@@ -71,6 +74,37 @@ export default function DataIOPage() {
     const result = await downloadBackup();
     if (result.ok) message.success(result.msg);
     else message.error(result.msg);
+  }
+
+  async function exportFullAuditSnapshot() {
+    const recentEventLogs = await db.eventLog.toArray();
+    const sortedRecent = recentEventLogs.sort((a, b) => b.createdAt - a.createdAt).slice(0, 200);
+    const tickets = buildAuditTickets(sortedRecent);
+    const psLogs = recentEventLogs.filter(log => {
+      const scope = String(log.detail?.scope || '');
+      return scope === 'desktop-preset-drill' || scope === 'powershell-drill' || scope === 'powershell-drill-all' || scope === 'powershell-golden-path';
+    });
+    const presetNames: string[] = [...new Set(psLogs.map(log => String(log.detail?.preset || log.detail?.skill || '未命名预设')))];
+    const psRisk = summarizePowerShellLogs(psLogs, presetNames).map(row => ({ preset: row.preset, level: row.level, riskScore: row.riskScore, total: row.total, ok: row.ok, fail: row.fail, avgMs: row.avgMs }));
+    const dailyAnchors = buildDailyChainSummary(tickets, 7);
+    const items = await db.items.filter(item => !item.deletedAt && (!!item.extra?.agent || !!item.extra?.aixCampaign)).toArray();
+    const branchHealth = scoreRelayBranches(items, recentEventLogs);
+    const scopeDistribution = buildScopeDistribution(tickets);
+    const json = buildFullAuditSnapshot({ tickets, dailyAnchors, powerShellRisk: psRisk, branchHealth, scopeDistribution });
+    const filename = `aix-full-audit-snapshot-${dayjs().format('YYYYMMDD-HHmm')}.json`;
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 全量审计快照导出：${tickets.length} 票据 / ${presetNames.length} 预设 / ${branchHealth.length} 分支`, detail: { scope: 'aix-full-audit-snapshot', tickets: tickets.length, presets: presetNames.length, branches: branchHealth.length }, createdAt: Date.now() });
+    message.success(`已导出全量审计快照（${tickets.length} 票据 + ${presetNames.length} 预设 + ${branchHealth.length} 分支）`);
   }
 
   async function onPartialBackup() {
@@ -275,6 +309,15 @@ export default function DataIOPage() {
                 />
                 <Button icon={<DownloadOutlined />} onClick={onPartialBackup} style={{ borderRadius: 10 }}>
                   导出选中模块
+                </Button>
+              </div>
+              <div style={{ padding: 12, borderRadius: 16, background: tintedBg('#a855f7'), border: isDark ? `1px solid ${accent}22` : '1px solid transparent' }}>
+                <Typography.Text strong style={{ color: titleColor }}>全量审计快照</Typography.Text>
+                <Typography.Paragraph style={{ margin: '6px 0 10px', color: subColor }}>
+                  把当前 Aix 黑匣子的 audit 票据、近 7 天日链锚点、PowerShell 风险评分、Agent 接力分支健康度和 scope 占比一次性打包成 schema=aix-full-audit-snapshot-1.0 的 JSON，便于跨设备审计核对或外部留档。
+                </Typography.Paragraph>
+                <Button type="primary" ghost icon={<DownloadOutlined />} onClick={exportFullAuditSnapshot} style={{ borderRadius: 10 }}>
+                  导出全量审计快照 JSON
                 </Button>
               </div>
             </Space>
