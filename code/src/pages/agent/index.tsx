@@ -224,6 +224,29 @@ export default function AgentPage() {
     message.success(`已接力创建 ${parsedRelay.branches.length} 个 Agent 分支`);
   }
 
+  function exportRelayMarkdown() {
+    if (!relayChainList.length) { message.warning('暂无接力链路可导出'); return; }
+    const md = relayChainList.map(chain => {
+      const lines = [`## ${chain.capsuleId}（${chain.tasks.length} 个分支，最近 ${dayjs(chain.latestAt).format('MM-DD HH:mm')}）`];
+      for (const task of chain.tasks) {
+        const subtasks = task.subtasks || [];
+        const done = subtasks.filter(item => item.done).length;
+        const total = subtasks.length || 1;
+        const percent = Math.round(done / total * 100);
+        lines.push(`- **${task.title}** · 风险 ${String(task.extra?.risk || '低风险')} · 进度 ${percent}% · 创建 ${dayjs(task.createdAt).format('MM-DD HH:mm')}`);
+        if (task.extra?.claudeWorkflow?.resume) lines.push(`  - 续跑：${String(task.extra?.claudeWorkflow?.resume).slice(0, 200)}`);
+      }
+      return lines.join('\n');
+    }).join('\n\n');
+    const filename = `agent-relay-chain-${dayjs().format('YYYYMMDD-HHmm')}.md`;
+    const blob = new Blob([`# Agent 接力链路导出 ${dayjs().format('YYYY-MM-DD HH:mm')}\n\n${md}\n`], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    message.success(`接力链路 Markdown 已下载：${filename}`);
+  }
+
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 28, background: isDark ? `linear-gradient(135deg, ${accent}18, rgba(10,14,28,0.96))` : 'linear-gradient(135deg, rgba(37,99,235,0.94), rgba(15,23,42,0.9))' }} bodyStyle={{ padding: 24 }}>
@@ -380,6 +403,10 @@ export default function AgentPage() {
           <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Agent 接力链路时间线</Typography.Title>
         </Space>
         <Typography.Paragraph style={{ color: subColor }}>把通过胶囊接力创建的 Agent 分支按 capsuleId 聚合并按时间排序，让多人协作链路一眼可见；只读取本地 Item.extra.relayFrom 标记，不上传任何数据。</Typography.Paragraph>
+        <Space wrap style={{ marginBottom: 12 }}>
+          <Button disabled={!relayChainList.length} onClick={exportRelayMarkdown} style={{ borderRadius: 12 }}>导出接力链路 Markdown</Button>
+          <Tag color="purple">只导出元数据，不含日记正文</Tag>
+        </Space>
         {relayChainList.length ? (
           <Space direction="vertical" size={14} style={{ width: '100%' }}>
             {relayChainList.map(chain => (

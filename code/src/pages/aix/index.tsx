@@ -89,6 +89,7 @@ export default function AixPage() {
   const [replayResult, setReplayResult] = useState<ReplayVerification | null>(null);
   const [playerIndex, setPlayerIndex] = useState(-1);
   const [playerActive, setPlayerActive] = useState(false);
+  const [auditFilter, setAuditFilter] = useState('');
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
@@ -262,7 +263,13 @@ export default function AixPage() {
   const powerShellRiskRows = useMemo(() => summarizePowerShellLogs(powerShellLogs, presetNames), [powerShellLogs, presetNames]);
   const powerShellOverallScore = powerShellRiskRows.length ? Math.round(powerShellRiskRows.reduce((sum, row) => sum + row.riskScore, 0) / powerShellRiskRows.length) : 0;
   const powerShellTrendRows = useMemo(() => buildPresetTrendRows(powerShellLogs, presetNames, 14), [powerShellLogs, presetNames]);
-  const auditDisplay = auditTickets.slice(0, 5);
+  const auditDisplay = useMemo(() => {
+    const keyword = auditFilter.trim().toLowerCase();
+    const list = keyword
+      ? auditTickets.filter(ticket => ticket.message.toLowerCase().includes(keyword) || ticket.scope.toLowerCase().includes(keyword) || ticket.scopeLabel.toLowerCase().includes(keyword))
+      : auditTickets;
+    return list.slice(0, 5);
+  }, [auditTickets, auditFilter]);
   useEffect(() => {
     if (!playerActive || !auditDisplay.length) return;
     const timer = window.setInterval(() => {
@@ -468,6 +475,17 @@ export default function AixPage() {
     }
     await db.eventLog.add({ id: nanoid(), level: 'info', message: `PowerShell 演练编排：${plans.length} 个预设`, detail: { scope: 'powershell-drill-plan', plans }, createdAt: now });
     message.success(`已创建 ${plans.length} 条演练事项`);
+  }
+
+  async function clearDrillLogs() {
+    const targets = await db.eventLog.where('level').equals('info').toArray();
+    const ids = targets.filter(log => {
+      const scope = String(log.detail?.scope || '');
+      return scope === 'desktop-preset-drill' || scope === 'powershell-drill-plan';
+    }).map(log => log.id);
+    if (!ids.length) { message.info('暂无可清零的演练日志'); return; }
+    await db.eventLog.bulkDelete(ids);
+    message.success(`已清零 ${ids.length} 条演练日志`);
   }
 
   return (
@@ -750,6 +768,7 @@ export default function AixPage() {
               <Tag color="purple">SHA-Lite 链式哈希</Tag>
               <Tag color="gold">含 Claude Code 续跑提示</Tag>
             </Space>
+            <Input allowClear value={auditFilter} onChange={event => setAuditFilter(event.target.value)} placeholder='过滤票据：按 scope / 消息关键字' style={{ marginTop: 10, borderRadius: 12 }} />
           </Col>
         </Row>
         <Space direction="vertical" size={10} style={{ width: '100%' }}>
@@ -853,6 +872,7 @@ export default function AixPage() {
           <Typography.Paragraph style={{ color: subColor, marginBottom: 8, fontSize: 12 }}>根据风险评分生成只读演练事项：红色排到今日 16:00 + 高重要度，黄色排到 3 天后 + 中等重要度，绿色排到一周后；事项写入提醒队列，可在我的一天看到。</Typography.Paragraph>
           <Space wrap>
             <Button type="primary" disabled={!powerShellRiskRows.length} onClick={scheduleAllPresetDrills} style={{ borderRadius: 12 }}>一键写入演练日程</Button>
+            <Button danger onClick={clearDrillLogs} style={{ borderRadius: 12 }}>清零演练日志</Button>
             <Tag color="green">写入 Item.extra.presetDrill</Tag>
             <Tag color="purple">写入 eventLog scope=powershell-drill-plan</Tag>
           </Space>

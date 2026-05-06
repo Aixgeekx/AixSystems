@@ -2,6 +2,11 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.89.0
+- Aix 主入口加 `auditFilter` useState + Input.allowClear，过滤逻辑用 `useMemo` 复用 auditTickets，与时间线播放器共用 `auditDisplay`。
+- Aix 主入口风险驾驶舱新增 `clearDrillLogs`：用 `db.eventLog.where('level').equals('info').toArray()` + 过滤 scope + `bulkDelete`；只清演练相关，不动其他 scope。
+- Agent 中枢新增 `exportRelayMarkdown`：把 `relayChainList` 拍平成 Markdown 列表（含 capsuleId / 分支风险 / 进度 / 续跑前 200 字），通过 Blob 触发文件下载到 `agent-relay-chain-YYYYMMDD-HHmm.md`。
+
 ## 最新版本 v0.88.0
 - Aix 主入口新增「审计票据时间线播放器」：用 useState `playerIndex/playerActive` + `useEffect setInterval(1200ms)` 控制逐张高亮，被高亮的票据使用 2px 实色 border + 4px shadow + ▶ 标签，符合"代码最少行数"原则。
 - Aix 主入口新增「PowerShell 14 天演练趋势条」：调用 `buildPresetTrendRows(logs, presetNames, 14)` 把日志按 day 分桶并计算成功率趋势（前 7 天 vs 后 7 天 ±5% 阈值），UI 端用 14 个 flex div 渲染条形，title 属性悬停显示当日总数 / 成功 / 失败 / fallback。
