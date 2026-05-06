@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import dayjs from 'dayjs';
-import { computeTodaySaturation, computeHabitStreaks, computeTomorrowAgenda } from './dailyInsight';
+import {
+  computeTodaySaturation,
+  computeHabitStreaks,
+  computeTomorrowAgenda,
+  computeWeeklySaturationTrend,
+  classifyAgendaSlot,
+  groupTomorrowAgenda
+} from './dailyInsight';
 import type { Item, Habit, HabitLog } from '@/models';
 
 const baseItem = (id: string, type: string, startTime: number, endTime?: number, status: 'pending' | 'done' = 'pending'): Item => ({
@@ -48,6 +55,39 @@ describe('computeTodaySaturation', () => {
   });
 });
 
+describe('computeWeeklySaturationTrend', () => {
+  it('returns 7 entries ending at today with isToday flag', () => {
+    const trend = computeWeeklySaturationTrend([]);
+    expect(trend).toHaveLength(7);
+    expect(trend[6].isToday).toBe(true);
+    expect(trend[5].isToday).toBe(false);
+    expect(trend.every(d => d.plannedMinutes === 0 && d.ratio === 0)).toBe(true);
+  });
+
+  it('aggregates planned minutes per day across the 7-day window', () => {
+    const today = dayjs().startOf('day').valueOf();
+    const yesterday = dayjs().subtract(1, 'day').startOf('day').valueOf();
+    const items = [
+      baseItem('a', 'schedule', today + 9 * 3_600_000, today + 9 * 3_600_000 + 30 * 60_000),     // 今日 30min
+      baseItem('b', 'work', today + 12 * 3_600_000, today + 12 * 3_600_000 + 60 * 60_000),       // 今日 60min
+      baseItem('c', 'schedule', yesterday + 8 * 3_600_000, yesterday + 8 * 3_600_000 + 90 * 60_000), // 昨日 90min
+      baseItem('d', 'diary', today + 15 * 3_600_000)                                              // 排除
+    ];
+    const trend = computeWeeklySaturationTrend(items);
+    const todayEntry = trend.find(d => d.isToday)!;
+    const yesterdayEntry = trend[trend.length - 2];
+    expect(todayEntry.plannedMinutes).toBe(90);
+    expect(yesterdayEntry.plannedMinutes).toBe(90);
+    expect(trend[0].plannedMinutes).toBe(0);
+  });
+
+  it('formats date and weekday labels', () => {
+    const trend = computeWeeklySaturationTrend([]);
+    expect(trend[6].dateLabel).toBe(dayjs().format('MM-DD'));
+    expect(['周日','周一','周二','周三','周四','周五','周六']).toContain(trend[6].weekdayLabel);
+  });
+});
+
 describe('computeHabitStreaks', () => {
   it('computes current and longest streak per habit', () => {
     const today = dayjs().startOf('day').valueOf();
@@ -62,6 +102,17 @@ describe('computeHabitStreaks', () => {
     expect(result).toHaveLength(1);
     expect(result[0].currentStreak).toBe(3);
     expect(result[0].longestStreak).toBe(3);
+    expect(result[0].todayDone).toBe(true);
+    expect(result[0].yesterdayDone).toBe(true);
+  });
+
+  it('marks yesterdayDone false when only today logged', () => {
+    const today = dayjs().startOf('day').valueOf();
+    const habit: Habit = { id: 'h1', name: '冥想', color: '#8b5cf6', frequency: 'daily', targetCount: 1, sortOrder: 0, createdAt: 0, updatedAt: 0 };
+    const logs: HabitLog[] = [{ id: '1', habitId: 'h1', date: today, count: 1, createdAt: 0 }];
+    const result = computeHabitStreaks([habit], logs);
+    expect(result[0].todayDone).toBe(true);
+    expect(result[0].yesterdayDone).toBe(false);
   });
 
   it('returns 0 streak when never logged', () => {
@@ -69,11 +120,26 @@ describe('computeHabitStreaks', () => {
     const result = computeHabitStreaks([habit], []);
     expect(result[0].currentStreak).toBe(0);
     expect(result[0].longestStreak).toBe(0);
+    expect(result[0].todayDone).toBe(false);
+    expect(result[0].yesterdayDone).toBe(false);
+  });
+});
+
+describe('classifyAgendaSlot', () => {
+  it('maps hour ranges to four time slots', () => {
+    expect(classifyAgendaSlot(6)).toBe('清晨');
+    expect(classifyAgendaSlot(8)).toBe('清晨');
+    expect(classifyAgendaSlot(9)).toBe('上午');
+    expect(classifyAgendaSlot(11)).toBe('上午');
+    expect(classifyAgendaSlot(12)).toBe('下午');
+    expect(classifyAgendaSlot(17)).toBe('下午');
+    expect(classifyAgendaSlot(18)).toBe('晚上');
+    expect(classifyAgendaSlot(23)).toBe('晚上');
   });
 });
 
 describe('computeTomorrowAgenda', () => {
-  it('returns tomorrow schedule items sorted by start time', () => {
+  it('returns tomorrow schedule items sorted by start time with timeSlot', () => {
     const tomorrow8 = dayjs().add(1, 'day').startOf('day').add(8, 'hour').valueOf();
     const tomorrow15 = dayjs().add(1, 'day').startOf('day').add(15, 'hour').valueOf();
     const items = [
@@ -85,6 +151,8 @@ describe('computeTomorrowAgenda', () => {
     const result = computeTomorrowAgenda(items);
     expect(result.map(r => r.itemId)).toEqual(['b', 'a']);
     expect(result[0].startLabel).toBe('08:00');
+    expect(result[0].timeSlot).toBe('清晨');
+    expect(result[1].timeSlot).toBe('下午');
   });
 
   it('respects topN', () => {
@@ -93,5 +161,29 @@ describe('computeTomorrowAgenda', () => {
     for (let i = 0; i < 10; i++) items.push(baseItem('i' + i, 'schedule', tomorrow + i * 3600_000));
     const result = computeTomorrowAgenda(items, 3);
     expect(result).toHaveLength(3);
+  });
+});
+
+describe('groupTomorrowAgenda', () => {
+  it('groups entries by slot and keeps slot order, drops empty slots', () => {
+    const tomorrow = dayjs().add(1, 'day').startOf('day');
+    const t8 = tomorrow.add(8, 'hour').valueOf();
+    const t10 = tomorrow.add(10, 'hour').valueOf();
+    const t14 = tomorrow.add(14, 'hour').valueOf();
+    const t20 = tomorrow.add(20, 'hour').valueOf();
+    const entries = computeTomorrowAgenda([
+      baseItem('a', 'schedule', t10),
+      baseItem('b', 'schedule', t8),
+      baseItem('c', 'schedule', t14),
+      baseItem('d', 'schedule', t20)
+    ]);
+    const groups = groupTomorrowAgenda(entries);
+    expect(groups.map(g => g.slot)).toEqual(['清晨', '上午', '下午', '晚上']);
+    expect(groups[0].entries.map(e => e.itemId)).toEqual(['b']);
+    expect(groups[1].entries.map(e => e.itemId)).toEqual(['a']);
+  });
+
+  it('returns empty array when no entries', () => {
+    expect(groupTomorrowAgenda([])).toEqual([]);
   });
 });

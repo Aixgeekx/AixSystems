@@ -29,7 +29,7 @@ import { getElectron, isElectron } from '@/utils/electron';
 import { callAixModel } from '@/utils/aixModel';
 import { useThemeVariants } from '@/hooks/useVariants';
 import { useSettingsStore } from '@/stores/settingsStore';
-import { computeTodaySaturation, computeHabitStreaks, computeTomorrowAgenda } from '@/utils/dailyInsight';
+import { computeTodaySaturation, computeHabitStreaks, computeTomorrowAgenda, computeWeeklySaturationTrend, groupTomorrowAgenda } from '@/utils/dailyInsight';
 import type { ItemType } from '@/config/itemTypes';
 
 type CompactFilter = 'all' | 'favorites' | 'agenda' | 'growth' | 'records' | 'tools' | 'settings';
@@ -206,6 +206,7 @@ export default function HomePage() {
       commandCenter,
       controlToken,
       todaySaturation: computeTodaySaturation(activeItems),
+      weeklySaturationTrend: computeWeeklySaturationTrend(activeItems),
       habitStreaks: computeHabitStreaks(habits, habitLogs),
       tomorrowAgenda: computeTomorrowAgenda(activeItems)
     };
@@ -931,6 +932,17 @@ export default function HomePage() {
               <Typography.Text strong style={{ color: titleColor }}>今日饱和度</Typography.Text>
               <div style={{ marginTop: 8, color: titleColor, fontSize: 22, fontWeight: 800 }}>{dashboard?.todaySaturation.plannedMinutes || 0} <span style={{ fontSize: 13, color: subColor, fontWeight: 500 }}>分钟</span></div>
               <Typography.Text style={{ color: subColor, fontSize: 12 }}>{dashboard?.todaySaturation.itemCount || 0} 件计划事项 · 占 24h 的 {dashboard?.todaySaturation.ratio || 0}%</Typography.Text>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginTop: 12, height: 38 }}>
+                {dashboard?.weeklySaturationTrend?.map((day: any) => {
+                  const barColor = day.ratio >= 60 ? '#ef4444' : day.ratio >= 30 ? '#f59e0b' : '#22c55e';
+                  return (
+                    <div key={day.dateKey} title={`${day.dateLabel} ${day.weekdayLabel} · ${day.plannedMinutes} 分钟`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                      <div style={{ width: '100%', height: Math.max(2, Math.round(day.ratio * 0.28)), borderRadius: 3, background: barColor, opacity: day.isToday ? 1 : 0.55, border: day.isToday ? `1px solid ${barColor}` : 'none' }} />
+                      <Typography.Text style={{ fontSize: 10, color: day.isToday ? titleColor : subColor, fontWeight: day.isToday ? 700 : 400 }}>{day.weekdayLabel.slice(1)}</Typography.Text>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </Col>
           <Col xs={24} md={8}>
@@ -939,10 +951,14 @@ export default function HomePage() {
               {dashboard?.habitStreaks?.length ? (
                 <Space direction="vertical" size={4} style={{ width: '100%', marginTop: 8 }}>
                   {dashboard.habitStreaks.map((s: any) => (
-                    <Space key={s.habitId} style={{ width: '100%', justifyContent: 'space-between' }}>
-                      <Typography.Text style={{ color: titleColor, fontSize: 12 }}><span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: s.color, marginRight: 6 }} />{s.name}</Typography.Text>
+                    <button key={s.habitId} type="button" onClick={() => nav(ROUTES.HABIT)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 6px', borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                      <Typography.Text style={{ color: titleColor, fontSize: 12 }}>
+                        <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: s.color, marginRight: 6 }} />
+                        {s.name}
+                        {s.currentStreak > 0 && !s.yesterdayDone && !s.todayDone ? <Tag color="warning" style={{ marginLeft: 6, marginInlineEnd: 0, fontSize: 10, lineHeight: '14px', padding: '0 4px' }}>昨日断签</Tag> : null}
+                      </Typography.Text>
                       <Typography.Text style={{ color: subColor, fontSize: 12 }}>当前 {s.currentStreak} · 最长 {s.longestStreak}</Typography.Text>
-                    </Space>
+                    </button>
                   ))}
                 </Space>
               ) : <Typography.Text style={{ color: subColor, fontSize: 12, display: 'block', marginTop: 8 }}>暂无习惯，去添加一个开始打卡。</Typography.Text>}
@@ -952,12 +968,19 @@ export default function HomePage() {
             <div style={{ padding: 14, borderRadius: 18, background: tintedBg('#a855f7'), border: '1px solid rgba(168,85,247,0.22)', height: '100%' }}>
               <Typography.Text strong style={{ color: titleColor }}>明日事项预览</Typography.Text>
               {dashboard?.tomorrowAgenda?.length ? (
-                <Space direction="vertical" size={4} style={{ width: '100%', marginTop: 8 }}>
-                  {dashboard.tomorrowAgenda.map((entry: any) => (
-                    <Space key={entry.itemId} style={{ width: '100%', justifyContent: 'space-between' }}>
-                      <Typography.Text style={{ color: titleColor, fontSize: 12 }}>{entry.startLabel} {entry.title}</Typography.Text>
-                      <Tag color={entry.importance >= 3 ? 'red' : entry.importance >= 2 ? 'gold' : 'blue'} style={{ marginInlineEnd: 0 }}>{entry.type}</Tag>
-                    </Space>
+                <Space direction="vertical" size={6} style={{ width: '100%', marginTop: 8 }}>
+                  {groupTomorrowAgenda(dashboard.tomorrowAgenda).map(group => (
+                    <div key={group.slot}>
+                      <Typography.Text style={{ color: subColor, fontSize: 10, letterSpacing: '0.04em' }}>{group.slot}</Typography.Text>
+                      <Space direction="vertical" size={2} style={{ width: '100%', marginTop: 2 }}>
+                        {group.entries.map(entry => (
+                          <button key={entry.itemId} type="button" onClick={() => openItemForm(entry.itemId)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 6px', borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                            <Typography.Text style={{ color: titleColor, fontSize: 12 }}>{entry.startLabel} {entry.title}</Typography.Text>
+                            <Tag color={entry.importance >= 3 ? 'red' : entry.importance >= 2 ? 'gold' : 'blue'} style={{ marginInlineEnd: 0 }}>{entry.type}</Tag>
+                          </button>
+                        ))}
+                      </Space>
+                    </div>
                   ))}
                 </Space>
               ) : <Typography.Text style={{ color: subColor, fontSize: 12, display: 'block', marginTop: 8 }}>明天暂无 schedule 类事项。</Typography.Text>}
