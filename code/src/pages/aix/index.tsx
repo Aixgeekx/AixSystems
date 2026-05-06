@@ -12,7 +12,7 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures, buildDailyAnchorJson, expandFailureCluster } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures, buildDailyAnchorJson, expandFailureCluster, compareDailyAnchors, buildFailureFixHint } from '@/utils/aixAudit';
 import type { ReplayVerification } from '@/utils/aixAudit';
 
 const SKILLS = [
@@ -92,6 +92,9 @@ export default function AixPage() {
   const [auditFilter, setAuditFilter] = useState('');
   const [scopeSelection, setScopeSelection] = useState<Record<string, boolean>>({});
   const [expandedCluster, setExpandedCluster] = useState<string>(''); 
+  const [anchorCompareInput, setAnchorCompareInput] = useState('');
+  const [anchorCompareResult, setAnchorCompareResult] = useState<ReturnType<typeof compareDailyAnchors>>(null);
+
   const isDark = theme.style === 'dark' || theme.style === 'cyberpunk' || theme.key === 'minimal_dark';
   const accent = theme.accent;
   const cardBg = isDark ? 'rgba(10,14,28,0.72)' : 'rgba(255,255,255,0.92)';
@@ -412,6 +415,15 @@ export default function AixPage() {
     downloadText(`aix-daily-anchor-${dayjs().format('YYYYMMDD-HHmm')}.json`, json);
     await db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 每日链锚 JSON 凭证导出：${dailyChainSummary.length} 天`, detail: { scope: 'aix-daily-anchor', days: dailyChainSummary.length }, createdAt: Date.now() });
     message.success(`已导出 ${dailyChainSummary.length} 天链锚 JSON 凭证`);
+  }
+
+  function compareAnchorInput() {
+    const trimmed = anchorCompareInput.trim();
+    if (!trimmed) { message.warning('请粘贴 aix-daily-anchor JSON 内容'); return; }
+    const result = compareDailyAnchors(dailyChainSummary, trimmed);
+    if (!result) { message.error('JSON 解析失败或 schema 不是 aix-daily-anchor-1.0'); return; }
+    setAnchorCompareResult(result);
+    db.eventLog.add({ id: nanoid(), level: 'info', message: `Aix 链锚反向比对：${result.ok ? '一致' : `${result.mismatch.length} 处不一致`}`, detail: { scope: 'aix-daily-anchor-compare', identical: result.identical.length, mismatch: result.mismatch.length, missingLocal: result.missingLocal.length, missingRemote: result.missingRemote.length }, createdAt: Date.now() });
   }
 
   async function drillAllPresets() {
@@ -887,6 +899,41 @@ export default function AixPage() {
             ))}
           </Space>
         </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(168,85,247,0.10)' : 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>链锚反向比对器</Typography.Text>
+            <Tag color="purple">aix-daily-anchor-1.0</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 8, fontSize: 12 }}>粘贴或选择以前从其他设备/日期导出的 aix-daily-anchor JSON，与本地 7 天日链锚点逐日对比，立刻看出哪些日期一致、不一致或缺失。</Typography.Paragraph>
+          <Input.TextArea rows={3} value={anchorCompareInput} onChange={event => setAnchorCompareInput(event.target.value)} placeholder='粘贴 aix-daily-anchor-*.json 内容' style={{ borderRadius: 12 }} />
+          <Space wrap style={{ marginTop: 10 }}>
+            <Button type="primary" onClick={compareAnchorInput} style={{ borderRadius: 12 }}>校验链锚一致性</Button>
+            <Button onClick={() => { setAnchorCompareInput(''); setAnchorCompareResult(null); }} style={{ borderRadius: 12 }}>清空</Button>
+          </Space>
+          {anchorCompareResult ? (
+            <div style={{ marginTop: 12 }}>
+              <Space wrap>
+                <Tag color={anchorCompareResult.ok ? 'green' : 'red'}>{anchorCompareResult.ok ? '完全一致' : '存在差异'}</Tag>
+                <Tag color="blue">一致 {anchorCompareResult.identical.length}</Tag>
+                <Tag color="red">不一致 {anchorCompareResult.mismatch.length}</Tag>
+                <Tag color="gold">本地缺 {anchorCompareResult.missingLocal.length}</Tag>
+                <Tag color="orange">外部缺 {anchorCompareResult.missingRemote.length}</Tag>
+              </Space>
+              <Typography.Paragraph style={{ color: subColor, fontSize: 12, marginTop: 6 }}>本地总指纹 <Typography.Text code style={{ color: titleColor }}>{anchorCompareResult.localAggregateHash}</Typography.Text> · 远端总指纹 <Typography.Text code style={{ color: titleColor }}>{anchorCompareResult.remoteAggregateHash || '—'}</Typography.Text></Typography.Paragraph>
+              {anchorCompareResult.mismatch.length ? (
+                <Space direction="vertical" size={4} style={{ width: '100%', marginTop: 4 }}>
+                  {anchorCompareResult.mismatch.map(m => (
+                    <div key={m.dateLabel} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', fontSize: 12, color: subColor }}>
+                      <Tag color="red">{m.dateLabel}</Tag>
+                      <span>本地 {m.localHash}</span>
+                      <span>外部 {m.remoteHash}</span>
+                    </div>
+                  ))}
+                </Space>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
         <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
           <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
             <Typography.Text strong style={{ color: titleColor }}>导入回放包校验链式哈希</Typography.Text>
@@ -1078,6 +1125,11 @@ export default function AixPage() {
                       <Typography.Text style={{ color: subColor, fontSize: 12 }}>{detail.message}</Typography.Text>
                     </div>
                   ))}
+                  <div style={{ marginTop: 6, padding: '6px 8px', borderRadius: 8, background: isDark ? 'rgba(34,197,94,0.10)' : 'rgba(34,197,94,0.06)', border: '1px dashed rgba(34,197,94,0.32)' }}>
+                    <Typography.Text style={{ color: titleColor, fontSize: 12 }}>💡 修复建议：</Typography.Text>
+                    <Typography.Text style={{ color: subColor, fontSize: 12 }}>{buildFailureFixHint(cluster.label)}</Typography.Text>
+                    <Button size="small" type="text" onClick={() => copyResume(buildFailureFixHint(cluster.label))} style={{ marginLeft: 4 }}>复制</Button>
+                  </div>
                 </div>
               ) : null}
             </div>

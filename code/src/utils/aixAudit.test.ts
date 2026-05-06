@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -454,5 +454,64 @@ describe('scoreRelayBranches', () => {
     expect(a.score).toBeGreaterThan(b.score);
     expect(b.failureCount).toBe(2);
     expect(['健康', '关注', '风险']).toContain(a.band);
+  });
+});
+
+
+describe('compareDailyAnchors', () => {
+  it('returns ok when local and remote anchors fully match', () => {
+    const anchors = [
+      { dateLabel: '05-06', dayStart: 1000, count: 1, lastChainHash: 'h1', lastTicketId: 't1' },
+      { dateLabel: '05-07', dayStart: 86_401_000, count: 2, lastChainHash: 'h2', lastTicketId: 't2' }
+    ];
+    const json = buildDailyAnchorJson(anchors, 'A');
+    const result = compareDailyAnchors(anchors, json)!;
+    expect(result.ok).toBe(true);
+    expect(result.identical).toHaveLength(2);
+    expect(result.mismatch).toHaveLength(0);
+  });
+
+  it('flags mismatched chain hashes between local and remote', () => {
+    const local = [
+      { dateLabel: '05-07', dayStart: 0, count: 1, lastChainHash: 'localHash', lastTicketId: 'tA' }
+    ];
+    const remote = [
+      { dateLabel: '05-07', dayStart: 0, count: 1, lastChainHash: 'remoteHash', lastTicketId: 'tA' }
+    ];
+    const json = buildDailyAnchorJson(remote, 'B');
+    const result = compareDailyAnchors(local, json)!;
+    expect(result.ok).toBe(false);
+    expect(result.mismatch[0].dateLabel).toBe('05-07');
+  });
+
+  it('returns null on invalid json', () => {
+    expect(compareDailyAnchors([], 'not-json')).toBeNull();
+  });
+});
+
+describe('buildFailureFixHint', () => {
+  it('returns hint for known label', () => {
+    expect(buildFailureFixHint('权限拒绝')).toContain('RunAs');
+    expect(buildFailureFixHint('超时')).toContain('OperationTimeout');
+  });
+
+  it('returns generic hint for unknown label', () => {
+    expect(buildFailureFixHint('火星语错误')).toContain('Microsoft Learn');
+  });
+});
+
+describe('buildBranchHealthTrend', () => {
+  const fixedNow = new Date('2026-05-07T18:00:00Z').getTime();
+
+  it('produces day-by-day average score for the lookback window', () => {
+    const items = [
+      { id: 'a', title: '稳定接力', updatedAt: fixedNow - 6 * 3_600_000, subtasks: [{ done: true }], extra: { relayFrom: 'CAP-A', risk: '低风险' } }
+    ];
+    const trend = buildBranchHealthTrend(items, [], 5, fixedNow);
+    expect(trend).toHaveLength(5);
+    const today = trend[trend.length - 1];
+    expect(today.count).toBe(1);
+    expect(today.avgScore).toBeGreaterThan(0);
+    expect(today.dateLabel).toMatch(/\d{2}-\d{2}/);
   });
 });

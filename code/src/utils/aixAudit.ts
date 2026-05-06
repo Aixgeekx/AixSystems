@@ -736,3 +736,93 @@ export function buildPresetTrendRows(logs: EventLog[], presetNames: string[], da
 }
 
 
+
+export interface AnchorComparisonResult {
+  ok: boolean;
+  identical: string[];
+  mismatch: Array<{ dateLabel: string; localHash: string; remoteHash: string }>;
+  missingLocal: string[];
+  missingRemote: string[];
+  remoteAggregateHash: string;
+  localAggregateHash: string;
+}
+
+export function compareDailyAnchors(localAnchors: DailyChainAnchor[], remoteJsonText: string): AnchorComparisonResult | null {
+  let pkg: DailyAnchorPackage;
+  try {
+    pkg = JSON.parse(remoteJsonText);
+  } catch {
+    return null;
+  }
+  if (!pkg || pkg.schema !== 'aix-daily-anchor-1.0' || !Array.isArray(pkg.anchors)) return null;
+  const localMap = new Map<string, DailyChainAnchor>();
+  for (const anchor of localAnchors) localMap.set(anchor.dateLabel, anchor);
+  const remoteMap = new Map<string, DailyChainAnchor>();
+  for (const anchor of pkg.anchors) remoteMap.set(anchor.dateLabel, anchor);
+  const identical: string[] = [];
+  const mismatch: Array<{ dateLabel: string; localHash: string; remoteHash: string }> = [];
+  const missingLocal: string[] = [];
+  const missingRemote: string[] = [];
+  const allDates = new Set<string>([...localMap.keys(), ...remoteMap.keys()]);
+  for (const date of allDates) {
+    const local = localMap.get(date);
+    const remote = remoteMap.get(date);
+    if (!local) { missingLocal.push(date); continue; }
+    if (!remote) { missingRemote.push(date); continue; }
+    if (local.lastChainHash === remote.lastChainHash) identical.push(date);
+    else mismatch.push({ dateLabel: date, localHash: local.lastChainHash, remoteHash: remote.lastChainHash });
+  }
+  const localAggregateHash = hashString(localAnchors.map(a => a.lastChainHash).join('|'));
+  return {
+    ok: !mismatch.length && !missingLocal.length && !missingRemote.length,
+    identical: identical.sort(),
+    mismatch: mismatch.sort((a, b) => a.dateLabel.localeCompare(b.dateLabel)),
+    missingLocal: missingLocal.sort(),
+    missingRemote: missingRemote.sort(),
+    remoteAggregateHash: pkg.aggregateHash || '',
+    localAggregateHash
+  };
+}
+
+const FAILURE_FIX_HINTS: Record<string, string> = {
+  '权限拒绝': 'Start-Process pwsh -Verb RunAs；或将该预设执行时序后置到管理员模式下重跑',
+  '权限不足': '检查当前账户是否在 Administrators / Performance Log Users 组；必要时改 PSRemoting Trusted Hosts',
+  '超时': '将预设拆分小批量；或在 Invoke-Command 中加 -SessionOption (New-PSSessionOption -OperationTimeout 60000)',
+  '网络异常': '先 Test-NetConnection / Resolve-DnsName 排查 DNS、防火墙；再切到 -UseBasicParsing 或 IPv4',
+  '连接失败': 'Test-NetConnection 端口可达性 + Get-Service WinRM 状态；公司网络下排查代理白名单',
+  '资源缺失': '确认路径存在：Test-Path、Get-ChildItem -Force；缺文件先补 Restore-Item / 重新生成',
+  '执行策略限制': 'Set-ExecutionPolicy -Scope Process Bypass；或在脚本头加 #Requires -Version 7',
+  '语法错误': '把脚本贴到 PSScriptAnalyzer：Invoke-ScriptAnalyzer .\preset.ps1 自动定位行号',
+  '参数错误': '运行 Get-Command <cmdlet> -Syntax 看签名；老版本 PS5 缺参数时升到 PS7'
+};
+
+export function buildFailureFixHint(label: string): string {
+  return FAILURE_FIX_HINTS[label] || '查 Microsoft Learn / about_ topics 文档与同名 cmdlet 的 -Verbose / -Debug 输出';
+}
+
+export interface HealthTrendCell {
+  dateLabel: string;
+  dayStart: number;
+  avgScore: number;
+  count: number;
+}
+
+export function buildBranchHealthTrend(items: Array<{ id: string; title: string; updatedAt: number; subtasks?: Array<{ done: boolean }>; extra?: any }>, logs: EventLog[], days = 7, now = Date.now()): HealthTrendCell[] {
+  const dayStart = new Date(now);
+  dayStart.setHours(0, 0, 0, 0);
+  const result: HealthTrendCell[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const start = dayStart.getTime() - i * 86_400_000;
+    const end = start + 86_400_000;
+    const scores = scoreRelayBranches(items, logs.filter(log => log.createdAt < end), end);
+    const date = new Date(start);
+    const avgScore = scores.length ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length) : 0;
+    result.push({
+      dateLabel: `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+      dayStart: start,
+      avgScore,
+      count: scores.length
+    });
+  }
+  return result;
+}

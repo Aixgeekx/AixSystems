@@ -2,6 +2,13 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.95.0
+- `code/src/utils/aixAudit.ts` 新增 `compareDailyAnchors(local, jsonText)`（schema 校验 + identical/mismatch/missingLocal/missingRemote 四类输出 + 本地 cyrb53 聚合）、`buildFailureFixHint(label)`（11 个失败标签 → 专家级 PowerShell 修复建议字典，含通用兜底）、`buildBranchHealthTrend(items, logs, days, now)`（按日截断 logs 后调 `scoreRelayBranches` 计算每日均分）。
+- Aix 主入口加 `anchorCompareInput` / `anchorCompareResult` useState + `compareAnchorInput` 函数 + 「链锚反向比对器」purple div：TextArea + 校验按钮 + 结果 Tag 群 + 不一致明细列表。
+- Aix 主入口失败聚类展开块末尾加 dashed 绿框「💡 修复建议」+ 复制按钮（复用 `copyResume`）。
+- Agent 中枢加 `branchHealthTrend` 计算 + 「近 7 天健康度趋势」div：flex 7 柱条，柱高=avgScore × 0.6，颜色按 75/45 阈值切换，title 悬停看明细。
+- 测试新增 3 个 describe（78 全绿）；纯本地 / 不上传 / 不读日记。
+
 ## 最新版本 v0.94.0
 - `code/src/utils/aixAudit.ts` 新增 `buildDailyAnchorJson(anchors, controlTokenId)`（schema=aix-daily-anchor-1.0 + aggregateHash）/ `expandFailureCluster(logs, label)`（按 label 反查 FAILURE_PATTERNS + 时间倒序）/ `scoreRelayBranches(items, logs, now)`（idle×0.5 + failure×8 + risk + progress 加权打分）。
 - Aix 主入口加 `exportDailyAnchor` 函数 + 「导出 JSON 凭证」按钮（disable 条件：所有锚点都没活动票据时）；写 eventLog scope=aix-daily-anchor。

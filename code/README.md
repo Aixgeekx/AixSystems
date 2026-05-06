@@ -54,6 +54,12 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.95.0 (2026-05-07)
+- Aix 主入口审计回放器卡片新增「链锚反向比对器」：调 `compareDailyAnchors` 将外部 aix-daily-anchor JSON 与本地 `dailyChainSummary` 逐日 diff，输出 identical / mismatch / missingLocal / missingRemote 四类 + 本地与远端 cyrb53 总指纹；写入 eventLog scope=aix-daily-anchor-compare。
+- Aix 主入口风险驾驶舱「失败原因聚类」展开明细底部追加修复建议条：调 `buildFailureFixHint(label)` 给每个分类返回专家级 PowerShell 修复一行（RunAs / OperationTimeout / Test-NetConnection / PSScriptAnalyzer 等），可一键复制。
+- Agent 中枢接力链路时间线新增「近 7 天健康度趋势」柱条：调 `buildBranchHealthTrend` 把每天截止当日所有接力分支的健康分平均，按 ≥75 绿 / ≥45 黄 / 否则红 三档色标，鼠标悬停看具体分数与分支数。
+- `code/src/utils/aixAudit.ts` 新增 `compareDailyAnchors` / `buildFailureFixHint` / `buildBranchHealthTrend` 三个工具函数 + `code/src/utils/aixAudit.test.ts` 补 3 套用例（共 78 测试 100% 绿）；`npm run build` 通过。
+
 ### v0.94.0 (2026-05-07)
 - Aix 主入口审计回放器卡片「近 7 天链式哈希摘要」头部新增「导出 JSON 凭证」按钮：调 `buildDailyAnchorJson` 把 7 天日链锚点序列化成 schema=aix-daily-anchor-1.0 的 JSON，含 cyrb53 总指纹 aggregateHash，便于跨日凭证比对。
 - Aix 主入口风险驾驶舱「失败原因聚类」每条卡片新增「展开明细」按钮：调 `expandFailureCluster` 取该分类下所有匹配 log 的级别/时间/预设/消息，按时间倒序最多 8 条。

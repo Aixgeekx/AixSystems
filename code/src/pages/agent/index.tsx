@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches, scoreRelayBranches } from '@/utils/aixAudit';
+import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches, scoreRelayBranches, buildBranchHealthTrend } from '@/utils/aixAudit';
 import type { ParsedCapsule } from '@/utils/aixAudit';
 
 const AGENT_TEMPLATES = [
@@ -121,6 +121,7 @@ export default function AgentPage() {
   const sleepingBranches = findSleepingRelayBranches(agentTasks, 24);
   const relayFailureLogs = useLiveQuery(() => db.eventLog.toArray(), []) || [];
   const branchHealthScores = scoreRelayBranches(agentTasks, relayFailureLogs);
+  const branchHealthTrend = buildBranchHealthTrend(agentTasks, relayFailureLogs, 7);
 
   const disciplineCoach = autonomyQueue.map(item => ({
     title: item.task.title,
@@ -548,6 +549,22 @@ export default function AgentPage() {
               </Space>
             </div>
           )) : <Alert type="info" showIcon message="暂无接力分支可评分；导入胶囊或开始接力后会自动出现。" style={{ borderRadius: 12 }} />}
+        </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(34,197,94,0.10)' : 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>近 7 天健康度趋势</Typography.Text>
+            <Tag color="green">分支平均分 · 绿/黄/红三档</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>把每天截止当日的所有接力分支健康度做平均，画成 7 天柱条；&ge;75 绿、&ge;45 黄、否则红，便于看出整体接力健康度是回升还是下滑。</Typography.Paragraph>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 80 }}>
+            {branchHealthTrend.map(cell => (
+              <div key={cell.dayStart} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div title={`${cell.dateLabel}: 平均 ${cell.avgScore} 分 · ${cell.count} 条分支`} style={{ width: '100%', height: cell.count ? `${Math.max(8, cell.avgScore * 0.6)}px` : '4px', borderRadius: 6, background: !cell.count ? 'rgba(148,163,184,0.32)' : cell.avgScore >= 75 ? 'rgba(34,197,94,0.78)' : cell.avgScore >= 45 ? 'rgba(245,158,11,0.78)' : 'rgba(239,68,68,0.78)' }} />
+                <Typography.Text style={{ color: subColor, fontSize: 10 }}>{cell.dateLabel}</Typography.Text>
+                <Typography.Text style={{ color: titleColor, fontSize: 10, fontWeight: 600 }}>{cell.count ? `${cell.avgScore}` : '—'}</Typography.Text>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
 
