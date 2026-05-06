@@ -54,6 +54,12 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.93.0 (2026-05-07)
+- Aix 主入口审计回放器卡片新增「近 7 天链式哈希摘要」：调 `buildDailyChainSummary` 抽出每日最后一张票据的 chainHash 作为日链锚点 + 单条复制按钮，可粘贴到外部系统跨日比对哈希一致性。
+- Aix 主入口风险驾驶舱新增「失败原因聚类」：调 `clusterPresetFailures` 扫描 access denied / timeout / network / not found / execution policy / syntax / parameter 等关键词，按 6 类聚合统计影响最大的失败原因 + 涉及预设。
+- Agent 中枢接力链路时间线新增「接力分支 SLA 沉睡告警」：调 `findSleepingRelayBranches` 找出超过 24h 未更新且未归档的接力分支，按 24/48/72h 三档标橙/黄/红，从 Item.updatedAt 计算空闲时长。
+- `code/src/utils/aixAudit.ts` 新增 `buildDailyChainSummary` / `clusterPresetFailures` / `findSleepingRelayBranches` 三个工具函数 + `code/src/utils/aixAudit.test.ts` 补 3 套用例（共 67 测试 100% 绿）；`npm run build` 通过。
+
 ### v0.92.0 (2026-05-07)
 - Aix 主入口审计回放器卡片新增「按 scope 选择性 CSV 导出」：每个 scope 用 `Tag.CheckableTag` 切换包含/排除，未选时默认导出全部；导出文件名带 `-{N}scopes` 标记。
 - Aix 主入口风险驾驶舱新增「演练成本 TOP 5 排行」：按 `total × avgMs` 总耗时降序，标出"耗时大户"，便于优先优化高频长耗时预设。

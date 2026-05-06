@@ -523,6 +523,100 @@ export function buildRelayTreeMarkdown(nodes: RelayDepthNode[]): string {
   return lines.join('\n') + '\n';
 }
 
+export interface DailyChainAnchor {
+  dateLabel: string;
+  dayStart: number;
+  count: number;
+  lastChainHash: string;
+  lastTicketId: string;
+}
+
+export function buildDailyChainSummary(tickets: AuditTicket[], days = 7, now = Date.now()): DailyChainAnchor[] {
+  const dayStart = new Date(now);
+  dayStart.setHours(0, 0, 0, 0);
+  const result: DailyChainAnchor[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const start = dayStart.getTime() - i * 86_400_000;
+    const end = start + 86_400_000;
+    const within = tickets.filter(ticket => ticket.timestamp >= start && ticket.timestamp < end).sort((a, b) => a.timestamp - b.timestamp);
+    const last = within[within.length - 1];
+    const date = new Date(start);
+    result.push({
+      dateLabel: `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+      dayStart: start,
+      count: within.length,
+      lastChainHash: last?.chainHash || '',
+      lastTicketId: last?.id || ''
+    });
+  }
+  return result;
+}
+
+const FAILURE_PATTERNS: Array<{ keyword: string; label: string }> = [
+  { keyword: 'access denied', label: '权限拒绝' },
+  { keyword: 'permission', label: '权限不足' },
+  { keyword: 'timeout', label: '超时' },
+  { keyword: 'timed out', label: '超时' },
+  { keyword: 'network', label: '网络异常' },
+  { keyword: 'connection', label: '连接失败' },
+  { keyword: 'not found', label: '资源缺失' },
+  { keyword: 'cannot find', label: '资源缺失' },
+  { keyword: 'execution policy', label: '执行策略限制' },
+  { keyword: 'syntax', label: '语法错误' },
+  { keyword: 'parameter', label: '参数错误' }
+];
+
+export interface FailureCluster {
+  label: string;
+  keyword: string;
+  count: number;
+  presets: string[];
+  lastAt: number;
+}
+
+export function clusterPresetFailures(logs: EventLog[]): FailureCluster[] {
+  const buckets = new Map<string, FailureCluster>();
+  for (const log of logs) {
+    if (log.detail?.ok !== false && log.level !== 'warn' && log.level !== 'error') continue;
+    const haystack = `${log.message} ${JSON.stringify(log.detail || {})}`.toLowerCase();
+    for (const pattern of FAILURE_PATTERNS) {
+      if (!haystack.includes(pattern.keyword)) continue;
+      const preset = String(log.detail?.preset || log.detail?.skill || log.message.slice(0, 40));
+      const entry = buckets.get(pattern.label) || { label: pattern.label, keyword: pattern.keyword, count: 0, presets: [], lastAt: 0 };
+      entry.count += 1;
+      if (!entry.presets.includes(preset)) entry.presets.push(preset);
+      if (log.createdAt > entry.lastAt) entry.lastAt = log.createdAt;
+      buckets.set(pattern.label, entry);
+      break;
+    }
+  }
+  return [...buckets.values()].sort((a, b) => b.count - a.count);
+}
+
+export interface SleepingBranch {
+  id: string;
+  title: string;
+  idleHours: number;
+  risk: string;
+  percent: number;
+  capsuleId: string;
+}
+
+export function findSleepingRelayBranches(items: Array<{ id: string; title: string; updatedAt: number; subtasks?: Array<{ done: boolean }>; extra?: any }>, thresholdHours = 24, now = Date.now()): SleepingBranch[] {
+  return items
+    .filter(item => !!item.extra?.relayFrom)
+    .map(item => {
+      const subtasks = item.subtasks || [];
+      const done = subtasks.filter(sub => sub.done).length;
+      const total = subtasks.length || 1;
+      const percent = Math.round(done / total * 100);
+      const idleHours = (now - item.updatedAt) / 3_600_000;
+      return { id: item.id, title: item.title, idleHours: Math.round(idleHours * 10) / 10, risk: String(item.extra?.risk || '低风险'), percent, capsuleId: String(item.extra?.relayFrom || '') };
+    })
+    .filter(branch => branch.idleHours >= thresholdHours && branch.percent < 100)
+    .sort((a, b) => b.idleHours - a.idleHours);
+}
+
 export function buildPresetTrendRows(logs: EventLog[], presetNames: string[], days = 14, now = Date.now()): PresetTrendRow[] {
   const dayStart = new Date(now);
   dayStart.setHours(0, 0, 0, 0);

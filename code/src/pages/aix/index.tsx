@@ -12,7 +12,7 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures } from '@/utils/aixAudit';
 import type { ReplayVerification } from '@/utils/aixAudit';
 
 const SKILLS = [
@@ -267,6 +267,8 @@ export default function AixPage() {
   const auditHeatmap = useMemo(() => buildAuditHeatmap(auditTickets, 14), [auditTickets]);
   const auditHeatPeak = useMemo(() => auditHeatmap.reduce((max, cell) => Math.max(max, cell.total), 0), [auditHeatmap]);
   const blacklistFindings = useMemo(() => scanPowerShellBlacklist(powerShellLogs), [powerShellLogs]);
+  const dailyChainSummary = useMemo(() => buildDailyChainSummary(auditTickets, 7), [auditTickets]);
+  const failureClusters = useMemo(() => clusterPresetFailures(powerShellLogs), [powerShellLogs]);
   const presetCostRanking = useMemo(() => powerShellRiskRows
     .map(row => ({ preset: row.preset, totalMs: row.total * row.avgMs, total: row.total, avgMs: row.avgMs, level: row.level }))
     .filter(row => row.totalMs > 0)
@@ -856,6 +858,23 @@ export default function AixPage() {
             })}
           </div>
         </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(20,184,166,0.10)' : 'rgba(20,184,166,0.06)', border: '1px solid rgba(20,184,166,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>近 7 天链式哈希摘要</Typography.Text>
+            <Tag color="cyan">每日链尾锚点 · 跨日比对凭证</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 8, fontSize: 12 }}>每天最后一张审计票据的 chainHash 抽出来作为"日链锚点"，可粘贴到外部系统比对哈希一致性，验证当天审计链是否被篡改或丢失。</Typography.Paragraph>
+          <Space direction="vertical" size={4} style={{ width: '100%' }}>
+            {dailyChainSummary.map(anchor => (
+              <div key={anchor.dayStart} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 10, background: isDark ? 'rgba(20,184,166,0.06)' : 'rgba(20,184,166,0.04)' }}>
+                <Tag color={anchor.count ? 'cyan' : 'default'}>{anchor.dateLabel}</Tag>
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>{anchor.count} 张票据</Typography.Text>
+                <Typography.Text code style={{ color: anchor.lastChainHash ? titleColor : subColor, fontSize: 12, fontFamily: 'Maple Mono NF CN, Consolas, monospace' }}>{anchor.lastChainHash || '— 无活动 —'}</Typography.Text>
+                {anchor.lastChainHash ? <Button size="small" type="text" onClick={() => copyResume(anchor.lastChainHash)}>复制</Button> : null}
+              </div>
+            ))}
+          </Space>
+        </div>
         <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
           <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
             <Typography.Text strong style={{ color: titleColor }}>导入回放包校验链式哈希</Typography.Text>
@@ -1017,6 +1036,25 @@ export default function AixPage() {
               </Space>
             </div>
           )) : <Alert type="info" showIcon message="尚无演练记录，先做几次只读演练即可看到成本排行。" style={{ borderRadius: 12 }} />}
+        </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(244,114,182,0.10)' : 'rgba(244,114,182,0.06)', border: '1px solid rgba(244,114,182,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>失败原因聚类</Typography.Text>
+            <Tag color="magenta">权限 / 超时 / 网络 / 资源 / 语法 / 参数</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>对所有失败演练（ok=false 或 warn/error 等级）扫描 access denied / timeout / network / not found / execution policy / syntax / parameter 等关键词，按类别聚合统计影响最大的失败原因。</Typography.Paragraph>
+          {failureClusters.length ? failureClusters.slice(0, 5).map(cluster => (
+            <div key={cluster.label} style={{ marginBottom: 6, padding: 10, borderRadius: 12, background: isDark ? 'rgba(244,114,182,0.08)' : 'rgba(244,114,182,0.05)', border: '1px solid rgba(244,114,182,0.18)' }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                <Space wrap>
+                  <Tag color="magenta">{cluster.label}</Tag>
+                  <Typography.Text strong style={{ color: titleColor }}>{cluster.count} 次失败</Typography.Text>
+                </Space>
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>最近 {dayjs(cluster.lastAt).format('MM-DD HH:mm')}</Typography.Text>
+              </Space>
+              <Typography.Text style={{ color: subColor, fontSize: 12 }}>影响预设：{cluster.presets.slice(0, 4).join(' · ')}{cluster.presets.length > 4 ? ' …' : ''}</Typography.Text>
+            </div>
+          )) : <Alert type="success" showIcon message="尚未识别到失败原因聚类，演练成功率良好。" style={{ borderRadius: 12 }} />}
         </div>
       </Card>
 

@@ -2,6 +2,13 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.93.0
+- `code/src/utils/aixAudit.ts` 新增 `buildDailyChainSummary(tickets, days, now)`（每日最后一张票据 chainHash + 计数）/ `clusterPresetFailures(logs)`（11 个失败关键词→6 类聚合）/ `findSleepingRelayBranches(items, threshold, now)`（接力分支 idleHours + percent）。
+- Aix 主入口审计回放器卡片末尾加「近 7 天链式哈希摘要」div，循环渲染 `dailyChainSummary`：日期 Tag + 票据数 + chainHash 截断 + 复制按钮（复用既有 `copyResume`）。
+- Aix 主入口风险驾驶舱底部加「失败原因聚类」div，渲染 `failureClusters.slice(0,5)`：每条卡片含分类 Tag + 次数 + 最近时间 + 涉及预设列表。
+- Agent 中枢接力链路时间线末尾加「接力分支 SLA 沉睡告警（≥ 24h）」div，渲染 `sleepingBranches.slice(0,6)`：三档色标 + 标题 + 风险 + 胶囊 + 进度。
+- 测试新增 3 个 describe（67 全绿）；纯本地计算、不读日记正文、无新依赖。
+
 ## 最新版本 v0.92.0
 - Aix 主入口加 `scopeSelection` useState + `Tag.CheckableTag` 多选 UI；`exportAuditCsv` 改为按选中 scope 过滤 `auditTickets` 再调 `buildAuditCsv`；未选时默认全部导出。
 - Aix 主入口风险驾驶舱底部新增「演练成本 TOP 5」div：用 `useMemo` 从 `powerShellRiskRows` 计算 `totalMs = total × avgMs` + 降序 + slice(5)；不引入新工具函数。

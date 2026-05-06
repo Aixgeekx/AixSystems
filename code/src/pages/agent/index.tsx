@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown } from '@/utils/aixAudit';
+import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches } from '@/utils/aixAudit';
 import type { ParsedCapsule } from '@/utils/aixAudit';
 
 const AGENT_TEMPLATES = [
@@ -118,6 +118,7 @@ export default function AgentPage() {
     const capsuleId = String(log.detail?.capsuleId || '');
     return capsuleId && !referencedCapsules.has(capsuleId);
   });
+  const sleepingBranches = findSleepingRelayBranches(agentTasks, 24);
   const disciplineCoach = autonomyQueue.map(item => ({
     title: item.task.title,
     risk: String(item.task.extra?.risk || (item.task.extra?.aixCampaign ? '中风险' : '低风险')),
@@ -507,6 +508,25 @@ export default function AgentPage() {
             <Button danger disabled={!orphanCapsuleLogs.length} onClick={cleanOrphanCapsules} style={{ borderRadius: 12 }}>清理 {orphanCapsuleLogs.length} 条孤儿日志</Button>
             <Tag color="default">写入 scope=agent-orphan-cleanup 审计</Tag>
           </Space>
+        </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(245,158,11,0.10)' : 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>接力分支 SLA 沉睡告警（≥ 24h）</Typography.Text>
+            <Tag color="gold">沉睡 {sleepingBranches.length}</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>把超过 24 小时未推进且未归档（进度 &lt; 100%）的接力分支挑出来，提示需要复盘或人工接力；时间从 Item.updatedAt 计算，纯本地。</Typography.Paragraph>
+          {sleepingBranches.length ? sleepingBranches.slice(0, 6).map(branch => (
+            <div key={branch.id} style={{ marginBottom: 6, padding: 10, borderRadius: 12, background: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.18)' }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                <Space wrap>
+                  <Tag color={branch.idleHours >= 72 ? 'red' : branch.idleHours >= 48 ? 'gold' : 'orange'}>沉睡 {branch.idleHours}h</Tag>
+                  <Typography.Text strong style={{ color: titleColor }}>{branch.title}</Typography.Text>
+                  <Tag color={branch.risk === '低风险' ? 'green' : 'gold'}>{branch.risk}</Tag>
+                </Space>
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>胶囊 {branch.capsuleId} · 进度 {branch.percent}%</Typography.Text>
+              </Space>
+            </div>
+          )) : <Alert type="success" showIcon message="所有接力分支都在 24 小时内有推进，SLA 健康。" style={{ borderRadius: 12 }} />}
         </div>
       </Card>
 

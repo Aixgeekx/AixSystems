@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -337,5 +337,65 @@ describe('buildRelayTreeMarkdown', () => {
 
   it('handles empty input with friendly message', () => {
     expect(buildRelayTreeMarkdown([])).toContain('空');
+  });
+});
+
+describe('buildDailyChainSummary', () => {
+  const fixedNow = new Date('2026-05-07T18:00:00Z').getTime();
+
+  it('records last chain hash per day for the lookback window', () => {
+    const dayMs = 86_400_000;
+    const dayStart = new Date(fixedNow);
+    dayStart.setHours(0, 0, 0, 0);
+    const start = dayStart.getTime();
+    const tickets = buildAuditTickets([
+      eventLog('a', 'aix-skill', start - 2 * dayMs + 1000),
+      eventLog('b', 'aix-campaign', start + 4000),
+      eventLog('c', 'aix-skill', start + 5000)
+    ]);
+    const summary = buildDailyChainSummary(tickets, 4, fixedNow);
+    expect(summary).toHaveLength(4);
+    const today = summary[summary.length - 1];
+    expect(today.count).toBe(2);
+    expect(today.lastTicketId).toBe('c');
+    expect(today.lastChainHash).toBeTruthy();
+    const empty = summary[0];
+    expect(empty.count).toBe(0);
+    expect(empty.lastChainHash).toBe('');
+  });
+});
+
+describe('clusterPresetFailures', () => {
+  it('clusters log entries by keyword pattern', () => {
+    const logs: EventLog[] = [
+      { id: '1', level: 'warn', message: 'preset failed: Access Denied', detail: { scope: 'desktop-preset-drill', preset: 'startup', ok: false }, createdAt: 1000 },
+      { id: '2', level: 'warn', message: 'preset failed: timeout after 5s', detail: { scope: 'desktop-preset-drill', preset: 'ports', ok: false }, createdAt: 2000 },
+      { id: '3', level: 'warn', message: 'preset failed: Access Denied (admin only)', detail: { scope: 'desktop-preset-drill', preset: 'reg', ok: false }, createdAt: 3000 }
+    ];
+    const clusters = clusterPresetFailures(logs);
+    expect(clusters.length).toBeGreaterThan(0);
+    const accessDenied = clusters.find(c => c.label === '权限拒绝')!;
+    expect(accessDenied.count).toBe(2);
+    expect(accessDenied.presets).toEqual(expect.arrayContaining(['startup', 'reg']));
+  });
+
+  it('returns empty when no failures', () => {
+    expect(clusterPresetFailures([{ id: 'a', level: 'info', message: 'ok', detail: { ok: true }, createdAt: 1 }])).toEqual([]);
+  });
+});
+
+describe('findSleepingRelayBranches', () => {
+  const fixedNow = new Date('2026-05-07T18:00:00Z').getTime();
+
+  it('flags relay branches idle longer than threshold and not yet completed', () => {
+    const items = [
+      { id: 'fresh', title: '最近活跃', updatedAt: fixedNow - 3_600_000, subtasks: [{ done: false }], extra: { relayFrom: 'CAP-1', risk: '低风险' } },
+      { id: 'idle', title: '沉睡 30h', updatedAt: fixedNow - 30 * 3_600_000, subtasks: [{ done: false }, { done: false }], extra: { relayFrom: 'CAP-2', risk: '中风险' } },
+      { id: 'done', title: '已归档', updatedAt: fixedNow - 100 * 3_600_000, subtasks: [{ done: true }], extra: { relayFrom: 'CAP-3' } },
+      { id: 'noRelay', title: '本地分支', updatedAt: fixedNow - 50 * 3_600_000, subtasks: [{ done: false }] }
+    ];
+    const sleeping = findSleepingRelayBranches(items, 24, fixedNow);
+    expect(sleeping.map(branch => branch.id)).toEqual(['idle']);
+    expect(sleeping[0].idleHours).toBeGreaterThanOrEqual(24);
   });
 });
