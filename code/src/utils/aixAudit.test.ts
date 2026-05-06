@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend, buildScopeDistribution, buildPresetGoldenPath, buildBranchRetroSubtasks, buildFullAuditSnapshot, verifyFullAuditSnapshot, buildHealthTrendCompare, buildGoldenPathMarkdown, summarizeRetroProgress, buildV1HealthCheck, buildPresetManualMarkdown, buildBranchHealthCsv, compareFullAuditSnapshots } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree, buildAuditCsv, buildRelayTreeMarkdown, buildDailyChainSummary, clusterPresetFailures, findSleepingRelayBranches, buildDailyAnchorJson, expandFailureCluster, scoreRelayBranches, compareDailyAnchors, buildFailureFixHint, buildBranchHealthTrend, buildScopeDistribution, buildPresetGoldenPath, buildBranchRetroSubtasks, buildFullAuditSnapshot, verifyFullAuditSnapshot, buildHealthTrendCompare, buildGoldenPathMarkdown, summarizeRetroProgress, buildV1HealthCheck, buildPresetManualMarkdown, buildBranchHealthCsv, compareFullAuditSnapshots, buildAuditHourlyHeatmap, summarizePresetCost, buildRelayTreeMermaid } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -761,5 +761,100 @@ describe('buildBranchHealthCsv', () => {
     ];
     const csv = buildBranchHealthCsv(scores);
     expect(csv).toContain('"a,b"');
+  });
+});
+
+describe('buildAuditHourlyHeatmap', () => {
+  it('returns 24 cells covering full day even when empty', () => {
+    const cells = buildAuditHourlyHeatmap([]);
+    expect(cells).toHaveLength(24);
+    expect(cells[0]).toMatchObject({ hour: 0, count: 0, label: '00:00', share: 0 });
+    expect(cells[23]).toMatchObject({ hour: 23, count: 0, label: '23:00', share: 0 });
+  });
+
+  it('aggregates ticket counts by local hour and computes share', () => {
+    const now = new Date('2026-05-07T23:59:00').getTime();
+    const at = (h: number) => new Date('2026-05-07').setHours(h, 0, 0, 0);
+    const tickets: any[] = [
+      { id: '1', timestamp: at(9), scope: 's', scopeLabel: 's', level: 'info', risk: '低风险', color: '#fff', message: 'a', fingerprint: 'f', chainHash: 'h', rollback: '', resume: '', prevHash: '0' },
+      { id: '2', timestamp: at(9), scope: 's', scopeLabel: 's', level: 'info', risk: '低风险', color: '#fff', message: 'b', fingerprint: 'f', chainHash: 'h', rollback: '', resume: '', prevHash: '0' },
+      { id: '3', timestamp: at(14), scope: 's', scopeLabel: 's', level: 'info', risk: '低风险', color: '#fff', message: 'c', fingerprint: 'f', chainHash: 'h', rollback: '', resume: '', prevHash: '0' }
+    ];
+    const cells = buildAuditHourlyHeatmap(tickets, 14, now);
+    expect(cells[9].count).toBe(2);
+    expect(cells[14].count).toBe(1);
+    expect(cells[9].share).toBeCloseTo(66.7, 1);
+    expect(cells[14].share).toBeCloseTo(33.3, 1);
+  });
+
+  it('drops tickets older than the cutoff window', () => {
+    const now = new Date('2026-05-07T23:59:00').getTime();
+    const old = now - 30 * 86_400_000;
+    const recent = now - 1 * 86_400_000;
+    const tickets: any[] = [
+      { id: 'old', timestamp: old, scope: 's', scopeLabel: 's', level: 'info', risk: '低风险', color: '#fff', message: 'old', fingerprint: 'f', chainHash: 'h', rollback: '', resume: '', prevHash: '0' },
+      { id: 'recent', timestamp: recent, scope: 's', scopeLabel: 's', level: 'info', risk: '低风险', color: '#fff', message: 'r', fingerprint: 'f', chainHash: 'h', rollback: '', resume: '', prevHash: '0' }
+    ];
+    const cells = buildAuditHourlyHeatmap(tickets, 14, now);
+    const total = cells.reduce((sum, c) => sum + c.count, 0);
+    expect(total).toBe(1);
+  });
+});
+
+describe('summarizePresetCost', () => {
+  it('ranks presets by cumulative milliseconds desc', () => {
+    const rows = summarizePresetCost([
+      { preset: 'a', total: 10, avgMs: 200 },                          // 2000ms
+      { preset: 'b', total: 3, avgMs: 5000 },                          // 15000ms
+      { preset: 'c', total: 5, avgMs: 1000 }                           // 5000ms
+    ]);
+    expect(rows.map(r => r.preset)).toEqual(['b', 'c', 'a']);
+    expect(rows[0].costRank).toBe(1);
+    expect(rows[0].totalMs).toBe(15000);
+    expect(rows[0].totalMinutes).toBe(0);                              // 15000ms < 60_000ms
+    expect(rows[2].costRank).toBe(3);
+  });
+
+  it('skips presets with zero runs or zero avgMs', () => {
+    const rows = summarizePresetCost([
+      { preset: 'never-run', total: 0, avgMs: 1000 },
+      { preset: 'instant', total: 5, avgMs: 0 },
+      { preset: 'real', total: 2, avgMs: 30_000 }                      // 60_000ms = 1min
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].preset).toBe('real');
+    expect(rows[0].totalMinutes).toBe(1);
+  });
+});
+
+describe('buildRelayTreeMermaid', () => {
+  it('returns empty placeholder block when no nodes', () => {
+    const text = buildRelayTreeMermaid([]);
+    expect(text).toContain('graph TD');
+    expect(text).toContain('暂无接力分支');
+  });
+
+  it('emits one node line per relay node and edge for each parent link', () => {
+    const nodes: any[] = [
+      { id: 'root1', title: '根任务', capsuleId: 'CAP-A', depth: 1, risk: '低风险', percent: 100, createdAt: 0 },
+      { id: 'child1', title: '子任务1', capsuleId: 'CAP-B', depth: 2, risk: '中风险', percent: 50, parentId: 'root1', createdAt: 1 },
+      { id: 'leaf1', title: '叶任务', capsuleId: 'CAP-C', depth: 3, risk: '低风险', percent: 30, parentId: 'child1', createdAt: 2 }
+    ];
+    const text = buildRelayTreeMermaid(nodes);
+    expect(text.startsWith('```mermaid')).toBe(true);
+    expect(text).toContain('graph TD');
+    expect(text).toContain('根任务 · 100%');
+    expect(text).toContain('叶任务 · 30%');
+    expect(text).toMatch(/nroot1\s*-->\s*nchild1/);
+    expect(text).toMatch(/nchild1\s*-->\s*nleaf1/);
+  });
+
+  it('escapes special characters in title', () => {
+    const nodes: any[] = [
+      { id: 'a', title: '含"引号"\n换行', capsuleId: 'CAP', depth: 1, risk: '低风险', percent: 0, createdAt: 0 }
+    ];
+    const text = buildRelayTreeMermaid(nodes);
+    expect(text).toContain('含 引号  换行');
+    expect(text).not.toMatch(/\n换行"/);
   });
 });

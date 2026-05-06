@@ -1137,3 +1137,66 @@ export function buildBranchHealthCsv(scores: BranchHealthScore[]): string {
   const rows = scores.map(s => [escape(s.id), escape(s.title), escape(s.capsuleId), escape(s.risk), s.band, String(s.score), String(s.idleHours), String(s.percent), String(s.failureCount)].join(','));
   return [header, ...rows].join('\n') + '\n';
 }
+
+export interface AuditHourCell {
+  hour: number;                                                              // 0-23
+  count: number;                                                             // 该小时段票据数
+  label: string;                                                             // "00:00" 形式
+  share: number;                                                             // 0-100 占总票据百分比（保留 1 位）
+}
+
+export function buildAuditHourlyHeatmap(tickets: AuditTicket[], days = 14, now = Date.now()): AuditHourCell[] {  // 24h 时段聚合
+  const cutoff = now - days * 86_400_000;
+  const counts = Array<number>(24).fill(0);
+  for (const ticket of tickets) {
+    if (ticket.timestamp >= cutoff && ticket.timestamp <= now) {
+      const hour = new Date(ticket.timestamp).getHours();
+      counts[hour] += 1;
+    }
+  }
+  const total = counts.reduce((sum, n) => sum + n, 0);
+  return counts.map((count, hour) => ({
+    hour,
+    count,
+    label: `${String(hour).padStart(2, '0')}:00`,
+    share: total ? Math.round(count / total * 1000) / 10 : 0
+  }));
+}
+
+export interface PresetCostRow {
+  preset: string;
+  totalRuns: number;                                                         // 累计演练次数
+  avgMs: number;                                                             // 平均耗时
+  totalMs: number;                                                           // 累计耗时（avgMs × totalRuns）
+  totalMinutes: number;                                                      // 累计分钟（向下取整）
+  costRank: number;                                                          // 1-based 成本排名
+}
+
+export function summarizePresetCost(rows: Array<{ preset: string; total: number; avgMs: number }>): PresetCostRow[] {
+  const cleaned = rows.filter(r => r.total > 0 && r.avgMs > 0).map(r => {
+    const totalMs = r.avgMs * r.total;
+    return {
+      preset: r.preset,
+      totalRuns: r.total,
+      avgMs: r.avgMs,
+      totalMs,
+      totalMinutes: Math.floor(totalMs / 60_000)
+    };
+  });
+  cleaned.sort((a, b) => b.totalMs - a.totalMs);
+  return cleaned.map((row, idx) => ({ ...row, costRank: idx + 1 }));
+}
+
+export function buildRelayTreeMermaid(nodes: RelayDepthNode[]): string {     // graph TD 文本，便于嵌入 Markdown
+  if (!nodes.length) return '```mermaid\ngraph TD\n  empty[/"暂无接力分支"/]\n```';
+  const safeId = (s: string) => 'n' + s.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
+  const safeLabel = (s: string) => s.replace(/["\\\n]/g, ' ').slice(0, 36);
+  const lines: string[] = ['```mermaid', 'graph TD'];
+  for (const node of nodes) {
+    const nid = safeId(node.id);
+    lines.push(`  ${nid}["${safeLabel(node.title)} · ${node.percent}%"]`);
+    if (node.parentId) lines.push(`  ${safeId(node.parentId)} --> ${nid}`);
+  }
+  lines.push('```');
+  return lines.join('\n');
+}

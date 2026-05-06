@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, findSleepingRelayBranches, scoreRelayBranches, buildBranchHealthTrend, buildBranchRetroSubtasks, buildHealthTrendCompare, summarizeRetroProgress } from '@/utils/aixAudit';
+import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree, buildRelayTreeMarkdown, buildRelayTreeMermaid, findSleepingRelayBranches, scoreRelayBranches, buildBranchHealthTrend, buildBranchRetroSubtasks, buildHealthTrendCompare, summarizeRetroProgress } from '@/utils/aixAudit';
 import type { ParsedCapsule } from '@/utils/aixAudit';
 
 const AGENT_TEMPLATES = [
@@ -277,6 +277,18 @@ export default function AgentPage() {
     message.success(`接力深度树 Markdown 已下载：${filename}`);
   }
 
+  function exportRelayDepthMermaid() {                                       // Mermaid 图表，便于嵌入 Markdown 笔记/Notion/GitHub
+    if (!relayTree.length) { message.warning('当前没有多跳接力分支'); return; }
+    const mermaid = buildRelayTreeMermaid(relayTree);
+    const filename = `agent-relay-depth-${dayjs().format('YYYYMMDD-HHmm')}.mermaid.md`;
+    const blob = new Blob([`# 接力深度树 (${dayjs().format('YYYY-MM-DD HH:mm')})\n\n${mermaid}\n`], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    message.success(`接力深度树 Mermaid 已下载：${filename}`);
+  }
+
   async function generateBatchRetroSubtasks() {
     const targets = branchHealthScores.filter(b => b.band === '风险');
     if (!targets.length) { message.info('当前没有风险档分支需要批量生成复盘 todo'); return; }
@@ -471,6 +483,7 @@ export default function AgentPage() {
         <Space wrap style={{ marginBottom: 12 }}>
           <Button disabled={!relayChainList.length} onClick={exportRelayMarkdown} style={{ borderRadius: 12 }}>导出接力链路 Markdown</Button>
           <Button disabled={!relayTree.length} onClick={exportRelayDepthMarkdown} style={{ borderRadius: 12 }}>导出深度树 Markdown</Button>
+          <Button disabled={!relayTree.length} onClick={exportRelayDepthMermaid} style={{ borderRadius: 12 }}>导出深度树 Mermaid</Button>
           <Tag color="purple">只导出元数据，不含日记正文</Tag>
         </Space>
         {relayChainList.length ? (

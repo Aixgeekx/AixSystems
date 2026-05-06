@@ -12,7 +12,7 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures, buildDailyAnchorJson, expandFailureCluster, compareDailyAnchors, buildFailureFixHint, buildScopeDistribution, buildPresetGoldenPath, buildGoldenPathMarkdown, scoreRelayBranches, buildV1HealthCheck } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildAuditCsv, buildDailyChainSummary, clusterPresetFailures, buildDailyAnchorJson, expandFailureCluster, compareDailyAnchors, buildFailureFixHint, buildScopeDistribution, buildPresetGoldenPath, buildGoldenPathMarkdown, scoreRelayBranches, buildV1HealthCheck, buildAuditHourlyHeatmap, summarizePresetCost } from '@/utils/aixAudit';
 import type { ReplayVerification } from '@/utils/aixAudit';
 
 const SKILLS = [
@@ -273,14 +273,17 @@ export default function AixPage() {
   const powerShellTrendRows = useMemo(() => buildPresetTrendRows(powerShellLogs, presetNames, 14), [powerShellLogs, presetNames]);
   const auditHeatmap = useMemo(() => buildAuditHeatmap(auditTickets, 14), [auditTickets]);
   const auditHeatPeak = useMemo(() => auditHeatmap.reduce((max, cell) => Math.max(max, cell.total), 0), [auditHeatmap]);
+  const auditHourlyHeatmap = useMemo(() => buildAuditHourlyHeatmap(auditTickets, 14), [auditTickets]);
+  const auditHourPeak = useMemo(() => auditHourlyHeatmap.reduce((max, cell) => Math.max(max, cell.count), 0), [auditHourlyHeatmap]);
   const blacklistFindings = useMemo(() => scanPowerShellBlacklist(powerShellLogs), [powerShellLogs]);
   const dailyChainSummary = useMemo(() => buildDailyChainSummary(auditTickets, 7), [auditTickets]);
   const failureClusters = useMemo(() => clusterPresetFailures(powerShellLogs), [powerShellLogs]);
-  const presetCostRanking = useMemo(() => powerShellRiskRows
-    .map(row => ({ preset: row.preset, totalMs: row.total * row.avgMs, total: row.total, avgMs: row.avgMs, level: row.level }))
-    .filter(row => row.totalMs > 0)
-    .sort((a, b) => b.totalMs - a.totalMs)
-    .slice(0, 5), [powerShellRiskRows]);
+  const presetCostRanking = useMemo(() => {
+    const levelMap = new Map(powerShellRiskRows.map(row => [row.preset, row.level]));
+    return summarizePresetCost(powerShellRiskRows.map(row => ({ preset: row.preset, total: row.total, avgMs: row.avgMs })))
+      .slice(0, 5)
+      .map(row => ({ ...row, level: levelMap.get(row.preset) || '绿色' }));
+  }, [powerShellRiskRows]);
   const scopeDistribution = useMemo(() => buildScopeDistribution(auditTickets), [auditTickets]);
   const presetGoldenPath = useMemo(() => buildPresetGoldenPath(powerShellRiskRows), [powerShellRiskRows]);
   const [displayScopeFilter, setDisplayScopeFilter] = useState<Record<string, boolean>>({});
@@ -984,6 +987,25 @@ export default function AixPage() {
             })}
           </div>
         </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>近 14 天审计 24h 时段热力</Typography.Text>
+            <Tag color="cyan">峰值 {auditHourPeak} 张 · 总 {auditHourlyHeatmap.reduce((sum, c) => sum + c.count, 0)} 张</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 8, fontSize: 12 }}>把过去 14 天的票据按本地小时分桶，找出审计活动的高发时段；高度按峰值缩放，share 标签显示该时段占比。</Typography.Paragraph>
+          <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 56 }}>
+            {auditHourlyHeatmap.map(cell => {
+              const peak = Math.max(1, auditHourPeak);
+              const h = Math.max(2, Math.round((cell.count / peak) * 40));
+              return (
+                <div key={cell.hour} title={`${cell.label} · ${cell.count} 张 · ${cell.share}%`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
+                  <div style={{ width: '100%', height: h, background: cell.count ? '#0ea5e9' : (isDark ? 'rgba(148,163,184,0.20)' : 'rgba(148,163,184,0.30)'), borderRadius: 2, opacity: cell.count ? 0.85 : 1 }} />
+                  <div style={{ fontSize: 8, textAlign: 'center', color: subColor }}>{cell.hour % 3 === 0 ? cell.hour : ''}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
         <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.22)' }}>
           <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
             <Typography.Text strong style={{ color: titleColor }}>scope 占比仪表盘</Typography.Text>
@@ -1209,11 +1231,11 @@ export default function AixPage() {
             <div key={row.preset} style={{ marginBottom: 6, padding: 10, borderRadius: 12, background: isDark ? 'rgba(34,197,94,0.08)' : 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.18)' }}>
               <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
                 <Space wrap>
-                  <Tag color={index === 0 ? 'red' : index <= 1 ? 'gold' : 'green'}>#{index + 1}</Tag>
+                  <Tag color={index === 0 ? 'red' : index <= 1 ? 'gold' : 'green'}>#{row.costRank}</Tag>
                   <Typography.Text strong style={{ color: titleColor }}>{row.preset}</Typography.Text>
                   <Tag color={row.level === '红色' ? 'red' : row.level === '黄色' ? 'gold' : 'green'}>{row.level}</Tag>
                 </Space>
-                <Typography.Text style={{ color: subColor, fontSize: 12 }}>{row.total} 次 · 平均 {row.avgMs}ms · 总 {(row.totalMs / 1000).toFixed(1)}s</Typography.Text>
+                <Typography.Text style={{ color: subColor, fontSize: 12 }}>{row.totalRuns} 次 · 平均 {row.avgMs}ms · 总 {row.totalMinutes >= 1 ? `${row.totalMinutes} 分` : `${(row.totalMs / 1000).toFixed(1)}s`}</Typography.Text>
               </Space>
             </div>
           )) : <Alert type="info" showIcon message="尚无演练记录，先做几次只读演练即可看到成本排行。" style={{ borderRadius: 12 }} />}

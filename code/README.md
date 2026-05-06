@@ -54,6 +54,11 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v1.2.0 (2026-05-07)
+- 审计 24h 时段热力条（找出审计高发小时，含 share 占比）
+- PowerShell 演练成本 TOP 5 抽到 utils（summarizePresetCost 加 totalMinutes/costRank，可单测）
+- Agent 接力深度树 Mermaid 图导出（buildRelayTreeMermaid，可嵌入 Markdown 笔记）
+
 ### v1.1.0 (2026-05-07)
 - 饱和度卡叠加 7 天迷你趋势条（今日高亮）
 - 习惯连击榜行可点跳转 + 昨日断签警示标
