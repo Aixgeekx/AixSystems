@@ -54,6 +54,11 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.86.0 (2026-05-07)
+- Aix 主入口新增「黑匣子审计回放器」：把最近的 Aix 技能、控制战役、Agent 分支和桌面预设事件压成链式哈希票据，每张票据带回滚指南和 Claude Code 续跑提示；一键导出 JSON 回放包；只用 eventLog 元数据，不读日记正文。
+- Aix 主入口新增「PowerShell 7 风险驾驶舱」：聚合 PowerShell 白名单预设的成功率、fallback 比例、平均耗时，输出绿/黄/红三色风险评分和 7 天再演练计划；桌面端真实 IPC，浏览器端 fallback 模拟。
+- Agent 中枢新增「CLI 续跑 Checkpoint 胶囊」：把所有 Agent 分支压成单 JSON 胶囊 + 可粘贴回 Claude Code 的 Prompt，支持一键复制、下载、归档审计。
+
 ### v0.66.0 (2026-05-04)
 - 成就中心增强：新增近30天解锁趋势折线图（ECharts 面积图）和成就分类分布环形饼图。
 - 报告中心增强：新增右上角 Markdown 导出按钮和详细数据对比表格（核心指标本期/上期/环比）。

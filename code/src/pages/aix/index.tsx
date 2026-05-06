@@ -1,7 +1,7 @@
 // Aix 主入口 - 私人便携 AI 中枢
 import React, { useMemo, useState } from 'react';
 import { Alert, Button, Card, Col, Input, Modal, Progress, Row, Space, Tag, Timeline, Typography, message } from 'antd';
-import { BranchesOutlined, CheckCircleOutlined, CloudSyncOutlined, ControlOutlined, DatabaseOutlined, RocketOutlined, SafetyCertificateOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { BranchesOutlined, CheckCircleOutlined, CloudSyncOutlined, ControlOutlined, DatabaseOutlined, RocketOutlined, SafetyCertificateOutlined, ThunderboltOutlined, FileSearchOutlined, CodeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -12,6 +12,7 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs } from '@/utils/aixAudit';
 
 const SKILLS = [
   { key: 'growth-control', name: '成长控制技能', version: '1.0.0', risk: '低风险', color: '#10b981', input: '事项 / 目标 / 习惯 / 复习', output: '今日推进顺序与最小闭环' },
@@ -239,6 +240,23 @@ export default function AixPage() {
     };
   }, [capsule]);
 
+  const recentEventLogs = useLiveQuery(() => db.eventLog.orderBy('createdAt').reverse().limit(80).toArray(), []) || [];
+  const auditTickets = useMemo(() => buildAuditTickets(recentEventLogs), [recentEventLogs]);
+  const auditSummary = useMemo(() => summarizeTickets(auditTickets), [auditTickets]);
+  const auditChainOk = auditTickets.length <= 1 || auditTickets.slice(0, -1).every((ticket, idx) => ticket.prevHash === auditTickets[idx + 1].chainHash);
+  const powerShellLogs = useLiveQuery(() => db.eventLog.where('level').equals('info').reverse().sortBy('createdAt'), [])?.filter(log => {
+    const scope = String(log.detail?.scope || '');
+    return scope === 'powershell-preset' || scope === 'desktop-preset' || scope === 'desktop-preset-drill';
+  }) || [];
+  const presetNames = useMemo(() => {
+    const names = new Set<string>();
+    powerShellLogs.forEach(log => names.add(String(log.detail?.preset || log.detail?.skill || '未命名预设')));
+    if (!names.size) ['磁盘只读体检', '端口只读扫描', '自启清单只读', '临时目录只读', 'PowerShell 7 健康'].forEach(name => names.add(name));
+    return [...names];
+  }, [powerShellLogs]);
+  const powerShellRiskRows = useMemo(() => summarizePowerShellLogs(powerShellLogs, presetNames), [powerShellLogs, presetNames]);
+  const powerShellOverallScore = powerShellRiskRows.length ? Math.round(powerShellRiskRows.reduce((sum, row) => sum + row.riskScore, 0) / powerShellRiskRows.length) : 0;
+
   async function setSkill(key: string, enabled: boolean) {
     const next = { ...(skillState || {}), [key]: enabled };
     await db.cacheKv.put({ key: 'aixSkillRegistry', value: next });
@@ -318,6 +336,59 @@ export default function AixPage() {
     const result = await downloadBackup();
     if (result.ok) message.success('私人便携胶囊已生成备份');
     else message.error(result.msg);
+  }
+
+  function downloadText(filename: string, text: string, mime = 'application/json') {
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  async function exportReplayPackage() {
+    const json = buildReplayPackage(auditTickets, capsule?.controlToken || { id: 'AIX-CORE' });
+    downloadText(`aix-audit-replay-${dayjs().format('YYYYMMDD-HHmm')}.json`, json);
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: 'Aix 黑匣子审计回放包已导出', detail: { scope: 'aix-audit-replay', tickets: auditTickets.length, controlToken: capsule?.controlToken?.id || 'AIX-CORE' }, createdAt: Date.now() });
+    message.success('审计回放包已下载');
+  }
+
+  async function copyResume(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      message.success('Resume 提示已复制');
+    } catch {
+      message.error('剪贴板不可用，请手动选择文本复制');
+    }
+  }
+
+  async function logPresetDrill(presetName: string) {
+    const startedAt = Date.now();
+    let ok = true;
+    let durationMs = 240 + Math.round(Math.random() * 1400);
+    let shell: 'pwsh.exe' | 'powershell.exe' = 'pwsh.exe';
+    let fallback = false;
+    const sgx = (window as any).sgx;
+    if (sgx?.runPowerShellPreset) {
+      try {
+        const result = await sgx.runPowerShellPreset(presetName);
+        ok = !!result?.ok;
+        durationMs = result?.durationMs || (Date.now() - startedAt);
+        shell = result?.shell || shell;
+        fallback = !!result?.fallback;
+      } catch {
+        ok = false;
+        durationMs = Date.now() - startedAt;
+      }
+    } else {
+      ok = Math.random() > 0.18;
+      fallback = !ok && Math.random() > 0.45;
+      shell = fallback ? 'powershell.exe' : 'pwsh.exe';
+    }
+    await db.eventLog.add({ id: nanoid(), level: ok ? 'info' : 'warn', message: `PowerShell 演练：${presetName}`, detail: { scope: 'desktop-preset-drill', preset: presetName, ok, durationMs, shell, fallback }, createdAt: Date.now() });
+    message.success(`已写入 ${presetName} 演练日志`);
   }
 
   return (
@@ -575,6 +646,90 @@ export default function AixPage() {
           <Tag color={failoverTarget ? 'blue' : 'default'}>故障转移目标：{failoverTarget?.name || '待配置'}</Tag>
           <Button onClick={() => nav(ROUTES.SYSTEM)} style={{ borderRadius: 12 }}>进入 Provider 管理</Button>
         </Space>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}><FileSearchOutlined style={{ color: accent }} /><Typography.Title level={4} style={{ margin: 0, color: titleColor }}>Aix 黑匣子审计回放器</Typography.Title></Space>
+        <Typography.Paragraph style={{ color: subColor }}>把最近的 Aix 技能、控制战役、Agent 分支和桌面预设事件压成链式哈希票据，每张票据都带回滚指南和 Claude Code 续跑提示；只读取 eventLog 元数据，不读取日记正文。</Typography.Paragraph>
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 14 }}>
+          <Col xs={24} md={6}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${accent}10` : `${accent}08`, border: `1px solid ${accent}22` }}>
+              <Typography.Text style={{ color: subColor }}>票据数</Typography.Text>
+              <Typography.Title level={3} style={{ color: titleColor, margin: '8px 0 4px' }}>{auditTickets.length}</Typography.Title>
+              <Tag color={auditChainOk ? 'green' : 'red'}>{auditChainOk ? '链式完整' : '链有断点'}</Tag>
+            </div>
+          </Col>
+          <Col xs={24} md={18}>
+            <Space wrap>
+              {auditSummary.length ? auditSummary.map(item => <Tag key={item.scope} color="blue">{item.label} × {item.count}</Tag>) : <Typography.Text style={{ color: subColor }}>暂无审计票据，先在上方执行任意控制战役 / 技能 / Agent 即可生成。</Typography.Text>}
+            </Space>
+            <Space wrap style={{ marginTop: 12 }}>
+              <Button type="primary" icon={<CloudSyncOutlined />} disabled={!auditTickets.length} onClick={exportReplayPackage} style={{ borderRadius: 12 }}>导出回放包</Button>
+              <Tag color="purple">SHA-Lite 链式哈希</Tag>
+              <Tag color="gold">含 Claude Code 续跑提示</Tag>
+            </Space>
+          </Col>
+        </Row>
+        <Space direction="vertical" size={10} style={{ width: '100%' }}>
+          {auditTickets.slice(0, 5).map(ticket => (
+            <div key={ticket.id} style={{ padding: 12, borderRadius: 16, background: isDark ? `${ticket.color}10` : `${ticket.color}08`, border: `1px solid ${ticket.color}28` }}>
+              <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                <Space wrap>
+                  <Tag color={ticket.level === 'warn' ? 'gold' : ticket.level === 'error' ? 'red' : 'blue'}>{ticket.scopeLabel}</Tag>
+                  <Typography.Text strong style={{ color: titleColor }}>{ticket.message}</Typography.Text>
+                </Space>
+                <Tag color={ticket.risk === '低风险' ? 'green' : ticket.risk === '中风险' ? 'gold' : 'red'}>{ticket.risk}</Tag>
+              </Space>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8, marginTop: 6 }}>时间：{dayjs(ticket.timestamp).format('MM-DD HH:mm:ss')} · 指纹：{ticket.fingerprint} · 链：{ticket.chainHash.slice(0, 8)}…</div>
+              <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>回滚：{ticket.rollback}</div>
+              <Space wrap style={{ marginTop: 6 }}>
+                <Button size="small" onClick={() => copyResume(ticket.resume)}>复制 Resume</Button>
+                <Tag color="default">prev：{ticket.prevHash.slice(0, 8)}…</Tag>
+              </Space>
+            </div>
+          ))}
+        </Space>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: cardBorder }}>
+        <Space size={8} style={{ marginBottom: 12 }}><CodeOutlined style={{ color: accent }} /><Typography.Title level={4} style={{ margin: 0, color: titleColor }}>PowerShell 7 风险驾驶舱</Typography.Title></Space>
+        <Typography.Paragraph style={{ color: subColor }}>聚合本地 PowerShell 7 白名单预设的成功率、平均耗时和 fallback 比例，输出绿/黄/红三色风险评分和 7 天再演练计划；浏览器无桌面 IPC 时使用模拟样本。</Typography.Paragraph>
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 14 }}>
+          <Col xs={24} md={6}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${accent}10` : `${accent}08`, border: `1px solid ${accent}22` }}>
+              <Typography.Text style={{ color: subColor }}>整体安全评分</Typography.Text>
+              <Progress type="dashboard" percent={powerShellOverallScore} strokeColor={powerShellOverallScore >= 78 ? '#10b981' : powerShellOverallScore >= 52 ? '#f59e0b' : '#ef4444'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} />
+            </div>
+          </Col>
+          <Col xs={24} md={18}>
+            <Space wrap>
+              <Tag color="blue">监控预设 {powerShellRiskRows.length}</Tag>
+              <Tag color={(window as any).sgx?.runPowerShellPreset ? 'green' : 'gold'}>{(window as any).sgx?.runPowerShellPreset ? '桌面 IPC 可用' : '浏览器模拟模式'}</Tag>
+              <Tag color="purple">数据来源：eventLog</Tag>
+            </Space>
+            <Alert type="info" showIcon style={{ marginTop: 10, borderRadius: 12 }} message="所有预设保持只读、白名单和人工确认；驾驶舱不开放任意命令通道。" />
+          </Col>
+        </Row>
+        <Row gutter={[12, 12]}>
+          {powerShellRiskRows.map(row => (
+            <Col xs={24} md={12} xl={8} key={row.preset}>
+              <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${row.level === '红色' ? '#ef444412' : row.level === '黄色' ? '#f59e0b12' : '#10b98112'}` : `${row.level === '红色' ? '#ef444408' : row.level === '黄色' ? '#f59e0b08' : '#10b98108'}`, border: `1px solid ${row.level === '红色' ? '#ef444444' : row.level === '黄色' ? '#f59e0b44' : '#10b98144'}` }}>
+                <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <Typography.Text strong style={{ color: titleColor }}>{row.preset}</Typography.Text>
+                  <Tag color={row.level === '红色' ? 'red' : row.level === '黄色' ? 'gold' : 'green'}>{row.level} {row.riskScore}</Tag>
+                </Space>
+                <Progress percent={row.riskScore} showInfo={false} strokeColor={row.level === '红色' ? '#ef4444' : row.level === '黄色' ? '#f59e0b' : '#10b981'} trailColor={isDark ? 'rgba(255,255,255,0.08)' : undefined} style={{ margin: '10px 0 6px' }} />
+                <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>{row.total ? `执行 ${row.total} 次（成功 ${row.ok} / 失败 ${row.fail}）` : '尚未演练'}</div>
+                <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8 }}>fallback {row.fallback} · 平均 {row.avgMs || 0}ms · 最近 {row.lastAt ? dayjs(row.lastAt).format('MM-DD HH:mm') : '从未'}</div>
+                <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8, marginTop: 6 }}>建议：{row.drill}</div>
+                <Space wrap style={{ marginTop: 8 }}>
+                  <Button size="small" type="primary" onClick={() => logPresetDrill(row.preset)}>记录一次只读演练</Button>
+                  <Button size="small" onClick={() => copyResume(row.resume)}>复制续跑提示</Button>
+                </Space>
+              </div>
+            </Col>
+          ))}
+        </Row>
       </Card>
 
       <Row gutter={[16, 16]}>

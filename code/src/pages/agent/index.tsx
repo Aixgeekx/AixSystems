@@ -1,11 +1,13 @@
 // Agent 控制中枢 - 本地任务分支、恢复和权限日志
 import React from 'react';
 import { Alert, Button, Card, Col, Progress, Row, Space, Tag, Timeline, Typography, message } from 'antd';
-import { BranchesOutlined, HistoryOutlined, SafetyCertificateOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { BranchesOutlined, HistoryOutlined, SafetyCertificateOutlined, ThunderboltOutlined, CodeOutlined } from '@ant-design/icons';
 import { nanoid } from 'nanoid';
 import { useLiveQuery } from 'dexie-react-hooks';
+import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
+import { buildCheckpointCapsule } from '@/utils/aixAudit';
 
 const AGENT_TEMPLATES = [
   { title: '成长控制 Agent', desc: '拆解今日目标、习惯和复习压力，生成可恢复的行动分支', risk: '低风险', color: '#10b981', allow: '读写事项/目标/习惯/复习队列', deny: '禁止删除私人数据或跳过复盘', evidence: '今日数据、里程碑、提醒队列' },
@@ -75,6 +77,17 @@ export default function AgentPage() {
     proof: `risk=${item.risk}; progress=${item.percent}%; breakpoint=${item.breakpoint}; priority=${item.priority}`,
     exportText: `### ${item.task.title}\n- Checkpoint: ${item.task.extra?.claudeWorkflow?.checkpoint || '待补充'}\n- Resume: ${item.resume}\n- Proof: risk=${item.risk}; progress=${item.percent}%; breakpoint=${item.breakpoint}`
   }));
+  const checkpointBranches = cliResumeRadar.map(item => ({
+    id: item.task.id,
+    title: item.task.title,
+    risk: item.risk,
+    percent: item.percent,
+    breakpoint: item.breakpoint,
+    resume: item.resume,
+    next: item.next,
+    proof: `progress=${item.percent}%; risk=${item.risk}; priority=${item.priority}`
+  }));
+  const checkpointCapsule = buildCheckpointCapsule(checkpointBranches);
   const disciplineCoach = autonomyQueue.map(item => ({
     title: item.task.title,
     risk: String(item.task.extra?.risk || (item.task.extra?.aixCampaign ? '中风险' : '低风险')),
@@ -107,6 +120,32 @@ export default function AgentPage() {
     });
     await db.eventLog.add({ id: nanoid(), level: 'info', message: `Agent 任务已创建：${template.title}`, detail: { scope: 'agent', risk: template.risk, recoverable: true }, createdAt: now });
     message.success('已创建可恢复 Agent 任务');
+  }
+
+  async function copyText(text: string, hint = '内容已复制') {
+    try {
+      await navigator.clipboard.writeText(text);
+      message.success(hint);
+    } catch {
+      message.error('剪贴板不可用，请手动选择文本复制');
+    }
+  }
+
+  function downloadCapsule() {
+    const filename = `${checkpointCapsule.capsuleId}.json`;
+    const blob = new Blob([checkpointCapsule.json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    message.success(`Checkpoint 胶囊已下载：${filename}`);
+  }
+
+  async function archiveCapsule() {
+    await db.eventLog.add({ id: nanoid(), level: 'info', message: `Agent Checkpoint 胶囊已归档：${checkpointCapsule.capsuleId}`, detail: { scope: 'agent-checkpoint-capsule', capsuleId: checkpointCapsule.capsuleId, summary: checkpointCapsule.summary }, createdAt: Date.now() });
+    message.success('胶囊已写入本地审计日志');
   }
 
   return (
@@ -196,6 +235,40 @@ export default function AgentPage() {
             <pre style={{ margin: '8px 0 0', padding: 10, borderRadius: 12, whiteSpace: 'pre-wrap', color: titleColor, background: isDark ? 'rgba(0,0,0,0.22)' : 'rgba(15,23,42,0.04)' }}>{item.exportText}</pre>
           </div>) : <Alert type="info" showIcon message="暂无可打包 Agent 证据链；创建 Agent 分支后会自动生成。" style={{ borderRadius: 12 }} />}
         </Space>
+      </Card>
+
+      <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>
+        <Space size={8} style={{ marginBottom: 12 }}>
+          <CodeOutlined style={{ color: accent }} />
+          <Typography.Title level={4} style={{ margin: 0, color: titleColor }}>CLI 续跑 Checkpoint 胶囊</Typography.Title>
+        </Space>
+        <Typography.Paragraph style={{ color: subColor }}>把所有 Agent 分支的 Plan / Permission / Checkpoint / Resume 压成单个可粘贴回 Claude Code CLI 的胶囊：JSON 一键下载，Prompt 一键复制；只用本地 Item 元数据，不读取日记正文。</Typography.Paragraph>
+        <Row gutter={[12, 12]} align="middle" style={{ marginBottom: 14 }}>
+          <Col xs={24} md={8}>
+            <div style={{ height: '100%', padding: 14, borderRadius: 16, background: isDark ? `${accent}10` : `${accent}08`, border: `1px solid ${accent}22` }}>
+              <Typography.Text style={{ color: subColor }}>{checkpointCapsule.capsuleId}</Typography.Text>
+              <Typography.Title level={4} style={{ color: titleColor, margin: '6px 0 10px' }}>{dayjs(checkpointCapsule.generatedAt).format('MM-DD HH:mm:ss')}</Typography.Title>
+              <Space wrap>
+                <Tag color="blue">总分支 {checkpointCapsule.summary.total}</Tag>
+                <Tag color="purple">待续跑 {checkpointCapsule.summary.pending}</Tag>
+                <Tag color="gold">待授权 {checkpointCapsule.summary.needsApproval}</Tag>
+                <Tag color="green">可归档 {checkpointCapsule.summary.archived}</Tag>
+              </Space>
+            </div>
+          </Col>
+          <Col xs={24} md={16}>
+            <Space wrap>
+              <Button type="primary" disabled={!checkpointBranches.length} onClick={() => copyText(checkpointCapsule.prompt, 'CLI Prompt 已复制')} style={{ borderRadius: 12 }}>复制 CLI 续跑 Prompt</Button>
+              <Button disabled={!checkpointBranches.length} onClick={() => copyText(checkpointCapsule.json, '胶囊 JSON 已复制')} style={{ borderRadius: 12 }}>复制 JSON</Button>
+              <Button disabled={!checkpointBranches.length} onClick={downloadCapsule} style={{ borderRadius: 12 }}>下载胶囊文件</Button>
+              <Button disabled={!checkpointBranches.length} onClick={archiveCapsule} style={{ borderRadius: 12 }}>归档到本地审计</Button>
+            </Space>
+            <Alert type="info" showIcon style={{ marginTop: 12, borderRadius: 12 }} message="胶囊只包含分支元数据：风险、进度、断点、续跑提示；不包含子任务原文以外的私人正文，不调用 Aix API。" />
+          </Col>
+        </Row>
+        {checkpointBranches.length ? (
+          <pre style={{ margin: 0, padding: 12, borderRadius: 14, maxHeight: 240, overflow: 'auto', whiteSpace: 'pre-wrap', color: titleColor, background: isDark ? 'rgba(0,0,0,0.32)' : 'rgba(15,23,42,0.05)', border: `1px solid ${accent}22` }}>{checkpointCapsule.prompt}</pre>
+        ) : <Alert type="info" showIcon message="尚无 Agent 分支；创建分支后此处会生成可粘贴回 Claude Code 的胶囊文本。" style={{ borderRadius: 12 }} />}
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>

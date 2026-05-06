@@ -2,6 +2,11 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.86.0
+- Aix 主入口新增「黑匣子审计回放器」：聚合 eventLog 中 aix-skill / aix-campaign / agent / desktop-preset 等 scope 的事件，按时间链式哈希（cyrb53）合成审计票据，每张票据带回滚指南、Claude Code 续跑提示、prev/chain hash；一键导出 JSON 回放包到 `aix-audit-replay-YYYYMMDD-HHmm.json`；本地工具实现见 `code/src/utils/aixAudit.ts`。
+- Aix 主入口新增「PowerShell 7 风险驾驶舱」：从 eventLog 中 scope=`powershell-preset|desktop-preset|desktop-preset-drill` 的记录聚合每个预设的成功率、fallback 比例、平均耗时和最近演练时间，输出 0-100 评分和绿/黄/红等级；桌面端通过 `window.sgx.runPowerShellPreset(name)` 触发真实白名单只读演练，浏览器端 fallback 为模拟样本；建议每周一次绿色、每周内黄色、当天红色再演练。
+- Agent 中枢新增「CLI 续跑 Checkpoint 胶囊」：把所有 Agent 分支的 risk / progress / breakpoint / resume / next 压成单 `aix-cli-checkpoint-1.0` JSON + Markdown 风格 Prompt，capsuleId 形如 `AIX-CKPT-YYYYMMDD-N`；支持复制 Prompt、复制 JSON、下载胶囊文件、归档到 eventLog（scope=`agent-checkpoint-capsule`）。
+
 ## 最新版本 v0.66.0
 - 成就中心增强：新增近30天解锁趋势折线图（ECharts 面积图）和成就分类分布环形饼图。
 - 报告中心增强：新增右上角 Markdown 导出按钮和详细数据对比表格（核心指标本期/上期/环比）。
