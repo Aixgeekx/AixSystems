@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db } from '@/db';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildCheckpointCapsule, parseCheckpointCapsule } from '@/utils/aixAudit';
+import { buildCheckpointCapsule, parseCheckpointCapsule, buildRelayTree } from '@/utils/aixAudit';
 import type { ParsedCapsule } from '@/utils/aixAudit';
 
 const AGENT_TEMPLATES = [
@@ -107,6 +107,8 @@ export default function AgentPage() {
     }))
     .sort((a, b) => b.latestAt - a.latestAt)
     .slice(0, 6);
+  const relayTree = buildRelayTree(agentTasks);
+  const relayMaxDepth = relayTree.reduce((max, node) => Math.max(max, node.depth), 0);
   const disciplineCoach = autonomyQueue.map(item => ({
     title: item.task.title,
     risk: String(item.task.extra?.risk || (item.task.extra?.aixCampaign ? '中风险' : '低风险')),
@@ -442,6 +444,30 @@ export default function AgentPage() {
             ))}
           </Space>
         ) : <Alert type="info" showIcon message="暂无接力分支；从其他人导入的 Checkpoint 胶囊会出现在这里。" style={{ borderRadius: 12 }} />}
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>接力深度追溯（多跳追踪）</Typography.Text>
+            <Tag color="blue">最深 {relayMaxDepth} 跳</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>从 Item.extra.relayFrom 递归回溯每个接力分支的源头，缩进展示深度链路；让 A→B→C 多跳协作一目了然，深度越大说明接力链越长，越需要复盘起点。</Typography.Paragraph>
+          {relayTree.length ? (
+            <Space direction="vertical" size={6} style={{ width: '100%' }}>
+              {relayTree.slice(0, 12).map(node => (
+                <div key={node.id} style={{ marginLeft: 18 * Math.max(0, node.depth - 1), padding: '8px 12px', borderRadius: 12, background: isDark ? 'rgba(56,189,248,0.08)' : 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.18)' }}>
+                  <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Space wrap>
+                      <Tag color="blue">深度 {node.depth}</Tag>
+                      <Typography.Text strong style={{ color: titleColor }}>{node.title}</Typography.Text>
+                      <Tag color={node.risk === '低风险' ? 'green' : 'gold'}>{node.risk}</Tag>
+                    </Space>
+                    <Tag color={node.percent === 100 ? 'green' : node.percent >= 50 ? 'blue' : 'default'}>进度 {node.percent}%</Tag>
+                  </Space>
+                  <Typography.Text style={{ color: subColor, fontSize: 12 }}>来自 {node.capsuleId} · 父分支 {node.parentId || '本地胶囊源'}</Typography.Text>
+                </div>
+              ))}
+            </Space>
+          ) : <Alert type="success" showIcon message="当前没有多跳接力，所有 Agent 都在本地原始胶囊上推进。" style={{ borderRadius: 12 }} />}
+        </div>
       </Card>
 
       <Card bordered={false} className="anim-fade-in-up" style={{ borderRadius: 24, background: cardBg, border: `1px solid ${accent}22` }}>

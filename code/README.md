@@ -54,6 +54,13 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v0.90.0 (2026-05-07)
+- Aix 主入口审计回放器卡片新增「14 天风险热力图」：每天用三层条带（绿低 / 紫中 / 红需确认）按当天票据数缩放高度，hover 显示明细；纯 CSS 渲染，零 ECharts 依赖。
+- Aix 主入口风险驾驶舱新增「PowerShell 黑名单关键词审计」：本地扫描所有演练日志中的 format/rm -rf/taskkill/iex 等 30+ 危险关键词，按高/中/低三档严重度排序输出告警卡 + Claude Code 续跑提示；不调用模型。
+- Agent 中枢接力链路时间线卡片新增「接力深度追溯」：递归 Item.extra.relayFrom 多跳回溯每个分支的源头，按 depth 缩进展示链路深度；让 A→B→C 多跳协作一目了然。
+- 工具层 `code/src/utils/aixAudit.ts` 新增 `buildAuditHeatmap`、`scanPowerShellBlacklist`、`buildRelayTree`，单元测试覆盖到 22 用例（共 61 测试）。
+- 发布闭环升级：commit/push 之后自动调 `python Aix_tools/release_assets.py` 给当前 tag 上传 Setup.exe + blockmap，GitHub Releases 与 main 分支同步。
+
 ### v0.89.0 (2026-05-07)
 - Aix 主入口审计回放器卡片新增「票据搜索过滤」：实时按 scope / 消息关键字过滤当前显示的 5 条票据，与播放器联动（过滤后再播放）。
 - Agent 中枢接力链路时间线卡片新增「导出 Markdown」：一键把所有接力链路（capsuleId / 分支数 / 风险 / 进度 / 续跑提示）导出为 `agent-relay-chain-*.md`，便于团队接力交接。

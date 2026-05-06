@@ -12,7 +12,7 @@ import { callAixModel } from '@/utils/aixModel';
 import { downloadBackup } from '@/utils/export';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeVariants } from '@/hooks/useVariants';
-import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows } from '@/utils/aixAudit';
+import { buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, verifyReplayPackage, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist } from '@/utils/aixAudit';
 import type { ReplayVerification } from '@/utils/aixAudit';
 
 const SKILLS = [
@@ -263,6 +263,9 @@ export default function AixPage() {
   const powerShellRiskRows = useMemo(() => summarizePowerShellLogs(powerShellLogs, presetNames), [powerShellLogs, presetNames]);
   const powerShellOverallScore = powerShellRiskRows.length ? Math.round(powerShellRiskRows.reduce((sum, row) => sum + row.riskScore, 0) / powerShellRiskRows.length) : 0;
   const powerShellTrendRows = useMemo(() => buildPresetTrendRows(powerShellLogs, presetNames, 14), [powerShellLogs, presetNames]);
+  const auditHeatmap = useMemo(() => buildAuditHeatmap(auditTickets, 14), [auditTickets]);
+  const auditHeatPeak = useMemo(() => auditHeatmap.reduce((max, cell) => Math.max(max, cell.total), 0), [auditHeatmap]);
+  const blacklistFindings = useMemo(() => scanPowerShellBlacklist(powerShellLogs), [powerShellLogs]);
   const auditDisplay = useMemo(() => {
     const keyword = auditFilter.trim().toLowerCase();
     const list = keyword
@@ -794,6 +797,30 @@ export default function AixPage() {
             );
           })}
         </Space>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(168,85,247,0.10)' : 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>近 14 天审计风险热力图</Typography.Text>
+            <Tag color="purple">低 / 中 / 需确认 三色叠加</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 8, fontSize: 12 }}>每天用一格三层条带：绿色=低风险（技能/审计），紫色=中风险（战役/Agent），红色=需确认（PowerShell 预设）；高度按当天该风险的票据数比例缩放，便于一眼看到风险峰值。</Typography.Paragraph>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {auditHeatmap.map(cell => {
+              const peak = Math.max(1, auditHeatPeak);
+              const lowH = Math.round((cell.low / peak) * 32);
+              const midH = Math.round((cell.mid / peak) * 32);
+              const highH = Math.round((cell.high / peak) * 32);
+              return (
+                <div key={cell.dayStart} title={`${cell.dateLabel} · 总 ${cell.total} · 低 ${cell.low} · 中 ${cell.mid} · 需确认 ${cell.high}`} style={{ flex: 1, display: 'flex', flexDirection: 'column-reverse', alignItems: 'stretch', minWidth: 16 }}>
+                  {cell.high ? <div style={{ height: highH || 4, background: '#ef4444', borderRadius: 2 }} /> : null}
+                  {cell.mid ? <div style={{ height: midH || 4, background: '#a855f7', borderRadius: 2, marginBottom: cell.high ? 1 : 0 }} /> : null}
+                  {cell.low ? <div style={{ height: lowH || 4, background: '#10b981', borderRadius: 2, marginBottom: cell.mid || cell.high ? 1 : 0 }} /> : null}
+                  {!cell.total ? <div style={{ height: 4, background: isDark ? 'rgba(148,163,184,0.20)' : 'rgba(148,163,184,0.30)', borderRadius: 2 }} /> : null}
+                  <div style={{ fontSize: 9, textAlign: 'center', color: subColor, marginTop: 4 }}>{cell.dateLabel.slice(-2)}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
         <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.22)' }}>
           <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
             <Typography.Text strong style={{ color: titleColor }}>导入回放包校验链式哈希</Typography.Text>
@@ -908,6 +935,33 @@ export default function AixPage() {
               </div>
             </div>
           )) : <Alert type="info" showIcon message="暂无预设记录，演练后再回来查看趋势。" style={{ borderRadius: 12 }} />}
+        </div>
+        <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: isDark ? 'rgba(239,68,68,0.10)' : 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.22)' }}>
+          <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Typography.Text strong style={{ color: titleColor }}>PowerShell 黑名单关键词审计</Typography.Text>
+            <Tag color="red">高 / 中 / 低 三档严重度</Tag>
+          </Space>
+          <Typography.Paragraph style={{ color: subColor, marginBottom: 10, fontSize: 12 }}>扫描所有 PowerShell 演练日志中是否出现 format / rm -rf / taskkill / iex / reg delete 等危险关键词，命中即输出告警卡 + Claude Code 续跑提示；保持本地静态扫描，不调用模型。</Typography.Paragraph>
+          {blacklistFindings.length ? (
+            <Space direction="vertical" size={8} style={{ width: '100%' }}>
+              {blacklistFindings.slice(0, 6).map(finding => (
+                <div key={finding.preset + finding.keyword} style={{ padding: 12, borderRadius: 14, background: isDark ? `${finding.severity === '高' ? '#ef444415' : finding.severity === '中' ? '#f59e0b15' : '#94a3b815'}` : `${finding.severity === '高' ? '#ef444408' : finding.severity === '中' ? '#f59e0b08' : '#94a3b808'}`, border: `1px solid ${finding.severity === '高' ? '#ef444444' : finding.severity === '中' ? '#f59e0b44' : '#94a3b844'}` }}>
+                  <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Space wrap>
+                      <Tag color={finding.severity === '高' ? 'red' : finding.severity === '中' ? 'gold' : 'default'}>严重度 {finding.severity}</Tag>
+                      <Typography.Text strong style={{ color: titleColor }}>{finding.preset}</Typography.Text>
+                      <Tag color="default">关键词 "{finding.keyword}"</Tag>
+                    </Space>
+                    <Typography.Text style={{ color: subColor, fontSize: 12 }}>命中 {finding.count} 次 · 最近 {dayjs(finding.lastAt).format('MM-DD HH:mm')}</Typography.Text>
+                  </Space>
+                  <div style={{ color: subColor, fontSize: 12, lineHeight: 1.8, marginTop: 6 }}>续跑：{finding.resume}</div>
+                  <Space wrap style={{ marginTop: 6 }}>
+                    <Button size="small" onClick={() => copyResume(finding.resume)}>复制 Resume</Button>
+                  </Space>
+                </div>
+              ))}
+            </Space>
+          ) : <Alert type="success" showIcon message="未发现危险关键词；保持白名单只读演练即可。" style={{ borderRadius: 12 }} />}
         </div>
       </Card>
 

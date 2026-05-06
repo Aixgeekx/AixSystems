@@ -39,6 +39,7 @@ cd code && npm install && npm run dev   # 开发模式 http://127.0.0.1:5173
 
 ## 最近更新
 
+- `v0.90.0`：三连深挖——审计票据风险热力图（14 天 × 低/中/需确认 三色叠加柱条）+ PowerShell 黑名单关键词审计（扫 format/rm -rf/taskkill/iex 等危险关键词，三档严重度 + Resume 提示）+ Agent 接力深度追溯（递归 relayFrom 多跳追踪，最深 N 跳一目了然）。同步把 `Aix_tools/release_assets.py` 纳入发布闭环——commit/push 后自动给对应 tag 上传 Setup.exe + blockmap，Releases 页面不再落后于 main 分支。
 - `v0.89.0`：三连小钢炮——审计票据搜索过滤（按 scope / 消息关键字实时过滤）+ Agent 接力链路 Markdown 导出（一键导出所有接力链路为可分享 .md 文件）+ PowerShell 演练日志清零（一键清空驾驶舱里的演练 / 编排日志，回到初始状态）。
 - `v0.88.0`：三连可视化——Aix 黑匣子审计票据时间线播放器（▶/暂停/重置 + 当前票据高亮 + 链式排序）+ PowerShell 7 近 14 天演练趋势条（绿/黄/红/灰逐日条形 + 周比趋势）+ Agent 接力链路时间线（按 capsuleId 聚合 antd Timeline，多人接力一眼可见）。
 - `v0.87.0`：三连闭环——Aix 主入口加「审计回放包导入校验器」（粘贴 JSON / 选择文件 → 重算 cyrb53 链式哈希、定位断点、写入审计日志）和「PowerShell 演练编排器」（红/黄/绿对应今日/本周/下周自动写入只读演练事项）；Agent 中枢加「CLI Checkpoint 胶囊接力导入」（粘贴胶囊一键创建对应数量的接力 Agent 分支，每条携带 relayFrom 标记）。

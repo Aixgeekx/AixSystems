@@ -2,6 +2,13 @@
 
 > 本目录存放 agent 生成的辅助脚本、工具、项目文档等。
 
+## 最新版本 v0.90.0
+- `code/src/utils/aixAudit.ts` 新增三个本地工具：`buildAuditHeatmap(tickets, days)` 按天分桶并按风险等级（低/中/需确认）统计；`scanPowerShellBlacklist(logs)` 静态扫描 30+ 危险关键词并按 高/中/低 三档严重度排序输出告警；`buildRelayTree(items)` 递归 `extra.relayFrom` 多跳计算每个 Agent 接力分支的 depth + parentId。
+- Aix 主入口审计回放器卡片新增「14 天风险热力图」div：每天三层条带，纯 CSS 实现，无 ECharts 依赖。
+- Aix 主入口风险驾驶舱卡片新增「黑名单关键词审计」div：复用 `scanPowerShellBlacklist`，输出最多 6 条告警卡，每条带"复制 Resume"按钮。
+- Agent 中枢接力链路时间线卡片新增「接力深度追溯」div：复用 `buildRelayTree`，按 depth 用 marginLeft 缩进展示前 12 个多跳节点。
+- 发布闭环：现有的 `Aix_tools/release_assets.py` 作为 commit/push 之后的固定步骤，自动扫 `desktop/dist-installer/` 的 `AixSystems-{version}-Setup.exe`/`*.blockmap`，按 `vX.Y.Z` tag 自动 `POST /releases` 创建并上传资产，避免 Release 页面落后于 main 分支。
+
 ## 最新版本 v0.89.0
 - Aix 主入口加 `auditFilter` useState + Input.allowClear，过滤逻辑用 `useMemo` 复用 auditTickets，与时间线播放器共用 `auditDisplay`。
 - Aix 主入口风险驾驶舱新增 `clearDrillLogs`：用 `db.eventLog.where('level').equals('info').toArray()` + 过滤 scope + `bulkDelete`；只清演练相关，不动其他 scope。

@@ -378,6 +378,119 @@ function bucketRatio(buckets: PresetDayBucket[]): number {
   return total ? ok / total : 0;
 }
 
+export interface AuditHeatCell {
+  dayStart: number;
+  dateLabel: string;                                         // MM-DD
+  low: number;
+  mid: number;
+  high: number;
+  total: number;
+}
+
+export function buildAuditHeatmap(tickets: AuditTicket[], days = 14, now = Date.now()): AuditHeatCell[] {
+  const dayStart = new Date(now);
+  dayStart.setHours(0, 0, 0, 0);
+  const cells: AuditHeatCell[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const start = dayStart.getTime() - i * 86_400_000;
+    const end = start + 86_400_000;
+    const within = tickets.filter(ticket => ticket.timestamp >= start && ticket.timestamp < end);
+    const date = new Date(start);
+    cells.push({
+      dayStart: start,
+      dateLabel: `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+      low: within.filter(ticket => ticket.risk === '低风险').length,
+      mid: within.filter(ticket => ticket.risk === '中风险').length,
+      high: within.filter(ticket => ticket.risk === '需确认').length,
+      total: within.length
+    });
+  }
+  return cells;
+}
+
+const DANGEROUS_KEYWORDS = [
+  'rm ', 'rm -', 'del ', 'remove-item', 'rmdir', 'rd /s', 'format ', 'mkfs', 'taskkill', 'stop-process', 'kill ',
+  'shutdown', 'reboot', 'reg delete', 'reg add', 'set-acl', 'icacls', 'cacls', 'net user', 'net localgroup',
+  'invoke-expression', 'iex ', 'invoke-webrequest', 'iwr ', 'curl ', 'wget ', 'start-process', 'cmd /c',
+  '> $null', 'out-null', '-force', 'no-confirm', 'whoami /priv'
+];
+
+export interface BlacklistFinding {
+  preset: string;
+  keyword: string;
+  count: number;
+  lastAt: number;
+  sample: string;
+  severity: '低' | '中' | '高';
+  resume: string;
+}
+
+export function scanPowerShellBlacklist(logs: EventLog[]): BlacklistFinding[] {
+  const findings = new Map<string, BlacklistFinding>();
+  for (const log of logs) {
+    const corpus = `${log.message} ${JSON.stringify(log.detail || {}).toLowerCase()}`;
+    for (const keyword of DANGEROUS_KEYWORDS) {
+      if (!corpus.includes(keyword)) continue;
+      const preset = String(log.detail?.preset || log.detail?.skill || log.message.slice(0, 40));
+      const key = `${preset}::${keyword}`;
+      const existing = findings.get(key);
+      const severity: BlacklistFinding['severity'] = ['format ', 'mkfs', 'rm -', 'rmdir', 'rd /s', 'shutdown', 'reboot', 'reg delete', 'iex ', 'invoke-expression'].some(item => keyword.startsWith(item.trim().slice(0, 4))) ? '高' : ['taskkill', 'stop-process', 'set-acl', 'icacls', 'net user', 'net localgroup'].some(item => keyword.includes(item)) ? '中' : '低';
+      const resume = `Claude Code 续跑：审查预设 ${preset} 中的关键字 "${keyword}"，确认是否在白名单允许范围；若否，立即清理或迁移到只读分支。`;
+      if (existing) {
+        existing.count += 1;
+        if (log.createdAt > existing.lastAt) { existing.lastAt = log.createdAt; existing.sample = corpus.slice(0, 200); }
+      } else {
+        findings.set(key, { preset, keyword: keyword.trim(), count: 1, lastAt: log.createdAt, sample: corpus.slice(0, 200), severity, resume });
+      }
+    }
+  }
+  return [...findings.values()].sort((a, b) => (a.severity === b.severity ? b.count - a.count : (a.severity === '高' ? -1 : b.severity === '高' ? 1 : a.severity === '中' ? -1 : 1)));
+}
+
+export interface RelayDepthNode {
+  id: string;
+  title: string;
+  capsuleId: string;
+  depth: number;
+  risk: string;
+  percent: number;
+  parentId?: string;
+  createdAt: number;
+}
+
+export function buildRelayTree(items: Array<{ id: string; title: string; createdAt: number; updatedAt: number; subtasks?: Array<{ done: boolean }>; extra?: any }>): RelayDepthNode[] {
+  const byId = new Map<string, typeof items[number]>();
+  for (const item of items) byId.set(item.id, item);
+  const nodes: RelayDepthNode[] = [];
+  for (const item of items) {
+    if (!item.extra?.relayFrom) continue;
+    const subtasks = item.subtasks || [];
+    const done = subtasks.filter(sub => sub.done).length;
+    const total = subtasks.length || 1;
+    const percent = Math.round(done / total * 100);
+    let depth = 1;
+    let parentId: string | undefined;
+    let cursor: typeof items[number] | undefined = items.find(other => String(other.extra?.capsuleId || '') === String(item.extra?.relayFrom));
+    if (cursor) parentId = cursor.id;
+    while (cursor && cursor.extra?.relayFrom) {
+      depth += 1;
+      cursor = items.find(other => String(other.extra?.capsuleId || '') === String(cursor!.extra?.relayFrom));
+      if (!cursor) break;
+    }
+    nodes.push({
+      id: item.id,
+      title: item.title,
+      capsuleId: String(item.extra?.relayFrom || ''),
+      depth,
+      risk: String(item.extra?.risk || '低风险'),
+      percent,
+      parentId,
+      createdAt: item.createdAt
+    });
+  }
+  return nodes.sort((a, b) => a.depth - b.depth || a.createdAt - b.createdAt);
+}
+
 export function buildPresetTrendRows(logs: EventLog[], presetNames: string[], days = 14, now = Date.now()): PresetTrendRow[] {
   const dayStart = new Date(now);
   dayStart.setHours(0, 0, 0, 0);

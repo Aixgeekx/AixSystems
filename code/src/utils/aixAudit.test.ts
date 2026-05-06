@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows } from './aixAudit';
+import { hashString, fingerprintDetail, buildAuditTickets, summarizeTickets, buildReplayPackage, summarizePowerShellLogs, buildCheckpointCapsule, verifyReplayPackage, parseCheckpointCapsule, buildPresetDrillSchedule, buildPresetTrendRows, buildAuditHeatmap, scanPowerShellBlacklist, buildRelayTree } from './aixAudit';
 import type { EventLog } from '@/models';
 
 const eventLog = (id: string, scope: string, ts: number, extra: Partial<EventLog> = {}, detail: Record<string, any> = {}): EventLog => ({
@@ -230,5 +230,78 @@ describe('buildPresetTrendRows', () => {
     expect(rows[0].successRatio).toBe(0);
     expect(rows[0].trend).toBe('持平');
     expect(rows[0].buckets.every(bucket => bucket.total === 0)).toBe(true);
+  });
+});
+
+describe('buildAuditHeatmap', () => {
+  const fixedNow = new Date('2026-05-07T18:00:00Z').getTime();
+
+  it('groups tickets into per-day low/mid/high counts', () => {
+    const dayMs = 86_400_000;
+    const dayStart = new Date(fixedNow);
+    dayStart.setHours(0, 0, 0, 0);
+    const start = dayStart.getTime();
+    const tickets = buildAuditTickets([
+      eventLog('a', 'aix-skill', start - 2 * dayMs + 1000),
+      eventLog('b', 'aix-campaign', start - 2 * dayMs + 2000),
+      eventLog('c', 'powershell-preset', start - dayMs + 3000),
+      eventLog('d', 'agent', start + 4000)
+    ]);
+    const cells = buildAuditHeatmap(tickets, 5, fixedNow);
+    expect(cells).toHaveLength(5);
+    const today = cells[cells.length - 1];
+    const yesterday = cells[cells.length - 2];
+    const dayBefore = cells[cells.length - 3];
+    expect(today.total).toBe(1);
+    expect(today.mid).toBe(1);                                // agent → 中风险
+    expect(yesterday.high).toBe(1);                           // powershell-preset → 需确认
+    expect(dayBefore.low).toBeGreaterThanOrEqual(1);          // aix-skill → 低风险
+    expect(dayBefore.mid).toBeGreaterThanOrEqual(1);          // aix-campaign → 中风险
+  });
+});
+
+describe('scanPowerShellBlacklist', () => {
+  it('flags dangerous keywords across logs and assigns severity', () => {
+    const logs: EventLog[] = [
+      eventLog('1', 'powershell-preset', 1000, {}, { preset: 'cleanup', script: 'Format C:', ok: true }),
+      eventLog('2', 'powershell-preset', 2000, {}, { preset: 'kill-task', script: 'taskkill /pid 1234', ok: true }),
+      eventLog('3', 'powershell-preset', 3000, {}, { preset: 'bench', script: 'Get-Process | Out-Null', ok: true })
+    ];
+    const findings = scanPowerShellBlacklist(logs);
+    expect(findings.length).toBeGreaterThan(0);
+    const hasFormat = findings.some(item => item.keyword.includes('format'));
+    const hasTaskkill = findings.some(item => item.keyword === 'taskkill');
+    expect(hasFormat).toBe(true);
+    expect(hasTaskkill).toBe(true);
+    const top = findings[0];
+    expect(top.resume).toContain('Claude Code 续跑');
+  });
+
+  it('returns empty when no dangerous keyword present', () => {
+    const logs: EventLog[] = [eventLog('1', 'powershell-preset', 1000, {}, { preset: 'safe', script: 'Get-ComputerInfo' })];
+    expect(scanPowerShellBlacklist(logs)).toEqual([]);
+  });
+});
+
+describe('buildRelayTree', () => {
+  it('computes relay depth across multi-hop relayFrom chains', () => {
+    const items = [
+      { id: 'a', title: '原始 Agent', createdAt: 100, updatedAt: 100, subtasks: [{ done: true }, { done: false }], extra: { capsuleId: 'CAP-1' } },
+      { id: 'b', title: '第二跳', createdAt: 200, updatedAt: 200, subtasks: [{ done: false }], extra: { relayFrom: 'CAP-1', capsuleId: 'CAP-2', risk: '低风险' } },
+      { id: 'c', title: '第三跳', createdAt: 300, updatedAt: 300, subtasks: [{ done: true }], extra: { relayFrom: 'CAP-2', risk: '中风险' } }
+    ];
+    const tree = buildRelayTree(items);
+    expect(tree).toHaveLength(2);
+    const second = tree.find(node => node.id === 'b')!;
+    const third = tree.find(node => node.id === 'c')!;
+    expect(second.depth).toBe(1);
+    expect(second.parentId).toBe('a');
+    expect(third.depth).toBe(2);
+    expect(third.parentId).toBe('b');
+    expect(third.percent).toBe(100);
+  });
+
+  it('returns empty when no items have relayFrom', () => {
+    expect(buildRelayTree([{ id: 'x', title: 'no relay', createdAt: 1, updatedAt: 1 }])).toEqual([]);
   });
 });
