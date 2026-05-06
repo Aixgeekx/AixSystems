@@ -54,6 +54,11 @@ Vite 5 + React 18 + TypeScript 5.6 + Ant Design 5 + Dexie (IndexedDB) + Zustand 
 
 ## 更新日志
 
+### v1.2.2 (2026-05-07)
+- fix: probeAixProvider 在 apiUrl 为空时不再假阳性 ok:true，并跳过 fetch
+- fix: Ollama 协议请求体加 stream:false，避免 NDJSON 让 res.json() 解析失败
+- fix: callAixModel 的 AbortError 改写为"Aix API 请求超时"友好提示；新增 aixModel.test.ts 15 个测试
+
 ### v1.2.1 (2026-05-07)
 - fix: Mermaid 节点 ID 用 idx 编号，防 item.id 长公共前缀碰撞
 - fix: 习惯断签警示改用 breakDays，多天断签后能正确显示
